@@ -140,3 +140,12 @@ class CompaniesHouseService:
         company_profile = self._query_ch_api(self.company_url, company_number)
 
         return company_profile
+
+if __name__ == '__main__':
+    from dotenv import load_dotenv
+    import os
+    load_dotenv()
+    API_KEY = os.getenv("CH_API_KEY")
+    client = CompaniesHouseService(API_KEY)
+
+    client.get_first_company_search('Excel')

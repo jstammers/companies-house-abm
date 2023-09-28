@@ -1,0 +1,20 @@
+# Here you can define all your data sets by using simple YAML syntax.
+#
+# Documentation for this file format can be found in "The Data Catalog"
+# Link: https://docs.kedro.org/en/stable/data/data_catalog.html
+"bulk_data":
+  type: PartitionedDataSet
+  dataset: earningsai.ixbrl_dataset.IXBRLDataSet
+  path: data/01_raw/${globals:timestamp}
+  filename_suffix: .html
+
+
+"earnings_report_{date}_{sic}_{timestamp}":
+  filepath: data/01_raw/{date}/Prod223_3517_{sic}_{timestamp}.html
+  type: pandas.GenericDataSet
+  file_format: html
+
+"combined_records":
+  type: pandas.CSVDataSet
+  filepath: data/02_intermediate/combined_records_${globals:timestamp}.csv
+

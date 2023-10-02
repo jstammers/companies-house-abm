@@ -1297,14 +1297,12 @@ arrow = ">=0.15.0"
 
 [[package]]
 name = "ixbrlparse"
-version = "0.7.2"
+version = "0.8.0"
 description = "A python module for getting useful data out of ixbrl files."
 optional = false
 python-versions = ">=3.8"
-files = [
-    {file = "ixbrlparse-0.7.2-py3-none-any.whl", hash = "sha256:3a0f454dfc6084d6b59358a280069e2577b762a11fabafc6087a83843c441463"},
-    {file = "ixbrlparse-0.7.2.tar.gz", hash = "sha256:625bfeb83e90227b7c1d4092191f3a61b63d4cbdd22db863f285f14610b0d75f"},
-]
+files = []
+develop = false
 
 [package.dependencies]
 beautifulsoup4 = "*"
@@ -1315,6 +1313,12 @@ word2number = "*"
 
 [package.extras]
 docs = ["mkdocs", "mkdocs-material", "mkdocstrings[python]"]
+
+[package.source]
+type = "git"
+url = "https://github.com/drkane/ixbrl-parse"
+reference = "v0.8.0"
+resolved_reference = "3a9d0d736cf6569db5747a206449a39989850633"
 
 [[package]]
 name = "jedi"
@@ -4418,4 +4422,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "28d875b34b1a5a7e09dd76e490d09c7ae366d528c1c3c2d0a68f8cad53700dc0"
+content-hash = "b52013e1038ea7a657209c8de318ad33523aafe70c0a937013f393f2c28fcb22"

@@ -5,8 +5,8 @@
 "bulk_data":
   type: PartitionedDataSet
   dataset: earningsai.ixbrl_dataset.IXBRLDataSet
-  path: data/01_raw/${globals:timestamp}
-  filename_suffix: .html
+  path: data/01_raw/${_timestamp}
+#  filename_suffix: .html
 
 
 "earnings_report_{date}_{sic}_{timestamp}":
@@ -16,5 +16,5 @@
 
 "combined_records":
   type: pandas.CSVDataSet
-  filepath: data/02_intermediate/combined_records_${globals:timestamp}.csv
+  filepath: data/02_intermediate/combined_records_${_timestamp}.csv
 

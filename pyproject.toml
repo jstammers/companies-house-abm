@@ -11,3 +11,17 @@ profile = "black"
 fail_under = 0
 show_missing = true
 exclude_lines = ["pragma: no cover", "raise NotImplementedError"]
+
+[tool.poetry]
+name = "earningsai"
+version = "0.1"
+description = ""
+authors = []
+packages = [
+    { include = "earningsai", from = "src" },
+]
+
+[tool.poetry.dependencies]
+jupyter = "^1.0.0"
+python = "^3.7"
+duckdb = "^0.9.2"

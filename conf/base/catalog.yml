@@ -15,6 +15,6 @@
   file_format: html
 
 "combined_records":
-  type: pandas.CSVDataSet
-  filepath: data/02_intermediate/combined_records_${_timestamp}.csv
+  type: pandas.ParquetDataSet
+  filepath: data/02_intermediate/combined_records_${_timestamp}.parquet
 

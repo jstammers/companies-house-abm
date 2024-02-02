@@ -12,6 +12,10 @@ fail_under = 0
 show_missing = true
 exclude_lines = ["pragma: no cover", "raise NotImplementedError"]
 
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
 [tool.poetry]
 name = "earningsai"
 version = "0.1"
@@ -21,7 +25,46 @@ packages = [
     { include = "earningsai", from = "src" },
 ]
 
+[project.scripts]
+earningsai = "earningsai.__main__:main"
+
 [tool.poetry.dependencies]
-jupyter = "^1.0.0"
-python = "^3.7"
+python = "^3.10"
+pandas = "^2.1.0"
+requests = "^2.31.0"
+python-dotenv = "^1.0.0"
+kedro = "0.18.14"
+langchain = "^0.0.301"
+unstructured = "^0.10.16"
+tiktoken = "^0.5.1"
+html5lib = "^1.1"
+ixbrlparse = {git = "https://github.com/drkane/ixbrl-parse", rev = "v0.8.0"}
+arelle-release = ">=2.22"
+polars = "^0.19.7"
+kedro-datasets = "^1.8.0"
+fast-xbrl-parser = {git = "https://github.com/TiesdeKok/fast_xbrl_parser"}
 duckdb = "^0.9.2"
+pyarrow = "^14.0.1"
+werkzeug = "^3.0.1"
+ipython = "^8.17.2"
+jupyter = "^1.0.0"
+duckdb-engine = "^0.9.2"
+matplotlib = "^3.8.2"
+arelle = "^2.2"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.1"
+
+[project.optional-dependencies]
+docs = [
+    "docutils<0.18.0",
+    "sphinx~=3.4.3",
+    "sphinx_rtd_theme==0.5.1",
+    "nbsphinx==0.8.1",
+    "nbstripout~=0.4",
+    "sphinx-autodoc-typehints==1.11.1",
+    "sphinx_copybutton==0.3.1",
+    "ipykernel>=5.3, <7.0",
+    "Jinja2<3.1.0",
+    "myst-parser~=0.17.2",
+]

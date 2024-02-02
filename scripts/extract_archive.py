@@ -65,6 +65,7 @@ def main():
     bootstrap_project(project_path=PROJECT_PATH.as_posix())
     for zipfile in INPUT_PATH.glob("*.zip"):
         process_zip(zipfile, PROJECT_PATH, EXTRACT_DIR, OUTPUT_DIR)
+    # num_workers = 4
     # with multiprocessing.Pool(num_workers) as pool:
     #     pool.starmap(process_zip,
     #                  [(zipfile, PROJECT_PATH, EXTRACT_DIR, OUTPUT_DIR) for zipfile in

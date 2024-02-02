@@ -3,18 +3,25 @@
 # Documentation for this file format can be found in "The Data Catalog"
 # Link: https://docs.kedro.org/en/stable/data/data_catalog.html
 "bulk_data":
-  type: PartitionedDataSet
+  type: PartitionedDataset
   dataset: earningsai.ixbrl_dataset.IXBRLDataSet
   path: data/01_raw/${_timestamp}
 #  filename_suffix: .html
 
 
 "earnings_report_{date}_{sic}_{timestamp}":
-  filepath: data/01_raw/{date}/Prod223_3517_{sic}_{timestamp}.html
+  filepath: data/01_raw/{date}/Prod223_3517_{sic}_{_timestamp}.html
   type: pandas.GenericDataSet
   file_format: html
 
-"combined_records":
-  type: pandas.ParquetDataSet
-  filepath: data/02_intermediate/combined_records_${_timestamp}.parquet
+#"combined_records":
+#  type: pandas.ParquetDataset
+#  filepath: data/02_intermediate/combined_records_${_timestamp}.parquet
 
+taxonomy:
+  type: pandas.CSVDataSet
+  filepath: data/02_intermediate/taxonomy.csv
+
+"combined_records_{timestamp}":
+  type: pandas.ParquetDataSet
+  filepath: data/03_primary/combined_records/combined_records_Accounts_Monthly_Data-{timestamp}.parquet

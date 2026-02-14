@@ -1,0 +1,2984 @@
+{
+  "factTable": [
+    [
+      "linkRole",
+      {
+        "role": "http://www.xbrl-uk.org/ExtendedLinkRoles/AE-Balance-Sheet",
+        "definition": "AE Balance Sheet"
+      },
+      {},
+      [
+        "facts",
+        {
+          "concept": "uk-gaap-pt:BalanceSheet"
+        },
+        {},
+        [
+          "facts",
+          {
+            "concept": "uk-gaap-ae:BalanceSheet-AuditExemptFormat"
+          },
+          {},
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-pt:ShareholderFunds"
+            },
+            {
+              "e2013": "364,452",
+              "e2014": "614,573"
+            },
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:EquityShareholdersFunds"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:NonEquityShareholdersFunds"
+              },
+              {}
+            ]
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-pt:CapitalReserves"
+            },
+            {},
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:CalledUpShareCapital"
+              },
+              {
+                "e2013": "600",
+                "e2014": "600"
+              }
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:ProfitLossAccountReserve"
+              },
+              {
+                "e2013": "363,852",
+                "e2014": "613,973"
+              }
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:RevaluationReserve"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:SharePremiumAccount"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:OtherAggregateReserves"
+              },
+              {}
+            ]
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-pt:NetAssetsLiabilitiesIncludingPensionAssetLiability"
+            },
+            {
+              "e2013": "364,452",
+              "e2014": "614,573"
+            },
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:AccrualsDeferredIncome"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:ProvisionsForLiabilitiesCharges"
+              },
+              {},
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:ProvisionsForTaxationIncludingDeferredTaxation"
+                },
+                {}
+              ]
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:CreditorsDueAfterOneYearTotalNoncurrentLiabilities"
+              },
+              {
+                "e2013": "590,529",
+                "e2014": "527,929"
+              },
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:BankLoansOverdraftsAfterOneYear"
+                },
+                {}
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:ObligationsUnderFinanceLeaseHirePurchaseContractsAfterOneYear"
+                },
+                {}
+              ]
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:TotalAssetsLessCurrentLiabilities"
+              },
+              {
+                "e2013": "954,981",
+                "e2014": "1,142,502"
+              },
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:NetCurrentAssetsLiabilities"
+                },
+                {
+                  "e2013": "389,598",
+                  "e2014": "38,749"
+                },
+                [
+                  "facts",
+                  {
+                    "concept": "uk-gaap-pt:CreditorsDueWithinOneYearTotalCurrentLiabilities"
+                  },
+                  {
+                    "e2013": "77,412",
+                    "e2014": "89,651"
+                  }
+                ],
+                [
+                  "facts",
+                  {
+                    "concept": "uk-gaap-pt:PrepaymentsAccruedIncomeNotExpressedWithinCurrentAssetSub-total"
+                  },
+                  {}
+                ],
+                [
+                  "facts",
+                  {
+                    "concept": "uk-gaap-pt:CurrentAssets"
+                  },
+                  {
+                    "e2013": "467,010",
+                    "e2014": "128,400"
+                  },
+                  [
+                    "facts",
+                    {
+                      "concept": "uk-gaap-pt:Debtors"
+                    },
+                    {
+                      "e2013": "414,420",
+                      "e2014": "16,878"
+                    }
+                  ],
+                  [
+                    "facts",
+                    {
+                      "concept": "uk-gaap-pt:StocksInventory"
+                    },
+                    {
+                      "e2013": "1,238",
+                      "e2014": "1,958"
+                    }
+                  ],
+                  [
+                    "facts",
+                    {
+                      "concept": "uk-gaap-pt:InvestmentsCurrentAssets"
+                    },
+                    {}
+                  ],
+                  [
+                    "facts",
+                    {
+                      "concept": "uk-gaap-pt:CashBankInHand"
+                    },
+                    {
+                      "e2013": "51,352",
+                      "e2014": "109,564"
+                    }
+                  ]
+                ]
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:FixedAssets"
+                },
+                {
+                  "e2013": "565,383",
+                  "e2014": "1,103,753"
+                },
+                [
+                  "facts",
+                  {
+                    "concept": "uk-gaap-pt:TangibleFixedAssets"
+                  },
+                  {
+                    "e2013": "565,383",
+                    "e2014": "1,103,753"
+                  }
+                ],
+                [
+                  "facts",
+                  {
+                    "concept": "uk-gaap-pt:IntangibleFixedAssets"
+                  },
+                  {}
+                ],
+                [
+                  "facts",
+                  {
+                    "concept": "uk-gaap-pt:TotalInvestmentsFixedAssets"
+                  },
+                  {}
+                ],
+                [
+                  "facts",
+                  {
+                    "concept": "uk-gaap-pt:InvestmentProperties"
+                  },
+                  {}
+                ]
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:CalledUpShareCapitalNotPaidNotExpressedAsCurrentAsset"
+                },
+                {}
+              ]
+            ]
+          ]
+        ],
+        [
+          "facts",
+          {
+            "concept": "uk-gaap-ae:BalanceSheetDeclarations"
+          },
+          {},
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:CompanyEntitledToExemptionUnderSection249A1CompaniesAct1985"
+            },
+            {}
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:CompanyEntitledToExemptionUnderSection249AA1CompaniesAct1985"
+            },
+            {}
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:MembersHaveNotRequiredCompanyToObtainAnAudit"
+            },
+            {
+              "y2014": "true"
+            }
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:DirectorsAcknowledgeTheirResponsibilitiesUnderCompaniesAct"
+            },
+            {
+              "y2014": "true"
+            }
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:AccountsAreInAccordanceWithSpecialProvisionsCompaniesActRelatingToSmallCompanies"
+            },
+            {
+              "y2014": "true"
+            }
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:CompanyEntitledToExemptionUnderSection477CompaniesAct2006"
+            },
+            {
+              "y2014": "true"
+            }
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:CompanyEntitledToExemptionUnderSection480CompaniesAct2006"
+            },
+            {}
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:AbridgedAccountsStatement"
+            },
+            {}
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:CompanyHasActedAsAnAgentDuringPeriod"
+            },
+            {}
+          ]
+        ],
+        [
+          "facts",
+          {
+            "concept": "uk-gaap-pt:ApprovalByBoard"
+          },
+          {},
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-pt:DateApproval"
+            },
+            {
+              "e2014": "2015-04-30"
+            }
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-pt:NameApprovingDirector"
+            },
+            {}
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-pt:AdditionalApprovingPerson"
+            },
+            {},
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:PositionAdditionalApprovingPerson"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:NameAdditionalApprovingPerson"
+              },
+              {}
+            ]
+          ]
+        ],
+        [
+          "facts",
+          {
+            "concept": "uk-gaap-ae:DateAccountsReceived"
+          },
+          {
+            "e2014": "2015-04-30"
+          }
+        ]
+      ]
+    ],
+    [
+      "linkRole",
+      {
+        "role": "http://www.xbrl-uk.org/ExtendedLinkRoles/AE-Directors-Report",
+        "definition": "AE Directors' Report"
+      },
+      {},
+      [
+        "facts",
+        {
+          "concept": "uk-gaap-ae:DirectorsReport"
+        },
+        {},
+        [
+          "facts",
+          {
+            "concept": "uk-gcd:EntityBusinessDescription"
+          },
+          {}
+        ],
+        [
+          "facts",
+          {
+            "concept": "uk-gaap-ae:DateApprovalDirectorsReport"
+          },
+          {}
+        ],
+        [
+          "facts",
+          {
+            "concept": "uk-gaap-ae:DirectorsReportGeneralText"
+          },
+          {}
+        ],
+        [
+          "facts",
+          {
+            "concept": "uk-gaap-ae:PoliticalCharitableDonationsText"
+          },
+          {}
+        ],
+        [
+          "facts",
+          {
+            "concept": "uk-gaap-ae:CompanyDormant"
+          },
+          {}
+        ],
+        [
+          "facts",
+          {
+            "concept": "uk-gaap-ae:CompanyNotDormant"
+          },
+          {
+            "y2014": "true"
+          }
+        ],
+        [
+          "facts",
+          {
+            "concept": "uk-gaap-ae:CompanyNon-trading"
+          },
+          {}
+        ],
+        [
+          "facts",
+          {
+            "concept": "uk-gaap-ae:ListDirectorsExecutives"
+          },
+          {},
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-pt:DirectorOrExecutivesName"
+            },
+            {}
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-pt:DateAssumedPosition"
+            },
+            {}
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:DateResignation"
+            },
+            {}
+          ]
+        ],
+        [
+          "facts",
+          {
+            "concept": "uk-gaap-ae:CompanySecretarysName"
+          },
+          {}
+        ],
+        [
+          "facts",
+          {
+            "concept": "uk-gaap-ae:DirectorShareholding"
+          },
+          {},
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-pt:DirectorOrExecutivesName"
+            },
+            {}
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:Shareholding"
+            },
+            {},
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:DescriptionSharesOrDebentures"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:SharesDirectorOrExecutive"
+              },
+              {}
+            ]
+          ]
+        ],
+        [
+          "facts",
+          {
+            "concept": "uk-gaap-ae:DirectorsShareCapitalFreeTextNote"
+          },
+          {}
+        ],
+        [
+          "facts",
+          {
+            "concept": "uk-gaap-ae:DirectorsReportFreeTextNote"
+          },
+          {}
+        ],
+        [
+          "facts",
+          {
+            "concept": "uk-gaap-ae:AccountsAreInAccordanceWithPartVIICompaniesActRelatingToSmallCompanies"
+          },
+          {}
+        ],
+        [
+          "facts",
+          {
+            "concept": "uk-gaap-ae:AccountsAreInAccordanceWithSpecialProvisionsCompaniesActRelatingToSmallCompanies-DirectorsReport"
+          },
+          {}
+        ],
+        [
+          "facts",
+          {
+            "concept": "uk-gaap-ae:ApprovalDirectorsReport"
+          },
+          {},
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:NamePersonApprovingDirectorsReport"
+            },
+            {}
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:PositionPersonApprovingDirectorsReport"
+            },
+            {}
+          ]
+        ],
+        [
+          "facts",
+          {
+            "concept": "uk-gaap-ae:DateAccountsReceived"
+          },
+          {
+            "e2014": "2015-04-30"
+          }
+        ]
+      ]
+    ],
+    [
+      "linkRole",
+      {
+        "role": "http://www.xbrl-uk.org/ExtendedLinkRoles/AE-Income-Statement",
+        "definition": "AE Income Statement"
+      },
+      {},
+      [
+        "facts",
+        {
+          "concept": "uk-gaap-pt:IncomeStatement"
+        },
+        {},
+        [
+          "facts",
+          {
+            "concept": "uk-gaap-pt:ProfitLossAccountReserve"
+          },
+          {
+            "e2013": "363,852",
+            "e2014": "613,973"
+          }
+        ],
+        [
+          "facts",
+          {
+            "concept": "uk-gaap-pt:ProfitLossAccountReserve"
+          },
+          {
+            "y2014": "363,852"
+          }
+        ],
+        [
+          "facts",
+          {
+            "concept": "uk-gaap-pt:RetainedProfitLossForFinancialYearTransferredToReserves"
+          },
+          {},
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-pt:GrossDividendPayment-AllShares"
+            },
+            {}
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-pt:ProfitLossOnOrdinaryActivitiesAfterTax"
+            },
+            {},
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:TaxRelatedToProfitOrLossOnOrdinaryActivities"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:ProfitLossOnOrdinaryActivitiesBeforeTax"
+              },
+              {},
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:TotalInterestPayableReceivableNet"
+                },
+                {}
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:TotalOperatingProfitLoss"
+                },
+                {},
+                [
+                  "facts",
+                  {
+                    "concept": "uk-gaap-pt:AdministrativeExpenses"
+                  },
+                  {}
+                ],
+                [
+                  "facts",
+                  {
+                    "concept": "uk-gaap-pt:DistributionCosts"
+                  },
+                  {}
+                ],
+                [
+                  "facts",
+                  {
+                    "concept": "uk-gaap-pt:GrossProfitLoss"
+                  },
+                  {},
+                  [
+                    "facts",
+                    {
+                      "concept": "uk-gaap-pt:CostSales"
+                    },
+                    {}
+                  ],
+                  [
+                    "facts",
+                    {
+                      "concept": "uk-gaap-pt:TurnoverGrossOperatingRevenue"
+                    },
+                    {}
+                  ]
+                ]
+              ]
+            ]
+          ]
+        ]
+      ]
+    ],
+    [
+      "linkRole",
+      {
+        "role": "http://www.xbrl-uk.org/ExtendedLinkRoles/AE-Notes-to-Accounts",
+        "definition": "AE Notes To Accounts"
+      },
+      {},
+      [
+        "facts",
+        {
+          "concept": "uk-gaap-pt:NotesToFinancialStatementsDetailedDisclosures"
+        },
+        {},
+        [
+          "facts",
+          {
+            "concept": "uk-gaap-ae:AccountingPolicies"
+          },
+          {},
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:AccountingPolicySubTitle"
+            },
+            {}
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:AccountsPreparedUnderHistoricalCostConventionInAccordanceWithFRSE"
+            },
+            {}
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:AccountsPreparedUnderHistoricalCostConventionInAccordanceWithFRSSE05"
+            },
+            {}
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:FRSSEVersionDate"
+            },
+            {}
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:AccountingPolicy"
+            },
+            {},
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-ae:TitleAccountingPolicy"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-ae:ContentAccountingPolicy"
+              },
+              {}
+            ]
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:DepreciationRate"
+            },
+            {},
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-ae:CategoryItem"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-ae:TypeDepreciation"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-ae:RateDepreciation"
+              },
+              {}
+            ]
+          ]
+        ],
+        [
+          "facts",
+          {
+            "concept": "uk-gaap-ae:ForeignExchangeRate"
+          },
+          {}
+        ],
+        [
+          "facts",
+          {
+            "concept": "uk-gaap-ae:ChargesBeforeOperatingProfit"
+          },
+          {},
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-pt:DepreciationAmountsWrittenOffFixedAssets"
+            },
+            {}
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-pt:OperatingLeaseExpenditure"
+            },
+            {}
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-pt:TotalFeesToAuditors"
+            },
+            {}
+          ]
+        ],
+        [
+          "facts",
+          {
+            "concept": "uk-gaap-pt:TaxRelatedToProfitOrLossOnOrdinaryActivities"
+          },
+          {},
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-pt:TotalUKCurrentCorporationTax"
+            },
+            {}
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-pt:TotalDeferredTax"
+            },
+            {}
+          ]
+        ],
+        [
+          "facts",
+          {
+            "concept": "uk-gaap-pt:TangibleFixedAssetsAnalysis"
+          },
+          {},
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-pt:TotalTangibleFixedAssetsAnalysis"
+            },
+            {},
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:CostOrValuationTangibleFixedAssets"
+              },
+              {},
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:TangibleFixedAssetsCostOrValuation"
+                },
+                {
+                  "y2014": "577,642"
+                }
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:TangibleFixedAssetsAdditions"
+                },
+                {
+                  "y2014": "553,357"
+                }
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:TangibleFixedAssetsDisposals"
+                },
+                {
+                  "y2014": "-10,938"
+                }
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:TangibleFixedAssetsIncreaseDecreaseFromRevaluations"
+                },
+                {}
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:TangibleFixedAssetsIncreaseDecreaseFromTransfersBetweenItems"
+                },
+                {}
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:TangibleFixedAssetsCostOrValuation"
+                },
+                {
+                  "e2013": "577,642",
+                  "e2014": "1,120,061"
+                }
+              ]
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:DepreciationTangibleFixedAssets"
+              },
+              {},
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:TangibleFixedAssetsDepreciation"
+                },
+                {
+                  "y2014": "12,259"
+                }
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:TangibleFixedAssetsDepreciationChargeForPeriod"
+                },
+                {
+                  "y2014": "4,049"
+                }
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:TangibleFixedAssetsDepreciationDisposals"
+                },
+                {}
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:TangibleFixedAssetsDepreciationIncreaseDecreaseFromTransfersBetweenItems"
+                },
+                {}
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-ae:TangibleFixedAssetsDepreciationOtherAdjustments"
+                },
+                {}
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:TangibleFixedAssetsDepreciation"
+                },
+                {
+                  "e2013": "12,259",
+                  "e2014": "16,308"
+                }
+              ]
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:TangibleFixedAssets"
+              },
+              {
+                "e2013": "565,383",
+                "e2014": "1,103,753"
+              }
+            ]
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-pt:LandBuildingsAnalysis"
+            },
+            {},
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:CostOrValuationLandBuildings"
+              },
+              {},
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:LandBuildingsCostOrValuation"
+                },
+                {}
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:LandBuildingsAdditions"
+                },
+                {}
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:LandBuildingsDisposals"
+                },
+                {}
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:LandBuildingsIncreaseDecreaseFromRevaluations"
+                },
+                {}
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:LandBuildingsIncreaseDecreaseFromTransfersBetweenItems"
+                },
+                {}
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:LandBuildingsCostOrValuation"
+                },
+                {}
+              ]
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:DepreciationLandBuildings"
+              },
+              {},
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:LandBuildingsDepreciation"
+                },
+                {}
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:LandBuildingsDepreciationChargeForPeriod"
+                },
+                {}
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:LandBuildingsDepreciationDisposals"
+                },
+                {}
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:LandBuildingsDepreciationIncreaseDecreaseFromTransfersBetweenItems"
+                },
+                {}
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-ae:LandBuildingsDepreciationOtherAdjustments"
+                },
+                {}
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:LandBuildingsDepreciation"
+                },
+                {}
+              ]
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:LandBuildings"
+              },
+              {}
+            ]
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-pt:PlantMachineryAnalysis"
+            },
+            {},
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:CostOrValuationPlantMachinery"
+              },
+              {},
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:PlantMachineryCostOrValuation"
+                },
+                {}
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:PlantMachineryAdditions"
+                },
+                {}
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:PlantMachineryDisposals"
+                },
+                {}
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:PlantMachineryIncreaseDecreaseFromRevaluations"
+                },
+                {}
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:PlantMachineryIncreaseDecreaseFromTransfersBetweenItems"
+                },
+                {}
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:PlantMachineryCostOrValuation"
+                },
+                {}
+              ]
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:DepreciationPlantMachinery"
+              },
+              {},
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:PlantMachineryDepreciation"
+                },
+                {}
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:PlantMachineryDepreciationChargeForPeriod"
+                },
+                {}
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:PlantMachineryDepreciationDisposals"
+                },
+                {}
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:PlantMachineryDepreciationIncreaseDecreaseFromTransfersBetweenItems"
+                },
+                {}
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-ae:PlantMachineryDepreciationOtherAdjustments"
+                },
+                {}
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:PlantMachineryDepreciation"
+                },
+                {}
+              ]
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:PlantMachinery"
+              },
+              {}
+            ]
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-pt:FixturesFittingsToolsEquipmentAnalysis"
+            },
+            {},
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:CostOrValuationFixturesFittingsToolsEquipment"
+              },
+              {},
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:FixturesFittingsToolsEquipmentCostOrValuation"
+                },
+                {}
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:FixturesFittingsToolsEquipmentAdditions"
+                },
+                {}
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:FixturesFittingsToolsEquipmentDisposals"
+                },
+                {}
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:FixturesFittingsToolsEquipmentIncreaseDecreaseFromRevaluations"
+                },
+                {}
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:FixturesFittingsToolsEquipmentIncreaseDecreaseFromTransfersBetweenItems"
+                },
+                {}
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:FixturesFittingsToolsEquipmentCostOrValuation"
+                },
+                {}
+              ]
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:DepreciationFixturesFittingsToolsEquipment"
+              },
+              {},
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:FixturesFittingsToolsEquipmentDepreciation"
+                },
+                {}
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:FixturesFittingsToolsEquipmentDepreciationChargeForPeriod"
+                },
+                {}
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:FixturesFittingsToolsEquipmentDepreciationDisposals"
+                },
+                {}
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:FixturesFittingsToolsEquipmentDepreciationIncreaseDecreaseFromTransfersBetweenItems"
+                },
+                {}
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-ae:FixturesFittingsToolsEquipmentDepreciationOtherAdjustments"
+                },
+                {}
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:FixturesFittingsToolsEquipmentDepreciation"
+                },
+                {}
+              ]
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:FixturesFittingsToolsEquipment"
+              },
+              {}
+            ]
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:OtherTypeTangibleFixedAsset-Analysis"
+            },
+            {},
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-ae:NameTypeTangibleFixedAsset"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-ae:CostOrValuationOtherTangibleFixedAsset"
+              },
+              {},
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-ae:OtherTangibleFixedAssetCostOrValuation"
+                },
+                {}
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-ae:OtherTangibleFixedAssetAdditions"
+                },
+                {}
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-ae:OtherTangibleFixedAssetDisposals"
+                },
+                {}
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-ae:OtherTangibleFixedAssetRevaluation"
+                },
+                {}
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-ae:OtherTangibleFixedAssetTransfers"
+                },
+                {}
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-ae:OtherTangibleFixedAssetCostOrValuation"
+                },
+                {}
+              ]
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-ae:DepreciationOtherTangibleFixedAsset"
+              },
+              {},
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-ae:OtherTangibleFixedAssetDepreciation"
+                },
+                {}
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-ae:OtherTangibleFixedAssetDepreciationChargeForPeriod"
+                },
+                {}
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-ae:OtherTangibleFixedAssetDepreciationDisposals"
+                },
+                {}
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-ae:OtherTangibleFixedAssetDepreciationTransfers"
+                },
+                {}
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-ae:OtherTangibleFixedAssetDepreciationOtherAdjustments"
+                },
+                {}
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-ae:OtherTangibleFixedAssetDepreciation"
+                },
+                {}
+              ]
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-ae:OtherTangibleFixedAsset"
+              },
+              {}
+            ]
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:TangibleAssetsFreeTextNote"
+            },
+            {
+              "e2014": "(reported)"
+            }
+          ]
+        ],
+        [
+          "facts",
+          {
+            "concept": "uk-gaap-pt:IntangibleFixedAssetsAnalysis"
+          },
+          {},
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-pt:IntangibleFixedAssetsCostOrValuation"
+            },
+            {}
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-pt:IntangibleFixedAssetsAdditions"
+            },
+            {}
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-pt:IntangibleFixedAssetsDisposals"
+            },
+            {}
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:IntangibleFixedAssetsRevaluation"
+            },
+            {}
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-pt:IntangibleFixedAssetsIncreaseDecreaseFromTransfersBetweenItems"
+            },
+            {}
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-pt:AmortisationImpairmentIntangibleFixedAssets"
+            },
+            {},
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:IntangibleFixedAssetsAggregateAmortisationImpairment"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:IntangibleFixedAssetsAmortisationChargedInPeriod"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:IntangibleFixedAssetsAmortisationOnDisposals"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:IntangibleFixedAssetsAmortisationIncreaseDecreaseFromTransfersBetweenItems"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-ae:IntangibleFixedAssetsAmortisationOtherAdjustments"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:IntangibleFixedAssetsAggregateAmortisationImpairment"
+              },
+              {}
+            ]
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-pt:IntangibleFixedAssets"
+            },
+            {}
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:IntangibleAssetsFreeTextNote"
+            },
+            {
+              "e2014": "(reported)"
+            }
+          ]
+        ],
+        [
+          "facts",
+          {
+            "concept": "uk-gaap-pt:TotalFixedAssetInvestmentsAnalysis"
+          },
+          {},
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-pt:CostOrValuationTotalFixedAssetInvestments"
+            },
+            {},
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:TotalFixedAssetInvestmentsCostOrValuation"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:TotalFixedAssetInvestmentsAdditions"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:TotalFixedAssetInvestmentsDisposals"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-ae:InvestmentsFixedAssetsRevaluations"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-ae:InvestmentsFixedAssetsIncreaseDecreaseFromTransfersBetweenItems"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:TotalFixedAssetInvestmentsCostOrValuation"
+              },
+              {}
+            ]
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:DepreciationTotalFixedAssetInvestments"
+            },
+            {},
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-ae:InvestmentsFixedAssetsDepreciation"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-ae:InvestmentsFixedAssetsDepreciationChargedInPeriod"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-ae:InvestmentsFixedAssetsDepreciationOnDisposals"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-ae:InvestmentsFixedAssetsDepreciationOnTransfers"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-ae:InvestmentsFixedAssetsDepreciationOtherAdjustments"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-ae:InvestmentsFixedAssetsDepreciation"
+              },
+              {}
+            ]
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:InvestmentsFixedAssetsFreeTextNote"
+            },
+            {
+              "e2014": "(reported)"
+            }
+          ]
+        ],
+        [
+          "facts",
+          {
+            "concept": "uk-gaap-ae:InvestmentPropertiesAnalysis"
+          },
+          {},
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:CostOrValuationInvestmentProperties"
+            },
+            {},
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:InvestmentPropertiesCostOrValuation"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:InvestmentPropertiesAdditions"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:InvestmentPropertiesDisposals"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:InvestmentPropertiesIncreaseDecreaseFromRevaluations"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:InvestmentPropertiesIncreaseDecreaseFromTransfersBetweenItems"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:InvestmentPropertiesCostOrValuation"
+              },
+              {}
+            ]
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:DepreciationInvestmentProperties"
+            },
+            {},
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:InvestmentPropertiesDepreciation"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:InvestmentPropertiesDepreciationChargeForPeriod"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:InvestmentPropertiesDepreciationDisposals"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:InvestmentPropertiesDepreciationIncreaseDecreaseFromTransfersBetweenItems"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-ae:InvestmentPropertyDepreciationOtherAdjustments"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:InvestmentPropertiesDepreciation"
+              },
+              {}
+            ]
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:InvestmentPropertyFreeTextNote"
+            },
+            {}
+          ]
+        ],
+        [
+          "facts",
+          {
+            "concept": "uk-gaap-ae:TotalFixedAssetsAnalysis"
+          },
+          {},
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:CostOrValuationTotalFixedAssets"
+            },
+            {},
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-ae:TotalFixedAssetsCostOrValuation"
+              },
+              {
+                "y2014": "577,642"
+              }
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-ae:TotalFixedAssetsAdditions"
+              },
+              {
+                "y2014": "553,357"
+              }
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-ae:TotalFixedAssetsDisposals"
+              },
+              {
+                "y2014": "-10,938"
+              }
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-ae:TotalFixedAssetsRevaluation"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-ae:TotalFixedAssetsIncreaseDecreaseFromTransfersBetweenItems"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-ae:TotalFixedAssetsCostOrValuation"
+              },
+              {
+                "e2013": "577,642",
+                "e2014": "1,120,061"
+              }
+            ]
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:DepreciationTotalFixedAssets"
+            },
+            {},
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-ae:TotalFixedAssetsDepreciation"
+              },
+              {
+                "y2014": "12,259"
+              }
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-ae:TotalFixedAssetsDepreciationChargeInPeriod"
+              },
+              {
+                "y2014": "4,049"
+              }
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-ae:TotalFixedAssetsDepreciationDisposals"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-ae:TotalFixedAssetsDepreciationOnTransfers"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-ae:TotalFixedAssetsDepreciationOtherAdjustments"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-ae:TotalFixedAssetsDepreciation"
+              },
+              {
+                "e2013": "12,259",
+                "e2014": "16,308"
+              }
+            ]
+          ]
+        ],
+        [
+          "facts",
+          {
+            "concept": "uk-gaap-ae:TotalFixedAssetsFreeTextNote"
+          },
+          {
+            "e2014": "(reported)"
+          }
+        ],
+        [
+          "facts",
+          {
+            "concept": "uk-gaap-pt:Debtors"
+          },
+          {
+            "e2013": "414,420",
+            "e2014": "16,878"
+          },
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-pt:TradeDebtors"
+            },
+            {}
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-pt:OtherDebtors"
+            },
+            {}
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-pt:PrepaymentsAccruedIncomeCurrentAsset"
+            },
+            {}
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-pt:CalledUpShareCapitalNotPaidCurrentAsset"
+            },
+            {}
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:DebtorsFreeTextNote"
+            },
+            {}
+          ]
+        ],
+        [
+          "facts",
+          {
+            "concept": "uk-gaap-pt:CreditorsDueWithinOneYearTotalCurrentLiabilities"
+          },
+          {
+            "e2013": "77,412",
+            "e2014": "89,651"
+          },
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-pt:BankLoansOverdraftsWithinOneYear"
+            },
+            {}
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-pt:TradeCreditorsWithinOneYear"
+            },
+            {}
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-pt:AccrualsDeferredIncomeWithinOneYear"
+            },
+            {}
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-pt:TaxationSocialSecurityDueWithinOneYear"
+            },
+            {}
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-pt:OtherCreditorsDueWithinOneYear"
+            },
+            {}
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:CreditorsDueWithinOneYearFreeTextNote"
+            },
+            {}
+          ]
+        ],
+        [
+          "facts",
+          {
+            "concept": "uk-gaap-pt:CreditorsDueAfterOneYearTotalNoncurrentLiabilities"
+          },
+          {
+            "e2013": "590,529",
+            "e2014": "527,929"
+          },
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-pt:BankLoansOverdraftsAfterOneYear"
+            },
+            {}
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-pt:ObligationsUnderFinanceLeaseHirePurchaseContractsAfterOneYear"
+            },
+            {}
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:LoansFromDirectors"
+            },
+            {}
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-pt:OtherCreditorsAfterOneYear"
+            },
+            {}
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:CreditorsDueAfterOneYearFreeTextNote"
+            },
+            {
+              "e2014": "(reported)"
+            }
+          ]
+        ],
+        [
+          "facts",
+          {
+            "concept": "uk-gaap-ae:AggregateCreditorsFreeTextNote"
+          },
+          {}
+        ],
+        [
+          "facts",
+          {
+            "concept": "uk-gaap-pt:CalledUpShareCapitalAnalysis"
+          },
+          {},
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-pt:ShareCapitalAuthorised"
+            },
+            {},
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:EquityAuthorised"
+              },
+              {},
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:EquityAuthorisedDetails"
+                },
+                {},
+                [
+                  "facts",
+                  {
+                    "concept": "uk-gaap-pt:TypeOrdinaryShare"
+                  },
+                  {}
+                ],
+                [
+                  "facts",
+                  {
+                    "concept": "uk-gaap-pt:ParValueOrdinaryShare"
+                  },
+                  {}
+                ],
+                [
+                  "facts",
+                  {
+                    "concept": "uk-gaap-pt:NumberOrdinarySharesAuthorised"
+                  },
+                  {}
+                ],
+                [
+                  "facts",
+                  {
+                    "concept": "uk-gaap-pt:ValueOrdinarySharesAuthorised"
+                  },
+                  {}
+                ]
+              ]
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:NonEquityAuthorised"
+              },
+              {},
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:NonEquityAuthorisedDetails"
+                },
+                {},
+                [
+                  "facts",
+                  {
+                    "concept": "uk-gaap-pt:TypeNonEquityShare"
+                  },
+                  {}
+                ],
+                [
+                  "facts",
+                  {
+                    "concept": "uk-gaap-pt:ParValueNonEquityShare"
+                  },
+                  {}
+                ],
+                [
+                  "facts",
+                  {
+                    "concept": "uk-gaap-pt:NumberNonEquitySharesAuthorised"
+                  },
+                  {}
+                ],
+                [
+                  "facts",
+                  {
+                    "concept": "uk-gaap-pt:ValueNonEquitySharesAuthorised"
+                  },
+                  {}
+                ]
+              ]
+            ]
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-pt:ShareCapitalAllottedCalledUpFullyPaid"
+            },
+            {},
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:EquityAllotted"
+              },
+              {},
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:DetailsOrdinarySharesAllotted"
+                },
+                {},
+                [
+                  "facts",
+                  {
+                    "concept": "uk-gaap-pt:TypeOrdinaryShare"
+                  },
+                  {}
+                ],
+                [
+                  "facts",
+                  {
+                    "concept": "uk-gaap-pt:ParValueOrdinaryShare"
+                  },
+                  {}
+                ],
+                [
+                  "facts",
+                  {
+                    "concept": "uk-gaap-pt:NumberOrdinarySharesAllotted"
+                  },
+                  {}
+                ],
+                [
+                  "facts",
+                  {
+                    "concept": "uk-gaap-pt:ValueOrdinarySharesAllotted"
+                  },
+                  {}
+                ]
+              ]
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:NonEquityAllotted"
+              },
+              {},
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:NonEquityAllottedDetails"
+                },
+                {},
+                [
+                  "facts",
+                  {
+                    "concept": "uk-gaap-pt:TypeNonEquityShare"
+                  },
+                  {}
+                ],
+                [
+                  "facts",
+                  {
+                    "concept": "uk-gaap-pt:ParValueNonEquityShare"
+                  },
+                  {}
+                ],
+                [
+                  "facts",
+                  {
+                    "concept": "uk-gaap-pt:NumberNonEquitySharesAllotted"
+                  },
+                  {}
+                ],
+                [
+                  "facts",
+                  {
+                    "concept": "uk-gaap-pt:ValueNonEquitySharesAllotted"
+                  },
+                  {}
+                ]
+              ]
+            ]
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-pt:OrdinarySharesIssuedInPeriod-Analysis"
+            },
+            {},
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:OrdinarySharesIssuedInPeriod-Details"
+              },
+              {},
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:TypeOrdinaryShare"
+                },
+                {}
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:ParValueOrdinaryShare"
+                },
+                {}
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:TotalNumberSharesIssued"
+                },
+                {}
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:TotalNominalValue"
+                },
+                {}
+              ],
+              [
+                "facts",
+                {
+                  "concept": "uk-gaap-pt:TotalConsideration"
+                },
+                {}
+              ]
+            ]
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-pt:NonEquitySharesDetailsAllotmentsDuringPeriod"
+            },
+            {},
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:TypeNonEquityShare"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:ParValueNonEquityShare"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:NumberNonEquitySharesAllottedInPeriod"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:ValueNonEquitySharesAllottedInPeriod"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:ConsiderationForNonEquitySharesAllottedInPeriod"
+              },
+              {}
+            ]
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:RedeemableShareDetails"
+            },
+            {},
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-ae:RedeemableSharesFreeTextNote"
+              },
+              {}
+            ]
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:ShareCapitalFreeTextNote"
+            },
+            {
+              "e2014": "(reported)"
+            }
+          ]
+        ],
+        [
+          "facts",
+          {
+            "concept": "uk-gaap-ae:CreditorsDueAfterOneYearAnalysis"
+          },
+          {},
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:InstalmentDebtsFallingDueAfter5Years"
+            },
+            {}
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:Non-InstalmentDebtsFallingDueAfter5Years"
+            },
+            {}
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:SecuredDebts"
+            },
+            {}
+          ]
+        ],
+        [
+          "facts",
+          {
+            "concept": "uk-gaap-pt:DividendsAnalysis"
+          },
+          {},
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-pt:GrossDividendPayment-AllShares"
+            },
+            {},
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:EquitySharesTotalDividendPayment"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gaap-pt:NonEquitySharesTotalDividendPayment"
+              },
+              {}
+            ]
+          ]
+        ],
+        [
+          "facts",
+          {
+            "concept": "uk-gaap-ae:ProfitLossAccount"
+          },
+          {},
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-pt:ProfitLossAccountReserve"
+            },
+            {
+              "y2014": "363,852"
+            }
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-pt:RetainedProfitLossForFinancialYearTransferredToReserves"
+            },
+            {}
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-pt:ProfitLossAccountReserve"
+            },
+            {
+              "e2013": "363,852",
+              "e2014": "613,973"
+            }
+          ]
+        ],
+        [
+          "facts",
+          {
+            "concept": "uk-gaap-pt:RelatedPartyDisclosures"
+          },
+          {},
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-pt:StatementOnRelatedPartyDisclosure"
+            },
+            {}
+          ]
+        ],
+        [
+          "facts",
+          {
+            "concept": "uk-gaap-ae:TransactionsWithDirectors"
+          },
+          {}
+        ],
+        [
+          "facts",
+          {
+            "concept": "uk-gaap-ae:TransactionWithDirector"
+          },
+          {},
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:DirectorsName"
+            },
+            {}
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:DirectorsLiability"
+            },
+            {}
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:DirectorsMaximumLiability"
+            },
+            {}
+          ]
+        ],
+        [
+          "facts",
+          {
+            "concept": "uk-gaap-ae:ReportHeading"
+          },
+          {}
+        ],
+        [
+          "facts",
+          {
+            "concept": "uk-gaap-ae:DisplayTotalCreditorsNote"
+          },
+          {}
+        ]
+      ]
+    ],
+    [
+      "linkRole",
+      {
+        "role": "http://www.xbrl-uk.org/ExtendedLinkRoles/AE-Standard-Information",
+        "definition": "AE Standard Information"
+      },
+      {},
+      [
+        "facts",
+        {
+          "concept": "uk-gcd:StandardInformation"
+        },
+        {},
+        [
+          "facts",
+          {
+            "concept": "uk-gaap-ae:CompanyIdentifyingNumbers"
+          },
+          {},
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:CompaniesHouseRegisteredNumber"
+            },
+            {}
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:VATRegistrationNumber"
+            },
+            {}
+          ]
+        ],
+        [
+          "facts",
+          {
+            "concept": "uk-gcd:EntityCurrentLegalName"
+          },
+          {}
+        ],
+        [
+          "facts",
+          {
+            "concept": "uk-gaap-ae:CompaniesHouseDocumentAuthentication"
+          },
+          {
+            "y2014": "      "
+          }
+        ],
+        [
+          "facts",
+          {
+            "concept": "uk-gcd:BalanceSheetDate"
+          },
+          {}
+        ],
+        [
+          "facts",
+          {
+            "concept": "uk-gaap-ae:RegisteredOfficeAddress"
+          },
+          {},
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:AddressCH"
+            },
+            {},
+            [
+              "facts",
+              {
+                "concept": "uk-gcd:AddressLine1"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gcd:AddressLine2"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gcd:AddressLine3"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gcd:CityOrTown"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gcd:County"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gcd:Postcode"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gcd:Country"
+              },
+              {}
+            ]
+          ]
+        ],
+        [
+          "facts",
+          {
+            "concept": "uk-gaap-ae:BusinessAddress"
+          },
+          {},
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:DescriptionBusinessAddress"
+            },
+            {}
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:AddressCH"
+            },
+            {},
+            [
+              "facts",
+              {
+                "concept": "uk-gcd:AddressLine1"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gcd:AddressLine2"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gcd:AddressLine3"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gcd:CityOrTown"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gcd:County"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gcd:Postcode"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gcd:Country"
+              },
+              {}
+            ]
+          ]
+        ],
+        [
+          "facts",
+          {
+            "concept": "uk-gaap-ae:ReportingAccountants"
+          },
+          {},
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:NameAccountants"
+            },
+            {}
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:DescriptionAccountants"
+            },
+            {}
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:AddressCH"
+            },
+            {},
+            [
+              "facts",
+              {
+                "concept": "uk-gcd:AddressLine1"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gcd:AddressLine2"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gcd:AddressLine3"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gcd:CityOrTown"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gcd:County"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gcd:Postcode"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gcd:Country"
+              },
+              {}
+            ]
+          ]
+        ],
+        [
+          "facts",
+          {
+            "concept": "uk-gaap-ae:Bankers"
+          },
+          {},
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:NameBankers"
+            },
+            {}
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:AddressCH"
+            },
+            {},
+            [
+              "facts",
+              {
+                "concept": "uk-gcd:AddressLine1"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gcd:AddressLine2"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gcd:AddressLine3"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gcd:CityOrTown"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gcd:County"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gcd:Postcode"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gcd:Country"
+              },
+              {}
+            ]
+          ]
+        ],
+        [
+          "facts",
+          {
+            "concept": "uk-gaap-ae:Solicitors"
+          },
+          {},
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:NameSolicitors"
+            },
+            {}
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gaap-ae:AddressCH"
+            },
+            {},
+            [
+              "facts",
+              {
+                "concept": "uk-gcd:AddressLine1"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gcd:AddressLine2"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gcd:AddressLine3"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gcd:CityOrTown"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gcd:County"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gcd:Postcode"
+              },
+              {}
+            ],
+            [
+              "facts",
+              {
+                "concept": "uk-gcd:Country"
+              },
+              {}
+            ]
+          ]
+        ],
+        [
+          "facts",
+          {
+            "concept": "uk-gcd:DocumentInformation"
+          },
+          {},
+          [
+            "facts",
+            {
+              "concept": "uk-gcd:DocumentVersionNumber"
+            },
+            {}
+          ],
+          [
+            "facts",
+            {
+              "concept": "uk-gcd:DocumentLastEditDate"
+            },
+            {}
+          ]
+        ]
+      ]
+    ]
+  ]
+}

@@ -14,9 +14,9 @@
   type: pandas.GenericDataSet
   file_format: html
 
-#"combined_records":
-#  type: pandas.ParquetDataset
-#  filepath: data/02_intermediate/combined_records_${_timestamp}.parquet
+"combined_records":
+  type: pandas.ParquetDataset
+  filepath: data/02_intermediate/combined_records_${_timestamp}.parquet
 
 taxonomy:
   type: pandas.CSVDataSet

@@ -27,3 +27,4 @@ con.close()
 
 con = duckdb.connect(database=db_path, read_only=True)
 con.execute("CREATE TABLE IF NOT EXISTS companies AS SELECT * FROM read_csv('data/03_primary/BasicCompanyDataAsOneFile-2023-11-01.csv', AUTO_DETECT=TRUE)")
+con.execute("CREATE OR REPLACE TABLE accounts_deduped as (SELECT * FROM accounts WHERE (instant::date = filing_date::date) OR (filing_date::date BETWEEN startdate AND enddate))")

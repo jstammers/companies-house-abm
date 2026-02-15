@@ -60,5 +60,9 @@ markdown_extensions:
 
 nav:
   - Home: index.md
+  - Model Design:
+      - Architecture: abm_architecture.md
+      - Model Description (ODD+D): model_description.md
+      - Implementation Roadmap: roadmap.md
   - API Reference: api.md
   - Contributing: contributing.md

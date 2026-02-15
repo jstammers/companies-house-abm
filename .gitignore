@@ -148,3 +148,9 @@ Thumbs.db
 # Data files
 data/
 *.parquet
+
+# Rust
+/target
+Cargo.lock
+*.rs.bk
+*.pdb

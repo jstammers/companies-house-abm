@@ -1,0 +1,45 @@
+# Rust Workspace for UK Economy ABM (Future Implementation)
+#
+# This workspace is a placeholder for Phase 3 of the implementation roadmap.
+# It will contain:
+#   - core: Simulation engine library (krabmaga-based)
+#   - pyo3_bindings: Python bindings via PyO3
+#   - cli: Optional Rust CLI tool
+#
+# To build (when implemented):
+#   cargo build --release
+#
+# To build Python extension (when implemented):
+#   maturin develop --release
+
+[workspace]
+members = [
+    # "rust/core",
+    # "rust/pyo3_bindings",
+    # "rust/cli",
+]
+
+# Workspace-level dependencies (to be shared by members)
+[workspace.dependencies]
+# krabmaga = "0.3"
+# petgraph = "0.6"
+# rand = "0.8"
+# rand_distr = "0.4"
+# serde = { version = "1.0", features = ["derive"] }
+# serde_json = "1.0"
+# rayon = "1.8"
+# pyo3 = { version = "0.20", features = ["extension-module"] }
+# arrow2 = "0.18"
+
+# Workspace-level profile settings
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+
+[profile.dev]
+opt-level = 0
+
+# Note: This Cargo.toml is a placeholder and will not build until
+# the member crates are implemented. See docs/rust_integration.md
+# for the detailed implementation plan.

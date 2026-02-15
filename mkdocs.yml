@@ -60,5 +60,7 @@ markdown_extensions:
 
 nav:
   - Home: index.md
+  - ABM Design: abm-design.md
+  - Implementation Roadmap: implementation-roadmap.md
   - API Reference: api.md
   - Contributing: contributing.md

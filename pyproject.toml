@@ -1,70 +1,167 @@
-[tool.kedro]
-package_name = "earningsai"
-project_name = "earningsai"
-kedro_init_version = "0.18.13"
-
-[tool.isort]
-profile = "black"
-
-
-[tool.coverage.report]
-fail_under = 0
-show_missing = true
-exclude_lines = ["pragma: no cover", "raise NotImplementedError"]
-
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
-[tool.poetry]
-name = "earningsai"
-version = "0.1"
-description = ""
-authors = []
-packages = [
-    { include = "earningsai", from = "src" },
+[project]
+name = "companies_house_abm"
+version = "0.1.0"
+description = "Agent-Based Modelling using Companies House Account Data"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.13"
+authors = [
+    { name = "jstammers", email = "jimmy.stammers@gmail.com" },
 ]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Typing :: Typed",
+]
+keywords = []
+dependencies = [
+    "polars>=1.38.1",
+    "stream-read-xbrl>=0.1.1",
+    "typer>=0.12.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.0",
+    "pytest-cov>=7.0.0",
+    "ruff>=0.14.14",
+    "ty>=0.0.14",
+    "hatch>=1.16.3",
+    "prek>=0.1.0",
+    "pysentry-rs>=0.1.0",
+]
+docs = [
+    "mkdocs>=1.6.0",
+    "mkdocs-material>=9.7.0",
+    "mkdocstrings-python>=2.0.1",
+]
+
+[project.urls]
+Homepage = "https://github.com/jstammers/companies-house-abm"
+Documentation = "https://jstammers.github.io/companies-house-abm"
+Repository = "https://github.com/jstammers/companies-house-abm"
+Issues = "https://github.com/jstammers/companies-house-abm/issues"
+Changelog = "https://github.com/jstammers/companies-house-abm/blob/main/CHANGELOG.md"
 
 [project.scripts]
-earningsai = "earningsai.__main__:main"
+companies_house_abm = "companies_house_abm.cli:app"
 
-[tool.poetry.dependencies]
-python = "^3.10"
-pandas = "^2.1.0"
-requests = "^2.31.0"
-python-dotenv = "^1.0.0"
-kedro = "0.18.14"
-langchain = "^0.0.301"
-unstructured = "^0.10.16"
-tiktoken = "^0.5.1"
-html5lib = "^1.1"
-ixbrlparse = {git = "https://github.com/drkane/ixbrl-parse", rev = "v0.8.0"}
-arelle-release = ">=2.22"
-polars = "^0.19.7"
-kedro-datasets = "^1.8.0"
-fast-xbrl-parser = {git = "https://github.com/TiesdeKok/fast_xbrl_parser"}
-duckdb = "^0.9.2"
-pyarrow = "^14.0.1"
-werkzeug = "^3.0.1"
-ipython = "^8.17.2"
-jupyter = "^1.0.0"
-duckdb-engine = "^0.9.2"
-matplotlib = "^3.8.2"
-arelle = "^2.2"
+# =============================================================================
+# Hatch
+# =============================================================================
 
-[tool.poetry.group.dev.dependencies]
-pytest = "^7.4.1"
-
-[project.optional-dependencies]
-docs = [
-    "docutils<0.18.0",
-    "sphinx~=3.4.3",
-    "sphinx_rtd_theme==0.5.1",
-    "nbsphinx==0.8.1",
-    "nbstripout~=0.4",
-    "sphinx-autodoc-typehints==1.11.1",
-    "sphinx_copybutton==0.3.1",
-    "ipykernel>=5.3, <7.0",
-    "Jinja2<3.1.0",
-    "myst-parser~=0.17.2",
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
 ]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/companies_house_abm"]
+
+# Matrix testing across Python versions
+[tool.hatch.envs.test]
+
+[[tool.hatch.envs.test.matrix]]
+python = ["3.10", "3.11", "3.12", "3.13"]
+
+# =============================================================================
+# Ruff
+# =============================================================================
+
+[tool.ruff]
+target-version = "py313"
+line-length = 88
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # Pyflakes
+    "I",      # isort
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "UP",     # pyupgrade
+    "ARG",    # flake8-unused-arguments
+    "SIM",    # flake8-simplify
+    "TCH",    # flake8-type-checking
+    "PTH",    # flake8-use-pathlib
+    "ERA",    # eradicate
+    "RUF",    # Ruff-specific rules
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["companies_house_abm"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["ARG001"]
+
+# =============================================================================
+# ty (Astral type checker)
+# =============================================================================
+
+[tool.ty.src]
+root = "."
+include = ["src/", "tests/"]
+
+[tool.ty.rules]
+# Polars stubs don't fully align with ty's inference yet
+invalid-assignment = "ignore"
+unresolved-attribute = "warn"
+not-subscriptable = "ignore"
+
+# =============================================================================
+# Pytest
+# =============================================================================
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = [
+    "-ra",
+    "-q",
+    "--strict-markers",
+    "--strict-config",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+]
+
+# =============================================================================
+# Coverage
+# =============================================================================
+
+[tool.coverage.run]
+source = ["src/companies_house_abm"]
+branch = true
+parallel = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+]
+show_missing = true
+
+# =============================================================================
+# git-cliff (Changelog generation)
+# =============================================================================
+
+[tool.git-cliff]
+config = "cliff.toml"

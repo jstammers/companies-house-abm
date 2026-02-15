@@ -1,122 +1,102 @@
-# eai
+# Companies House ABM
 
-## Overview
+[![CI](https://github.com/jstammers/companies-house-abm/actions/workflows/ci.yml/badge.svg)](https://github.com/jstammers/companies-house-abm/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/jstammers/companies-house-abm/branch/main/graph/badge.svg)](https://codecov.io/gh/jstammers/companies-house-abm)
+[![Python 3.13+](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org/downloads/)
+[![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![ty](https://img.shields.io/badge/type--checked-ty-blue?labelColor=orange)](https://github.com/astral-sh/ty)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/jstammers/companies-house-abm/blob/main/LICENSE)
 
-This is your new Kedro project, which was generated using `kedro 0.18.13`.
+Agent-Based Modelling using Companies House Account Data
 
-Take a look at the [Kedro documentation](https://docs.kedro.org) to get started.
+## Features
 
-## Rules and guidelines
+- Fast and modern Python toolchain using Astral's tools (uv, ruff, ty)
+- Type-safe with full type annotations
+- Command-line interface built with Typer
+- Comprehensive documentation with MkDocs — [View Docs](https://jstammers.github.io/companies-house-abm/)
 
-In order to get the best out of the template:
+## Installation
 
-* Don't remove any lines from the `.gitignore` file we provide
-* Make sure your results can be reproduced by following a data engineering convention
-* Don't commit data to your repository
-* Don't commit any credentials or your local configuration to your repository. Keep all your credentials and local configuration in `conf/local/`
-
-## How to install dependencies
-
-Declare any dependencies in `src/requirements.txt` for `pip` installation and `src/environment.yml` for `conda` installation.
-
-To install them, run:
-
-```
-pip install -r src/requirements.txt
+```bash
+pip install companies_house_abm
 ```
 
-## How to run your Kedro pipeline
+Or using uv (recommended):
 
-You can run your Kedro project with:
-
-```
-kedro run
+```bash
+uv add companies_house_abm
 ```
 
-## How to test your Kedro project
+## Quick Start
 
-Have a look at the file `src/tests/test_run.py` for instructions on how to write your tests. You can run your tests as follows:
+```python
+import companies_house_abm
 
-```
-kedro test
-```
-
-To configure the coverage threshold, go to the `.coveragerc` file.
-
-## Project dependencies
-
-To generate or update the dependency requirements for your project:
-
-```
-kedro build-reqs
+print(companies_house_abm.__version__)
 ```
 
-This will `pip-compile` the contents of `src/requirements.txt` into a new file `src/requirements.lock`. You can see the output of the resolution by opening `src/requirements.lock`.
+### CLI Usage
 
-After this, if you'd like to update your project requirements, please update `src/requirements.txt` and re-run `kedro build-reqs`.
+```bash
+# Show version
+companies_house_abm --version
 
-[Further information about project dependencies](https://docs.kedro.org/en/stable/kedro_project_setup/dependencies.html#project-specific-dependencies)
-
-## How to work with Kedro and notebooks
-
-> Note: Using `kedro jupyter` or `kedro ipython` to run your notebook provides these variables in scope: `context`, `catalog`, and `startup_error`.
->
-> Jupyter, JupyterLab, and IPython are already included in the project requirements by default, so once you have run `pip install -r src/requirements.txt` you will not need to take any extra steps before you use them.
-
-### Jupyter
-To use Jupyter notebooks in your Kedro project, you need to install Jupyter:
-
-```
-pip install jupyter
+# Say hello
+companies_house_abm hello World
 ```
 
-After installing Jupyter, you can start a local notebook server:
+## Development
 
-```
-kedro jupyter notebook
-```
+### Prerequisites
 
-### JupyterLab
-To use JupyterLab, you need to install it:
+- Python 3.13+
+- [uv](https://docs.astral.sh/uv/) for package management
 
-```
-pip install jupyterlab
-```
+### Setup
 
-You can also start JupyterLab:
-
-```
-kedro jupyter lab
+```bash
+git clone https://github.com/jstammers/companies-house-abm.git
+cd companies-house-abm
+make install
 ```
 
-### IPython
-And if you want to run an IPython session:
+### Running Tests
 
-```
-kedro ipython
-```
+```bash
+make test
 
-### How to convert notebook cells to nodes in a Kedro project
-You can move notebook code over into a Kedro project structure using a mixture of [cell tagging](https://jupyter-notebook.readthedocs.io/en/stable/changelog.html#release-5-0-0) and Kedro CLI commands.
+# With coverage
+make test-cov
 
-By adding the `node` tag to a cell and running the command below, the cell's source code will be copied over to a Python file within `src/<package_name>/nodes/`:
-
-```
-kedro jupyter convert <filepath_to_my_notebook>
-```
-> *Note:* The name of the Python file matches the name of the original notebook.
-
-Alternatively, you may want to transform all your notebooks in one go. Run the following command to convert all notebook files found in the project root directory and under any of its sub-folders:
-
-```
-kedro jupyter convert --all
+# Across all Python versions
+make test-matrix
 ```
 
-### How to ignore notebook output cells in `git`
-To automatically strip out all output cell contents before committing to `git`, you can run `kedro activate-nbstripout`. This will add a hook in `.git/config` which will run `nbstripout` before anything is committed to `git`.
+### Code Quality
 
-> *Note:* Your output cells will be retained locally.
+```bash
+# Run all checks (lint, format, type-check)
+make verify
 
-## Package your Kedro project
+# Auto-fix lint and format issues
+make fix
+```
 
-[Further information about building project documentation and packaging your project](https://docs.kedro.org/en/stable/tutorial/package_a_project.html)
+### Prek
+
+```bash
+prek install
+prek run --all-files
+```
+
+### Documentation
+
+```bash
+make docs-serve
+```
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

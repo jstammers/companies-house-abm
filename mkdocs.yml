@@ -64,5 +64,6 @@ nav:
       - Architecture: abm_architecture.md
       - Model Description (ODD+D): model_description.md
       - Implementation Roadmap: roadmap.md
+      - Rust Integration Plan: rust_integration.md
   - API Reference: api.md
   - Contributing: contributing.md

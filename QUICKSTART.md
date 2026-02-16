@@ -41,7 +41,7 @@ src/companies_house_abm/
     ├── markets/           # Market mechanisms (TODO)
     └── README.md          # Module documentation
 
-conf/base/
+config/
 └── model_parameters.yml   # NEW: Model configuration
 
 docs/
@@ -54,7 +54,7 @@ notebooks/
 
 ### 3. Review the Configuration (5 minutes)
 
-Open `conf/base/model_parameters.yml` to see:
+Open `config/model_parameters.yml` to see:
 - Simulation settings (periods, time steps)
 - Agent populations (firms, households, banks)
 - Behavioral parameters (pricing, consumption, lending)
@@ -318,7 +318,7 @@ import yaml
 from pathlib import Path
 
 # Load config
-config_path = Path("conf/base/model_parameters.yml")
+config_path = Path("config/model_parameters.yml")
 with config_path.open() as f:
     config = yaml.safe_load(f)
 

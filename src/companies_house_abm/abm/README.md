@@ -30,7 +30,7 @@ pip install companies_house_abm[abm]
 
 ### 1. Configuration
 
-Model parameters are defined in `conf/base/model_parameters.yml`. You can create local overrides in `conf/local/` (which are gitignored).
+Model parameters are defined in `config/model_parameters.yml`.
 
 ### 2. Initialize Firm Agents from Data
 
@@ -51,7 +51,7 @@ firms = load_firms_from_parquet(
 from companies_house_abm.abm.model import UKEconomyModel
 
 # Initialize the model with configuration
-model = UKEconomyModel(config_path="conf/base/model_parameters.yml")
+model = UKEconomyModel(config_path="config/model_parameters.yml")
 
 # Run simulation for 400 quarters (100 years)
 for i in range(400):

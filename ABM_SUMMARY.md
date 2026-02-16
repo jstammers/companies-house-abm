@@ -58,7 +58,7 @@ src/companies_house_abm/abm/
 
 ### 3. Configuration
 
-#### Model Parameters (`conf/base/model_parameters.yml`) - 8KB
+#### Model Parameters (`config/model_parameters.yml`) - 8KB
 Comprehensive YAML configuration covering:
 
 **Simulation Settings**:
@@ -230,7 +230,7 @@ from companies_house_abm.abm import UKEconomyModel
 from companies_house_abm.abm.initialize import load_firms_from_parquet
 
 # Load configuration
-config_path = "conf/base/model_parameters.yml"
+config_path = "config/model_parameters.yml"
 
 # Initialize model
 model = UKEconomyModel(

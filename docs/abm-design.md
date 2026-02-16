@@ -358,10 +358,10 @@ src/companies_house_abm/
 
 ### 6.3 Configuration System
 
-Use existing Kedro-style config structure:
+Use a simple YAML configuration file:
 
 ```yaml
-# conf/base/model_parameters.yml
+# config/model_parameters.yml
 simulation:
   periods: 400  # 100 years quarterly
   time_step: "quarter"

@@ -376,7 +376,7 @@ class TestCLIIngest:
         assert captured["ingest_data_after_date"] == datetime.date(2024, 6, 1)
 
     def test_help(self):
-        result = runner.invoke(app, ["ingest", "--help"])
+        result = runner.invoke(app, ["ingest", "--help"], color=False)
         assert result.exit_code == 0
         assert "--output" in result.stdout
         assert "--zip-dir" in result.stdout

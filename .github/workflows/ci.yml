@@ -12,6 +12,7 @@ concurrency:
 
 env:
   FORCE_COLOR: "1"
+  RICH_FORCE_TERMINAL: "0"
 
 jobs:
   lint:

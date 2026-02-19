@@ -1,0 +1,213 @@
+# Model Parameters Configuration
+# 
+# This file contains parameters for the agent-based model of the UK economy.
+# Parameters are organized by component and follow conventions from complexity
+# economics and stock-flow consistent modeling literature.
+
+# Simulation settings
+simulation:
+  periods: 400  # Number of time steps (e.g., 400 quarters = 100 years)
+  time_step: "quarter"  # Time unit: "quarter", "month", or "year"
+  seed: 42  # Random seed for reproducibility
+  warm_up_periods: 40  # Number of periods to discard for initial transients
+
+# Agent populations and initialization
+agents:
+  firms:
+    sample_size: 50000  # Number of firm agents (sampled from Companies House data)
+    sampling_strategy: "stratified"  # "stratified" by sector/size or "random"
+    sectors:  # Sector classifications (can map to SIC codes)
+      - "agriculture"
+      - "manufacturing"
+      - "construction"
+      - "wholesale_retail"
+      - "transport"
+      - "hospitality"
+      - "information_communication"
+      - "financial"
+      - "professional_services"
+      - "public_admin"
+      - "education"
+      - "health"
+      - "other_services"
+    size_classes:  # Based on number of employees
+      micro: [0, 9]
+      small: [10, 49]
+      medium: [50, 249]
+      large: [250, 999999]
+    entry_rate: 0.02  # Proportion of firms entering per period (gross)
+    exit_threshold: -0.5  # Equity/assets ratio triggering bankruptcy
+    
+  households:
+    count: 10000  # Number of household agents
+    income_distribution: "lognormal"  # Distribution type
+    income_mean: 35000  # Annual income mean (GBP)
+    income_std: 15000  # Annual income standard deviation
+    wealth_distribution: "pareto"  # Wealth distribution
+    wealth_shape: 1.5  # Pareto alpha parameter
+    mpc_mean: 0.8  # Mean marginal propensity to consume
+    mpc_std: 0.1  # Std dev of MPC across households
+    
+  banks:
+    count: 10  # Number of banking agents
+    capital_requirement: 0.10  # Regulatory capital ratio (Basel III)
+    reserve_requirement: 0.01  # Required reserves as fraction of deposits
+    risk_weight: 1.0  # Risk weight for standard loans
+    
+  central_bank:
+    exists: true  # Whether to include central bank agent
+    
+  government:
+    exists: true  # Whether to include government agent
+
+# Behavioral parameters
+behavior:
+  firms:
+    price_markup: 0.15  # Average markup over unit costs
+    markup_adjustment_speed: 0.1  # Speed of markup adaptation
+    inventory_target_ratio: 0.2  # Target inventory as fraction of expected sales
+    capacity_utilization_target: 0.85  # Desired capacity utilization
+    investment_sensitivity: 2.0  # Sensitivity of investment to profitability
+    wage_adjustment_speed: 0.05  # Speed of wage adjustments
+    
+  households:
+    job_search_intensity: 0.3  # Fraction of unemployed searching per period
+    reservation_wage_ratio: 0.9  # Reservation wage as fraction of market wage
+    consumption_smoothing: 0.7  # Weight on permanent vs current income
+    
+  banks:
+    base_interest_markup: 0.02  # Markup over policy rate for loans
+    risk_premium_sensitivity: 0.05  # How risk affects interest rates
+    lending_threshold: 0.3  # Minimum debt service coverage ratio
+    capital_buffer: 0.02  # Buffer above regulatory minimum
+
+# Market mechanisms
+markets:
+  goods:
+    market_structure: "monopolistic_competition"  # Or "perfect_competition"
+    price_adjustment_speed: 0.1  # Speed of price adjustments
+    quantity_adjustment_speed: 0.3  # Speed of production adjustments
+    search_intensity: 0.5  # Consumer search effort
+    
+  labor:
+    wage_stickiness: 0.8  # Persistence of nominal wages (0=flexible, 1=rigid)
+    matching_efficiency: 0.3  # Efficiency of job matching process
+    separation_rate: 0.05  # Exogenous job separation rate
+    phillips_curve_slope: -0.5  # Wage response to unemployment gap
+    
+  credit:
+    rationing: true  # Whether credit rationing can occur
+    collateral_requirement: 0.5  # Required collateral as fraction of loan
+    default_rate_base: 0.01  # Base default probability
+    
+  interbank:
+    active: true  # Whether interbank market operates
+    overnight_rate_spread: 0.001  # Spread around policy rate
+
+# Policy rules and parameters
+policy:
+  central_bank:
+    taylor_rule:
+      active: true
+      inflation_target: 0.02  # 2% annual inflation target
+      inflation_coefficient: 1.5  # Response to inflation gap (>1 for stability)
+      output_gap_coefficient: 0.5  # Response to output gap
+      interest_rate_smoothing: 0.8  # Degree of interest rate smoothing
+      lower_bound: 0.001  # Effective lower bound (0.1%)
+    quantitative_easing:
+      active: false
+      asset_purchases: 0.0  # As fraction of GDP per period
+      
+  government:
+    fiscal_rule:
+      active: true
+      spending_gdp_ratio: 0.40  # Government spending as fraction of GDP
+      tax_rate_corporate: 0.19  # Corporate tax rate
+      tax_rate_income_base: 0.20  # Base income tax rate
+      tax_progressivity: 0.1  # Progressive tax parameter
+      deficit_target: 0.03  # Target deficit as fraction of GDP
+      deficit_adjustment_speed: 0.1  # Fiscal adjustment speed
+    transfers:
+      unemployment_benefit_ratio: 0.4  # Replacement rate for unemployed
+      pension_ratio: 0.3  # Pension as fraction of average wage
+    automatic_stabilizers: true  # Whether automatic stabilizers are active
+
+# Network structure
+networks:
+  supply_chain:
+    type: "input_output"  # "input_output", "random", "scale_free"
+    io_table_source: "ons"  # Use ONS input-output tables
+    rewiring_probability: 0.01  # Rate of supply chain relationship changes
+    
+  credit:
+    type: "preferential_attachment"  # How bank-firm links form
+    average_degree: 2  # Average number of bank relationships per firm
+    concentration: 0.3  # Degree of concentration in lending
+
+# Shocks and scenarios
+shocks:
+  demand_shock:
+    active: false
+    period: 100
+    magnitude: -0.1  # -10% demand shock
+    duration: 4  # Number of periods
+    
+  productivity_shock:
+    active: false
+    period: 150
+    magnitude: 0.05  # +5% productivity shock
+    sectors: ["all"]  # Or list specific sectors
+    
+  financial_shock:
+    active: false
+    period: 200
+    type: "credit_crunch"  # "credit_crunch", "bank_failure"
+    magnitude: 0.5  # Reduction in credit availability
+    
+  policy_change:
+    active: false
+    period: 250
+    type: "interest_rate"  # "interest_rate", "government_spending", "tax_rate"
+    new_value: 0.05
+
+# Output and data collection
+output:
+  collect_micro_data: true  # Whether to save individual agent data
+  collection_frequency: 1  # Collect data every N periods
+  aggregate_statistics:
+    - "gdp"
+    - "unemployment_rate"
+    - "inflation"
+    - "wage_growth"
+    - "interest_rate"
+    - "government_deficit"
+    - "bank_capital_ratio"
+    - "firm_bankruptcies"
+  distributional_statistics:
+    - "firm_size_distribution"
+    - "firm_growth_distribution"
+    - "income_inequality"
+    - "wealth_inequality"
+  network_statistics:
+    - "supply_chain_centrality"
+    - "credit_network_density"
+    - "systemic_risk_index"
+
+# Validation targets (UK data for calibration)
+validation:
+  gdp_growth_mean: 0.005  # Quarterly GDP growth (~2% annual)
+  gdp_growth_std: 0.01  # Volatility of GDP growth
+  unemployment_mean: 0.045  # Average unemployment rate (4.5%)
+  inflation_mean: 0.02  # Target inflation (2%)
+  inflation_std: 0.005  # Inflation volatility
+  firm_size_pareto_alpha: 1.06  # Zipf exponent for firm size distribution
+  wage_share: 0.55  # Labor share of income
+  investment_gdp_ratio: 0.17  # Investment as fraction of GDP
+  government_debt_gdp: 0.85  # Government debt to GDP ratio
+  
+# Technical settings
+technical:
+  scheduler_type: "staged_activation"  # "random", "staged_activation", "simultaneous"
+  numerical_tolerance: 1e-6  # Tolerance for stock-flow consistency checks
+  max_iterations: 100  # Max iterations for market clearing algorithms
+  logging_level: "INFO"  # "DEBUG", "INFO", "WARNING", "ERROR"

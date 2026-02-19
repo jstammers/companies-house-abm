@@ -1,0 +1,226 @@
+[
+  {
+    "backend": "python",
+    "n_firms": 10,
+    "n_households": 50,
+    "n_banks": 3,
+    "total_agents": 63,
+    "periods": 10,
+    "reps": 3,
+    "median_s": 0.0010704429998895648,
+    "median_ms_per_period": 0.10704429998895648,
+    "all_times_s": [
+      0.0013054989999545796,
+      0.0010704429998895648,
+      0.0010503259998131398
+    ]
+  },
+  {
+    "backend": "rust",
+    "n_firms": 10,
+    "n_households": 50,
+    "n_banks": 3,
+    "total_agents": 63,
+    "periods": 10,
+    "reps": 3,
+    "median_s": 0.0001275170000099024,
+    "median_ms_per_period": 0.01275170000099024,
+    "all_times_s": [
+      0.00018122999995284772,
+      0.0001275170000099024,
+      0.00011423699993429182
+    ]
+  },
+  {
+    "backend": "python",
+    "n_firms": 25,
+    "n_households": 125,
+    "n_banks": 5,
+    "total_agents": 155,
+    "periods": 10,
+    "reps": 3,
+    "median_s": 0.0036917779998475453,
+    "median_ms_per_period": 0.36917779998475453,
+    "all_times_s": [
+      0.003915982000080476,
+      0.0036917779998475453,
+      0.0020219949999500386
+    ]
+  },
+  {
+    "backend": "rust",
+    "n_firms": 25,
+    "n_households": 125,
+    "n_banks": 5,
+    "total_agents": 155,
+    "periods": 10,
+    "reps": 3,
+    "median_s": 0.00016363100007765752,
+    "median_ms_per_period": 0.016363100007765752,
+    "all_times_s": [
+      0.00022867999996378785,
+      0.00016363100007765752,
+      0.000154235000081826
+    ]
+  },
+  {
+    "backend": "python",
+    "n_firms": 50,
+    "n_households": 250,
+    "n_banks": 5,
+    "total_agents": 305,
+    "periods": 10,
+    "reps": 3,
+    "median_s": 0.006313724999927217,
+    "median_ms_per_period": 0.6313724999927217,
+    "all_times_s": [
+      0.006313724999927217,
+      0.007323110000015731,
+      0.0038758250000228145
+    ]
+  },
+  {
+    "backend": "rust",
+    "n_firms": 50,
+    "n_households": 250,
+    "n_banks": 5,
+    "total_agents": 305,
+    "periods": 10,
+    "reps": 3,
+    "median_s": 0.0003265720001763839,
+    "median_ms_per_period": 0.03265720001763839,
+    "all_times_s": [
+      0.00039010199998301687,
+      0.0003265720001763839,
+      0.00028720199998133467
+    ]
+  },
+  {
+    "backend": "python",
+    "n_firms": 100,
+    "n_households": 500,
+    "n_banks": 10,
+    "total_agents": 610,
+    "periods": 10,
+    "reps": 3,
+    "median_s": 0.013119034000055763,
+    "median_ms_per_period": 1.3119034000055763,
+    "all_times_s": [
+      0.01435692400013977,
+      0.012754744999938339,
+      0.013119034000055763
+    ]
+  },
+  {
+    "backend": "rust",
+    "n_firms": 100,
+    "n_households": 500,
+    "n_banks": 10,
+    "total_agents": 610,
+    "periods": 10,
+    "reps": 3,
+    "median_s": 0.0009305870000844152,
+    "median_ms_per_period": 0.09305870000844152,
+    "all_times_s": [
+      0.0010685820000162494,
+      0.000916887000130373,
+      0.0009305870000844152
+    ]
+  },
+  {
+    "backend": "python",
+    "n_firms": 200,
+    "n_households": 1000,
+    "n_banks": 10,
+    "total_agents": 1210,
+    "periods": 10,
+    "reps": 3,
+    "median_s": 0.026626275999888094,
+    "median_ms_per_period": 2.6626275999888094,
+    "all_times_s": [
+      0.026626275999888094,
+      0.029301358999873628,
+      0.02370984200001658
+    ]
+  },
+  {
+    "backend": "rust",
+    "n_firms": 200,
+    "n_households": 1000,
+    "n_banks": 10,
+    "total_agents": 1210,
+    "periods": 10,
+    "reps": 3,
+    "median_s": 0.0013064849999864236,
+    "median_ms_per_period": 0.13064849999864236,
+    "all_times_s": [
+      0.0014240549999158247,
+      0.0013064849999864236,
+      0.001274751999972068
+    ]
+  },
+  {
+    "backend": "python",
+    "n_firms": 500,
+    "n_households": 2500,
+    "n_banks": 10,
+    "total_agents": 3010,
+    "periods": 10,
+    "reps": 3,
+    "median_s": 0.041518090999943524,
+    "median_ms_per_period": 4.151809099994352,
+    "all_times_s": [
+      0.041630081999983304,
+      0.041518090999943524,
+      0.03968055599989384
+    ]
+  },
+  {
+    "backend": "rust",
+    "n_firms": 500,
+    "n_households": 2500,
+    "n_banks": 10,
+    "total_agents": 3010,
+    "periods": 10,
+    "reps": 3,
+    "median_s": 0.00445248799996989,
+    "median_ms_per_period": 0.44524879999698896,
+    "all_times_s": [
+      0.005213535999928354,
+      0.003696085999990828,
+      0.00445248799996989
+    ]
+  },
+  {
+    "backend": "python",
+    "n_firms": 1000,
+    "n_households": 5000,
+    "n_banks": 10,
+    "total_agents": 6010,
+    "periods": 10,
+    "reps": 3,
+    "median_s": 0.07847587900005237,
+    "median_ms_per_period": 7.847587900005236,
+    "all_times_s": [
+      0.0935765229999106,
+      0.07792472600021938,
+      0.07847587900005237
+    ]
+  },
+  {
+    "backend": "rust",
+    "n_firms": 1000,
+    "n_households": 5000,
+    "n_banks": 10,
+    "total_agents": 6010,
+    "periods": 10,
+    "reps": 3,
+    "median_s": 0.009372658000074807,
+    "median_ms_per_period": 0.9372658000074807,
+    "all_times_s": [
+      0.009372658000074807,
+      0.008387173000073744,
+      0.009742085999960182
+    ]
+  }
+]

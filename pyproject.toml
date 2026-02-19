@@ -53,6 +53,7 @@ abm = [
     "scipy>=1.11.0",
     "matplotlib>=3.8.0",
     "pyyaml>=6.0.0",
+    "marimo>=0.10.0",
 ]
 
 [project.urls]
@@ -114,6 +115,8 @@ known-first-party = ["companies_house_abm"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["ARG001"]
+# Marimo notebooks use bare expressions to display output
+"notebooks/**/*.py" = ["B018", "E501"]
 
 # =============================================================================
 # ty (Astral type checker)
@@ -126,6 +129,8 @@ include = ["src/", "tests/"]
 [tool.ty.rules]
 # Polars stubs don't fully align with ty's inference yet
 invalid-assignment = "ignore"
+# Dynamic dict unpacking (**kwargs) for YAML config and Polars stubs
+invalid-argument-type = "warn"
 unresolved-attribute = "warn"
 not-subscriptable = "ignore"
 

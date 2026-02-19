@@ -110,5 +110,34 @@ def ingest(
     typer.echo(f"Done. {len(result)} total rows in {output}.")
 
 
+@app.command()
+def serve(
+    host: str = typer.Option(
+        "127.0.0.1", "--host", "-H", help="Host to bind the server to."
+    ),
+    port: int = typer.Option(8000, "--port", "-p", help="Port to bind the server to."),
+    reload: bool = typer.Option(
+        False, "--reload", help="Enable auto-reload for development."
+    ),
+) -> None:
+    """Launch the economy simulator web application."""
+    try:
+        import uvicorn
+    except ImportError:
+        typer.echo(
+            "uvicorn is not installed. Install the ABM extras:\n  uv sync --all-groups",
+            err=True,
+        )
+        raise typer.Exit(code=1) from None
+
+    typer.echo(f"Starting economy simulator at http://{host}:{port}")
+    uvicorn.run(
+        "companies_house_abm.webapp.app:app",
+        host=host,
+        port=port,
+        reload=reload,
+    )
+
+
 if __name__ == "__main__":
     app()

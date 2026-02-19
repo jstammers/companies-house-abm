@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Economy Simulator</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+  <!-- Plotly from CDN — no build step required -->
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" defer></script>
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+
+<header>
+  <h1>Economy <span>Simulator</span></h1>
+  <span class="header-subtitle">Companies House ABM · UK Macroeconomic Model</span>
+</header>
+
+<div class="layout">
+
+  <!-- ── Sidebar ──────────────────────────────────────────────────── -->
+  <aside>
+    <div class="sidebar-inner">
+      <div id="param-groups"></div>
+    </div>
+    <div class="sidebar-actions">
+      <button class="btn-run" id="btn-run">▶ Run Simulation</button>
+      <button class="btn-reset" id="btn-reset">Reset to defaults</button>
+    </div>
+  </aside>
+
+  <!-- ── Main ─────────────────────────────────────────────────────── -->
+  <main>
+
+    <!-- Status bar -->
+    <div class="status-bar">
+      <div class="status-dot" id="status-dot"></div>
+      <span class="status-text" id="status-text">Ready</span>
+      <div class="summary-chips" id="summary-chips"></div>
+    </div>
+
+    <!-- Empty state (shown before first run) -->
+    <div class="empty-state" id="empty-state">
+      <svg width="64" height="64" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="1.5">
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+      </svg>
+      <p>Configure the parameters in the sidebar then click <strong>Run Simulation</strong>.</p>
+    </div>
+
+    <!-- Charts grid (hidden until first run) -->
+    <div class="charts-grid" id="charts-grid"></div>
+
+  </main>
+</div>
+
+</body>
+</html>

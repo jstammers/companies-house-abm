@@ -17,29 +17,47 @@ src/companies_house_abm/     # Production code
 ├── __init__.py               # Package version
 ├── cli.py                    # Typer CLI (ingest, hello, --version)
 ├── ingest.py                 # ETL pipeline: schema, dedup, zip/stream ingest, merge
-└── abm/                      # Agent-based model module (NEW)
-    ├── __init__.py           # ABM package initialization
+└── abm/                      # Agent-based model module
+    ├── __init__.py           # ABM package exports (Simulation, ModelConfig, load_config)
+    ├── config.py             # Dataclass configuration and YAML loader
+    ├── model.py              # Simulation orchestrator
     ├── agents/               # Agent implementations
     │   ├── __init__.py
-    │   └── base.py           # Abstract base agent class
+    │   ├── base.py           # Abstract base agent class
+    │   ├── firm.py           # Firm agent
+    │   ├── household.py      # Household agent
+    │   ├── bank.py           # Bank agent
+    │   ├── central_bank.py   # Central bank agent (Taylor rule)
+    │   └── government.py     # Government agent (fiscal policy)
     ├── markets/              # Market mechanisms
-    │   └── __init__.py
+    │   ├── __init__.py
+    │   ├── base.py           # Abstract base market class
+    │   ├── goods.py          # Goods market
+    │   ├── labor.py          # Labour market
+    │   └── credit.py         # Credit market
     └── README.md             # ABM module documentation
 tests/                        # Pytest test suite
 ├── conftest.py               # Shared fixtures
 ├── test_companies_house_abm.py  # CLI/version tests
-└── test_ingest.py            # Ingest module tests (class-based, ~380 lines)
-config/                       # Configuration files (NEW)
+├── test_ingest.py            # Ingest module tests (class-based, ~380 lines)
+├── test_abm_agents.py        # Agent class tests (~400 lines)
+├── test_abm_markets.py       # Market mechanism tests
+├── test_abm_model.py         # Simulation model tests
+└── test_abm_config.py        # Configuration loading tests
+config/                       # Configuration files
 ├── README.md                 # Configuration usage guide
-└── model_parameters.yml      # ABM model parameters
+└── model_parameters.yml      # ABM model parameters (200+ parameters)
 docs/                         # MkDocs documentation
-├── abm-design.md             # ABM design document (NEW)
-├── implementation-roadmap.md # Development roadmap (NEW)
+├── abm-design.md             # ABM design document
+├── modelling-approach.md     # Implemented modelling approach
 └── ...                       # Other documentation
 scripts/                      # Utility scripts (download, extract, import)
-notebooks/                    # Jupyter analysis notebooks
-├── abm_getting_started.ipynb # ABM tutorial (NEW)
-└── ...                       # Other notebooks
+notebooks/                    # Marimo interactive notebooks
+├── firm_agent.py             # Firm agent explorer
+├── household_agent.py        # Household agent explorer
+├── bank_agent.py             # Bank agent explorer
+├── policy_agents.py          # Central bank & government explorer
+└── ecosystem.py              # Full ecosystem simulation
 .github/workflows/            # CI, docs deployment, release
 ```
 
@@ -266,8 +284,9 @@ Line length is 88. Selected rule sets: `E`, `W`, `F`, `I`, `B`, `C4`, `UP`, `ARG
 
 ### Type Checking Notes
 
-ty has specific rule overrides due to Polars stubs:
+ty has specific rule overrides due to Polars stubs and dynamic YAML loading:
 - `invalid-assignment`: ignored
+- `invalid-argument-type`: warn only (dynamic dict unpacking)
 - `not-subscriptable`: ignored
 - `unresolved-attribute`: warn only
 
@@ -296,42 +315,36 @@ ty has specific rule overrides due to Polars stubs:
 5. Deduplicated (keep last occurrence)
 6. Written to output Parquet file
 
-### ABM module (NEW)
+### ABM module
 
-The agent-based model module (`src/companies_house_abm/abm/`) is designed to simulate UK macroeconomic dynamics using Companies House firm data.
+The agent-based model module (`src/companies_house_abm/abm/`) simulates UK macroeconomic dynamics using Companies House firm data.
 
-**Key Components**:
+**Agents** (`abm/agents/`):
 
-- **`abm/agents/base.py`**: Abstract `BaseAgent` class with:
-  - `step()` method: Execute one time step of agent behavior
-  - `get_state()` method: Return current agent state for logging/analysis
-  - UUID-based unique identifiers
-  - Type-safe design with proper annotations
+- `base.py`: Abstract `BaseAgent` with `step()` and `get_state()` methods
+- `firm.py`: Firm agents — pricing, production, employment, financials
+- `household.py`: Household agents — consumption, saving, labour supply
+- `bank.py`: Bank agents — lending, capital adequacy, risk pricing
+- `central_bank.py`: Central bank — Taylor rule monetary policy
+- `government.py`: Government — taxation, spending, fiscal rule
 
-- **`abm/agents/`**: Agent implementations (planned):
-  - `firm.py`: Firm agents initialized from Companies House data
-  - `household.py`: Household agents for consumption and labor
-  - `bank.py`: Bank agents for credit provision
-  - `central_bank.py`: Central bank for monetary policy
-  - `government.py`: Government for fiscal policy
+**Markets** (`abm/markets/`):
 
-- **`abm/markets/`**: Market mechanisms (planned):
-  - `goods.py`: Goods market with price/quantity adjustment
-  - `labor.py`: Labor market with matching and frictions
-  - `credit.py`: Credit market with risk-based lending
-  - `interbank.py`: Interbank market for liquidity
+- `base.py`: Abstract `BaseMarket` with `clear()` method
+- `goods.py`: Goods market — competitive allocation by price
+- `labor.py`: Labour market — matching with frictions
+- `credit.py`: Credit market — risk-based lending with rationing
 
-**Configuration**:
-- `config/model_parameters.yml`: 200+ parameters for simulation, agents, behaviors, markets, policy rules, networks, and validation targets
-- Simple YAML structure (no Kedro dependency)
-- See `config/README.md` for usage instructions
+**Orchestration**:
 
-**Documentation**:
-- `docs/abm-design.md`: Comprehensive design document (23KB)
-- `docs/implementation-roadmap.md`: 12-month development plan
-- `ABM_SUMMARY.md`: Executive summary
-- `QUICKSTART.md`: Developer onboarding guide
-- `notebooks/abm_getting_started.ipynb`: Interactive tutorial
+- `config.py`: Frozen dataclass configuration loaded from YAML
+- `model.py`: `Simulation` class drives the period-by-period loop
+
+**Configuration**: `config/model_parameters.yml` (200+ parameters)
+
+**Documentation**: `docs/abm-design.md` (design) and `docs/modelling-approach.md` (implementation)
+
+**Notebooks** (`notebooks/`): Marimo interactive notebooks for each agent and the full ecosystem
 
 ## CI Pipeline
 
@@ -398,6 +411,7 @@ Conventional commits are required because the project uses **git-cliff** (`cliff
 - **scipy** (>=1.11.0): Scientific computing and optimization
 - **matplotlib** (>=3.8.0): Visualization
 - **pyyaml** (>=6.0.0): YAML configuration parsing
+- **marimo** (>=0.10.0): Interactive notebook framework
 
 ### Build
 

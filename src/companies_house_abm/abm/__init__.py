@@ -14,7 +14,14 @@ The ABM is inspired by complexity economics and incorporates:
 
 from __future__ import annotations
 
+from companies_house_abm.abm.config import ModelConfig, load_config
+from companies_house_abm.abm.model import Simulation, SimulationResult
+
 __all__ = [
+    "ModelConfig",
+    "Simulation",
+    "SimulationResult",
     "agents",
+    "load_config",
     "markets",
 ]

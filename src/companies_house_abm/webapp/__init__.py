@@ -1,0 +1,1 @@
+"""Economy simulator web application."""

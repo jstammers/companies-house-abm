@@ -1,4 +1,4 @@
-.PHONY: verify fix lint format format-check type-check install test test-cov test-matrix test-matrix-cov pysentry docs docs-serve
+.PHONY: verify fix lint format format-check type-check install test test-cov test-matrix test-matrix-cov pysentry docs docs-serve build-rust benchmark
 
 # Verify - check everything without making changes
 verify: lint format-check type-check
@@ -46,6 +46,14 @@ test-matrix-cov:
 pysentry:
 	uv run pysentry-rs
 
+
+# Build the Rust ABM extension (requires cargo + maturin)
+build-rust:
+	./scripts/build_rust_abm.sh
+
+# Run ABM performance benchmark (Python vs Rust)
+benchmark:
+	uv run --group abm python scripts/run_benchmark.py
 
 # Documentation
 docs:

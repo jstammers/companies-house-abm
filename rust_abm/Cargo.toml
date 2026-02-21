@@ -1,0 +1,19 @@
+[package]
+name = "companies_house_abm_rust"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "_rust_abm"
+crate-type = ["cdylib"]
+
+[dependencies]
+krabmaga = { version = "0.5.3", default-features = false }
+pyo3 = { version = "0.23", features = ["extension-module"] }
+rand = "0.8"
+rand_distr = "0.4"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1

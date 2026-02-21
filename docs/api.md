@@ -104,6 +104,35 @@
       show_root_heading: true
       show_source: true
 
+## Data Sources
+
+### Firm Distributions
+
+::: companies_house_abm.data_sources.firm_distributions
+    options:
+      show_root_heading: true
+      show_source: true
+      members:
+        - SIC_TO_SECTOR
+        - FIRM_FIELD_MAP
+        - CANDIDATE_DISTRIBUTIONS
+        - FieldProfile
+        - DataProfile
+        - FittedDistribution
+        - SectorYearParameters
+        - FirmDistributionSummary
+        - load_accounts
+        - assign_sectors
+        - map_sic_to_sector
+        - profile_accounts
+        - profile_field
+        - fit_distribution
+        - compute_sector_year_parameters
+        - build_summary
+        - save_parameters_yaml
+        - save_parameters_json
+        - run_profile_pipeline
+
 ### Markets
 
 ::: companies_house_abm.abm.markets.goods.GoodsMarket
@@ -111,7 +140,7 @@
       show_root_heading: true
       show_source: true
 
-::: companies_house_abm.abm.markets.labor.LaborMarket
+::: companies_house_abm.abm.markets.Labour.LabourMarket
     options:
       show_root_heading: true
       show_source: true

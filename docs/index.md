@@ -59,6 +59,34 @@ companies_house_abm fetch-data
 # Fetch only ONS and Bank of England data
 companies_house_abm fetch-data --source ons --source boe
 
+# Say hello
+companies_house_abm hello World
+
+# Profile firm data and fit distributions
+companies_house_abm profile-firms \
+    --parquet data/companies_house_accounts.parquet \
+    --output data/firm_distribution_parameters.yml
+
+# Profile with SIC code sector assignment
+companies_house_abm profile-firms \
+    --sic-file data/sic_codes.csv \
+    --sample 0.01
+
+# Output as JSON
+companies_house_abm profile-firms --format json -o data/params.json
+```
+
+### Interactive Notebooks
+
+Marimo notebooks are available in `notebooks/` for interactive exploration:
+
+```bash
+# Firm data analysis (profiling, distributions, parameter export)
+marimo edit notebooks/firm_data_analysis.py
+
+# Individual agent explorers
+marimo edit notebooks/firm_agent.py
+marimo edit notebooks/ecosystem.py
 # Fetch all data and write a calibrated model config
 companies_house_abm fetch-data --calibrate --output ./calibrated/
 ```

@@ -15,7 +15,7 @@ Companies House ABM is a Python library and CLI tool for ingesting and processin
 ```
 src/companies_house_abm/     # Production code
 ├── __init__.py               # Package version
-├── cli.py                    # Typer CLI (ingest, fetch-data, serve, hello, --version)
+├── cli.py                    # Typer CLI (ingest, hello, fetch-data, profile-firms, serve, --version)
 ├── ingest.py                 # ETL pipeline: schema, dedup, zip/stream ingest, merge
 ├── data_sources/             # Public data fetchers for ABM calibration
 │   ├── __init__.py           # Module exports
@@ -48,9 +48,22 @@ src/companies_house_abm/     # Production code
     │   ├── __init__.py
     │   ├── base.py           # Abstract base market class
     │   ├── goods.py          # Goods market
-    │   ├── labor.py          # Labour market
+    │   ├── Labour.py          # Labour market
     │   └── credit.py         # Credit market
     └── README.md             # ABM module documentation
+├── data_sources/             # External data fetching and calibration
+    ├── __init__.py
+    ├── _http.py              # HTTP utilities with retry
+    ├── boe.py                # Bank of England data
+    ├── calibration.py        # Calibration helpers
+    ├── firm_distributions.py # Firm data profiling and distribution fitting
+    ├── hmrc.py               # HMRC tax data
+    └── ons.py                # ONS economic data
+├── webapp/                   # FastAPI web application
+    ├── __init__.py
+    ├── app.py
+    ├── models.py
+    └── static/
 tests/                        # Pytest test suite
 ├── conftest.py               # Shared fixtures
 ├── test_companies_house_abm.py  # CLI/version tests
@@ -59,6 +72,8 @@ tests/                        # Pytest test suite
 ├── test_abm_markets.py       # Market mechanism tests
 ├── test_abm_model.py         # Simulation model tests
 ├── test_abm_config.py        # Configuration loading tests
+├── test_data_sources.py      # Data source and calibration tests
+├── test_firm_distributions.py # Firm profiling and distribution fitting tests
 ├── test_abm_performance.py   # Performance benchmarks for ABM simulation
 └── test_data_sources.py      # Data sources and calibration tests
 config/                       # Configuration files
@@ -373,7 +388,7 @@ The agent-based model module (`src/companies_house_abm/abm/`) simulates UK macro
 
 - `base.py`: Abstract `BaseMarket` with `clear()` method
 - `goods.py`: Goods market — competitive allocation by price
-- `labor.py`: Labour market — matching with frictions
+- `Labour.py`: Labour market — matching with frictions
 - `credit.py`: Credit market — risk-based lending with rationing
 
 **Orchestration**:
@@ -416,7 +431,7 @@ This project uses [Conventional Commits](https://www.conventionalcommits.org/). 
 | `feat` | New feature |
 | `fix` | Bug fix |
 | `docs` | Documentation changes |
-| `refactor` | Code refactoring (no behavior change) |
+| `refactor` | Code refactoring (no Behaviour change) |
 | `test` | Adding or updating tests |
 | `chore` | Maintenance tasks, dependency updates |
 | `perf` | Performance improvements |

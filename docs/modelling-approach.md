@@ -105,7 +105,7 @@ All parameters are stored in `config/model_parameters.yml` and loaded into froze
 |---------|----------|
 | `simulation` | `periods`, `seed`, `warm_up_periods` |
 | `agents.firms` | `sample_size`, `sectors`, `entry_rate` |
-| `behavior.firms` | `price_markup`, `inventory_target_ratio` |
+| `Behaviour.firms` | `price_markup`, `inventory_target_ratio` |
 | `agents.households` | `count`, `mpc_mean`, `income_mean` |
 | `agents.banks` | `count`, `capital_requirement` |
 | `policy.central_bank` | Taylor rule coefficients |

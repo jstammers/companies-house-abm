@@ -14,13 +14,19 @@ repos:
       - id: check-merge-conflict
       - id: debug-statements
 
-  # Ruff - Fast Python linter and formatter
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.8.4
+  # Ruff - use local uv environment so version matches pyproject.toml dev dependency
+  - repo: local
     hooks:
       - id: ruff
-        args: [--fix]
+        name: ruff (lint)
+        entry: uv run ruff check --fix
+        language: system
+        types: [python]
       - id: ruff-format
+        name: ruff (format)
+        entry: uv run ruff format
+        language: system
+        types: [python]
 
   # ty - Astral's type checker (local hook since no prek repo yet)
   - repo: local

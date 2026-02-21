@@ -64,7 +64,7 @@ if __name__ == "__main__":
     rust_available = False
     if not args.no_rust:
         try:
-            import companies_house_abm._rust_abm  # noqa: F401
+            import companies_house_abm._rust_abm  # noqa: F401  # type: ignore[import]
 
             rust_available = True
             print("Rust extension: AVAILABLE")

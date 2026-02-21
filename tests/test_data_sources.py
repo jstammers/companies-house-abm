@@ -505,9 +505,9 @@ class TestOnsInputOutputTable:
             io = fetch_input_output_table()
         for sector, inputs in io["use_coefficients"].items():
             for upstream, coeff in inputs.items():
-                assert (
-                    0.0 <= coeff <= 1.0
-                ), f"Coefficient {sector}←{upstream}={coeff} out of bounds"
+                assert 0.0 <= coeff <= 1.0, (
+                    f"Coefficient {sector}←{upstream}={coeff} out of bounds"
+                )
 
 
 # ---------------------------------------------------------------------------

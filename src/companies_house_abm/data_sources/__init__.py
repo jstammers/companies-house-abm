@@ -33,6 +33,9 @@ from companies_house_abm.data_sources.calibration import (
     calibrate_io_sectors,
     calibrate_model,
 )
+from companies_house_abm.data_sources.firm_distributions import (
+    run_profile_pipeline,
+)
 from companies_house_abm.data_sources.hmrc import (
     get_corporation_tax_rate,
     get_income_tax_bands,
@@ -65,4 +68,5 @@ __all__ = [
     "get_income_tax_bands",
     "get_national_insurance_rates",
     "get_vat_rate",
+    "run_profile_pipeline",
 ]

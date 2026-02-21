@@ -316,6 +316,108 @@ def _write_calibrated_yaml(config: object, path: Path) -> None:
     )
 
 
+@app.command(name="profile-firms")
+def profile_firms(
+    parquet: Annotated[
+        Path,
+        typer.Option(
+            "--parquet",
+            "-p",
+            help="Path to Companies House accounts parquet file.",
+        ),
+    ] = Path("data/companies_house_accounts.parquet"),
+    sic_file: Annotated[
+        Path | None,
+        typer.Option(
+            "--sic-file",
+            "-s",
+            help=(
+                "Path to SIC code lookup (parquet or CSV) with columns "
+                "'companies_house_registered_number' and 'sic_code'."
+            ),
+        ),
+    ] = None,
+    output: Annotated[
+        Path,
+        typer.Option(
+            "--output",
+            "-o",
+            help="Output file for fitted distribution parameters.",
+        ),
+    ] = Path("data/firm_distribution_parameters.yml"),
+    output_format: Annotated[
+        str,
+        typer.Option(
+            "--format",
+            "-f",
+            help="Output format: yaml or json.",
+        ),
+    ] = "yaml",
+    sample: Annotated[
+        float | None,
+        typer.Option(
+            "--sample",
+            help=(
+                "Fraction of data to sample (e.g. 0.01 for 1%%)."
+                " Useful for large datasets."
+            ),
+        ),
+    ] = None,
+) -> None:
+    """Profile firm financial data and fit statistical distributions.
+
+    Analyses Companies House accounts data to generate per-sector,
+    per-financial-year distribution parameters suitable for initialising
+    firm agents in the ABM simulation.
+
+    Examples:
+
+    \\b
+        # Profile all data (may be slow for large datasets)
+        companies_house_abm profile-firms
+
+    \\b
+        # Profile a 1%% sample with SIC code lookup
+        companies_house_abm profile-firms --sample 0.01 --sic-file data/sic_codes.csv
+
+    \\b
+        # Output as JSON
+        companies_house_abm profile-firms --format json -o data/params.json
+    """
+    from companies_house_abm.data_sources.firm_distributions import (
+        run_profile_pipeline,
+    )
+
+    if not parquet.exists():
+        typer.echo(f"Error: parquet file not found: {parquet}", err=True)
+        raise typer.Exit(code=1)
+
+    if output_format not in ("yaml", "json"):
+        typer.echo(f"Error: unsupported format '{output_format}'", err=True)
+        raise typer.Exit(code=1)
+
+    typer.echo(f"Profiling firm data from {parquet}...")
+    if sample is not None:
+        typer.echo(f"  Sampling {sample:.1%} of data")
+    if sic_file is not None:
+        typer.echo(f"  Using SIC codes from {sic_file}")
+
+    summary = run_profile_pipeline(
+        parquet_path=parquet,
+        sic_path=sic_file,
+        output_path=output,
+        output_format=output_format,
+        sample_fraction=sample,
+    )
+
+    typer.echo(
+        f"Done. Fitted {len(summary.parameters)} sector-year parameter sets"
+        f" across {len(summary.sectors)} sectors"
+        f" and {len(summary.financial_years)} financial years."
+    )
+    typer.echo(f"Parameters written to {output}")
+
+
 @app.command()
 def serve(
     host: str = typer.Option(

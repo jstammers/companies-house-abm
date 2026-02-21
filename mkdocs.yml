@@ -62,5 +62,6 @@ nav:
   - Home: index.md
   - ABM Design: abm-design.md
   - Modelling Approach: modelling-approach.md
+  - Firm Data Analysis: firm-data-analysis.md
   - API Reference: api.md
   - Contributing: contributing.md

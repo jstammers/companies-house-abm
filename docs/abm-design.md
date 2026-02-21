@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-This document outlines the design for an agent-based model (ABM) of the UK economy that leverages Companies House financial data to simulate firm-level behavior and macroeconomic dynamics. The model incorporates insights from complexity economics to capture emergent phenomena arising from heterogeneous agent interactions.
+This document outlines the design for an agent-based model (ABM) of the UK economy that leverages Companies House financial data to simulate firm-level Behaviour and macroeconomic dynamics. The model incorporates insights from complexity economics to capture emergent phenomena arising from heterogeneous agent interactions.
 
 ## 1. Model Overview
 
@@ -22,7 +22,7 @@ The model draws from:
 - **Post-Keynesian economics**: Demand-driven dynamics with financial constraints
 - **Complexity economics**: Network effects, path dependence, far-from-equilibrium dynamics
 - **Input-Output analysis**: Sectoral interdependencies and supply chains
-- **Behavioral economics**: Bounded rationality and adaptive expectations
+- **Behavioural economics**: Bounded rationality and adaptive expectations
 
 ## 2. Agent Types
 
@@ -45,7 +45,7 @@ The model draws from:
 - `debt_ratio`: Total liabilities / total assets
 - `bankruptcy_risk`: Probabilistic based on financial health
 
-**Behaviors**:
+**Behaviours**:
 1. **Production Decision**: Based on demand expectations, inventory, and capacity
 2. **Pricing Decision**: Mark-up pricing based on costs and market conditions
 3. **Investment Decision**: Capacity expansion based on profitability and finance availability
@@ -57,7 +57,7 @@ The model draws from:
 - Supply chain relationships (input-output linkages)
 - Credit networks (supplier credit, trade credit)
 - Competition in product markets
-- Labor market competition
+- Labour market competition
 
 ### 2.2 Household Agents
 
@@ -68,9 +68,9 @@ The model draws from:
 - `employed`: Boolean employment status
 - `employer_id`: Link to employing firm (if employed)
 
-**Behaviors**:
+**Behaviours**:
 1. **Consumption**: Based on income, wealth, and expectations
-2. **Labor Supply**: Job search when unemployed
+2. **Labour Supply**: Job search when unemployed
 3. **Savings**: Unspent income accumulates as deposits
 
 **Distribution**:
@@ -86,7 +86,7 @@ The model draws from:
 - `deposits`: Household and firm deposits
 - `risk_appetite`: Lending propensity
 
-**Behaviors**:
+**Behaviours**:
 1. **Lending Decision**: Credit evaluation based on firm financial ratios
 2. **Interest Rate Setting**: Risk-based pricing
 3. **Capital Adequacy**: Maintain regulatory capital ratios
@@ -103,7 +103,7 @@ The model draws from:
 - `inflation_target`: Target CPI inflation (2% for UK)
 - `reserves_supplied`: Total reserves to banking system
 
-**Behaviors**:
+**Behaviours**:
 1. **Monetary Policy**: Taylor rule or variant for interest rate setting
 2. **Reserve Operations**: Accommodate reserve demand
 3. **Lender of Last Resort**: Emergency liquidity provision
@@ -117,7 +117,7 @@ The model draws from:
 - `deficit`: Revenue - expenditure
 - `debt`: Accumulated deficits
 
-**Behaviors**:
+**Behaviours**:
 1. **Taxation**: VAT, corporation tax, income tax
 2. **Spending**: Government consumption, public sector wages, transfers
 3. **Automatic Stabilizers**: Unemployment benefits, progressive taxation
@@ -129,7 +129,7 @@ The model draws from:
 - `portfolio`: Holdings of firm equity and bonds
 - `risk_preference`: Risk aversion parameter
 
-**Behaviors**:
+**Behaviours**:
 1. **Asset Allocation**: Based on expected returns and risk
 2. **Firm Valuation**: Impact on firm cost of capital
 3. **Speculation**: Can introduce volatility
@@ -142,7 +142,7 @@ The model draws from:
 - **Market Clearing**: Inventory accumulation/depletion, not instant clearing
 - **Price Discovery**: Firms adjust prices based on inventory and demand signals
 
-### 3.2 Labor Market
+### 3.2 Labour Market
 
 - **Matching**: Job search and hiring processes with frictions
 - **Wage Formation**: Bargaining or efficiency wages, sticky nominal wages
@@ -168,7 +168,7 @@ The model operates in discrete time periods (e.g., quarters or months).
 **Within-period sequence** (illustrative):
 1. **Policy Setting**: Central bank sets interest rate; government announces budget
 2. **Credit Market**: Firms apply for credit; banks make lending decisions
-3. **Labor Market**: Firms post vacancies; households search; matching occurs
+3. **Labour Market**: Firms post vacancies; households search; matching occurs
 4. **Production**: Firms produce based on capacity, employment, and input availability
 5. **Goods Market**: Households and government consume; firms sell goods
 6. **Accounting**: Firms pay wages, taxes, interest; calculate profits
@@ -215,11 +215,11 @@ All flows (income, expenditure, lending) must result in consistent stock changes
 - Government budget: Match UK fiscal position
 - Unemployment rate: Match ONS statistics
 
-**Behavioral Parameters** (estimated or calibrated):
+**Behavioural Parameters** (estimated or calibrated):
 - Consumption propensity: From UK consumption data
 - Mark-up rates: Sector-specific from industry data
 - Investment sensitivity: Calibrate to match investment/GDP ratio
-- Wage elasticity: From labor economics literature
+- Wage elasticity: From Labour economics literature
 
 **Network Structure**:
 - Supply chain networks: From ONS input-output tables
@@ -230,7 +230,7 @@ All flows (income, expenditure, lending) must result in consistent stock changes
 The model should reproduce:
 - GDP growth volatility and persistence
 - Unemployment dynamics
-- Inflation behavior
+- Inflation Behaviour
 - Firm size distribution (power law)
 - Firm growth rate distribution (Laplace/tent-shaped)
 - Financial ratios distributions
@@ -254,7 +254,7 @@ The model should reproduce:
 - Matrix operations for network analysis
 - Optimization routines
 
-**Visualization**: 
+**Visualization**:
 - Matplotlib/Plotly for time series
 - NetworkX for network visualization
 - Mesa's built-in dashboard
@@ -288,7 +288,7 @@ Python Layer:
   - Parameter exploration
 
 Rust Layer:
-  - Agent state and behavior
+  - Agent state and Behaviour
   - Scheduler and execution
   - Market mechanisms
   - Network traversal
@@ -308,7 +308,7 @@ Rust Layer:
 
 1. **Phase 1**: Prototype in Mesa (Python)
    - Rapid development and testing
-   - Validate model logic and behaviors
+   - Validate model logic and Behaviours
    - Small-scale calibration (~10k firms)
 
 2. **Phase 2**: Port to Rust/PyO3 if performance is insufficient
@@ -333,7 +333,7 @@ src/companies_house_abm/
 │   ├── markets/
 │   │   ├── __init__.py
 │   │   ├── goods.py         # Goods market mechanism
-│   │   ├── labor.py         # Labor market matching
+│   │   ├── Labour.py         # Labour market matching
 │   │   ├── credit.py        # Credit market
 │   │   └── interbank.py     # Interbank market
 │   ├── model.py             # Main ABM model class
@@ -373,7 +373,7 @@ agents:
     sectors: ["manufacturing", "services", "construction", ...]
     entry_rate: 0.02  # per period
     exit_threshold: -0.5  # equity/assets ratio
-  
+
   households:
     count: 10000
     income_distribution: "lognormal"
@@ -389,8 +389,8 @@ markets:
   goods:
     price_adjustment_speed: 0.1
     inventory_target: 0.2  # of expected sales
-  
-  labor:
+
+  Labour:
     wage_stickiness: 0.8
     matching_efficiency: 0.3
 
@@ -405,7 +405,7 @@ policy:
       inflation_coefficient: 1.5
       output_gap_coefficient: 0.5
       smoothing: 0.8
-  
+
   government:
     spending_gdp_ratio: 0.40
     tax_rate_corporate: 0.19
@@ -482,7 +482,7 @@ Agents form expectations based on:
 
 **Structural Policies**:
 - Industrial policy (sector-specific support)
-- Labor market reforms
+- Labour market reforms
 - Competition policy
 
 ## 8. Output and Analysis
@@ -588,7 +588,7 @@ The model should replicate:
 ### Phase 2: Core Model (Months 4-6)
 
 - [ ] Implement all agent types (firms, households, banks, CB, government)
-- [ ] Implement all markets (goods, labor, credit)
+- [ ] Implement all markets (goods, Labour, credit)
 - [ ] Stock-flow consistency validation
 - [ ] Calibrate to UK macroeconomic data
 - [ ] Replicate basic stylized facts
@@ -661,17 +661,17 @@ The model should replicate:
 
 1. **Computational Constraints**: Cannot simulate all 4+ million UK firms
 2. **Data Limitations**: Missing firm-level data (networks, detailed transactions)
-3. **Behavioral Assumptions**: Simplified decision rules vs real complexity
-4. **Validation Challenges**: Hard to validate micro-level behavior
-5. **Lucas Critique**: Behavioral parameters may change under new policies
+3. **Behavioural Assumptions**: Simplified decision rules vs real complexity
+4. **Validation Challenges**: Hard to validate micro-level Behaviour
+5. **Lucas Critique**: Behavioural parameters may change under new policies
 
 ### Mitigation Strategies
 
 1. **Representative Sampling**: Use statistical methods to represent full population
 2. **Synthetic Networks**: Generate plausible networks from available data
-3. **Empirical Grounding**: Base behaviors on empirical studies where possible
+3. **Empirical Grounding**: Base Behaviours on empirical studies where possible
 4. **Multiple Validation Levels**: Validate at micro, meso, and macro levels
-5. **Robustness Checks**: Test sensitivity to behavioral assumptions
+5. **Robustness Checks**: Test sensitivity to Behavioural assumptions
 
 ### Ethical Considerations
 
@@ -691,4 +691,4 @@ This agent-based model represents a ambitious but feasible approach to understan
 
 The phased development approach allows for incremental progress, with early validation and course correction. Starting with a Python/Mesa prototype enables rapid development, with the option to scale to Rust for performance if needed.
 
-The model will be a valuable tool for researchers, policymakers, and analysts seeking to understand the emergent properties of the economic system and test interventions in a rich, behaviorally grounded simulation environment.
+The model will be a valuable tool for researchers, policymakers, and analysts seeking to understand the emergent properties of the economic system and test interventions in a rich, Behaviourally grounded simulation environment.

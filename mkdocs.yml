@@ -62,5 +62,6 @@ nav:
   - Home: index.md
   - ABM Design: abm-design.md
   - Modelling Approach: modelling-approach.md
+  - Stochastic Behaviour & Bounded Rationality: stochastic-bounded-rationality.md
   - API Reference: api.md
   - Contributing: contributing.md

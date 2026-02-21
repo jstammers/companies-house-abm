@@ -430,6 +430,161 @@ def profile_firms(
     typer.echo(f"Parameters written to {output}")
 
 
+@app.command(name="run-simulation")
+def run_simulation(
+    config: Annotated[
+        Path | None,
+        typer.Option(
+            "--config",
+            "-c",
+            help=(
+                "Path to model YAML config file. "
+                "Defaults to config/model_parameters.yml."
+            ),
+        ),
+    ] = None,
+    output: Annotated[
+        Path,
+        typer.Option(
+            "--output",
+            "-o",
+            help="Directory to write results.",
+        ),
+    ] = Path("results"),
+    periods: Annotated[
+        int | None,
+        typer.Option(
+            "--periods",
+            "-n",
+            help="Number of periods to simulate. Overrides config value.",
+        ),
+    ] = None,
+    output_format: Annotated[
+        str,
+        typer.Option(
+            "--format",
+            "-f",
+            help="Output format for time-series data: csv, json, or parquet.",
+        ),
+    ] = "csv",
+    evaluate: Annotated[
+        bool,
+        typer.Option(
+            "--evaluate/--no-evaluate",
+            help=(
+                "Compare output to UK calibration targets "
+                "and print an evaluation report."
+            ),
+        ),
+    ] = False,
+    warm_up: Annotated[
+        int,
+        typer.Option(
+            "--warm-up",
+            "-w",
+            help=(
+                "Number of leading periods to skip when computing "
+                "evaluation statistics."
+            ),
+        ),
+    ] = 0,
+) -> None:
+    """Run the ABM simulation and save results.
+
+    Loads configuration from a YAML file (or built-in defaults), runs the
+    simulation, and writes time-series results and optional evaluation reports
+    to the output directory.
+
+    Examples:
+
+    \\b
+        # Run with defaults and save CSV results
+        companies_house_abm run-simulation
+
+    \\b
+        # Run for 40 quarters using a custom config
+        companies_house_abm run-simulation --config calibrated.yml --periods 40
+
+    \\b
+        # Run and evaluate against calibration targets
+        companies_house_abm run-simulation --periods 80 --evaluate --warm-up 20
+    """
+    from companies_house_abm.abm.config import load_config
+    from companies_house_abm.abm.model import Simulation
+
+    if output_format not in ("csv", "json", "parquet"):
+        typer.echo(f"Error: unsupported format '{output_format}'", err=True)
+        raise typer.Exit(code=1)
+
+    typer.echo("Loading configuration...")
+    cfg = load_config(config)
+    n_periods = periods or cfg.simulation.periods
+    typer.echo(
+        f"Running simulation: {n_periods} periods, "
+        f"{cfg.firms.sample_size} firms, "
+        f"{cfg.households.count} households, "
+        f"{cfg.banks.count} banks"
+    )
+
+    sim = Simulation(cfg)
+    sim.initialize_agents()
+    typer.echo(
+        f"Agents initialised: {len(sim.firms)} firms, "
+        f"{len(sim.households)} households, "
+        f"{len(sim.banks)} banks"
+    )
+
+    result = sim.run(periods=n_periods)
+    typer.echo(f"Simulation complete: {len(result.records)} periods recorded.")
+
+    output.mkdir(parents=True, exist_ok=True)
+
+    # ── Write time-series results ─────────────────────────────────────────
+    import dataclasses
+
+    records_data = [dataclasses.asdict(r) for r in result.records]
+
+    if output_format == "json":
+        _write_json(output / "simulation_results.json", records_data)
+        typer.echo(f"  Results -> {output / 'simulation_results.json'}")
+    elif output_format == "parquet":
+        try:
+            import polars as pl
+
+            df = pl.DataFrame(records_data)
+            df.write_parquet(output / "simulation_results.parquet")
+            typer.echo(f"  Results -> {output / 'simulation_results.parquet'}")
+        except ImportError:
+            typer.echo(
+                "polars is required for parquet output. Falling back to CSV.", err=True
+            )
+            output_format = "csv"
+
+    if output_format == "csv":
+        import csv
+
+        csv_path = output / "simulation_results.csv"
+        with csv_path.open("w", newline="", encoding="utf-8") as fh:
+            if records_data:
+                writer = csv.DictWriter(fh, fieldnames=records_data[0].keys())
+                writer.writeheader()
+                writer.writerows(records_data)
+        typer.echo(f"  Results -> {csv_path}")
+
+    # ── Evaluation ────────────────────────────────────────────────────────
+    if evaluate:
+        from companies_house_abm.abm.evaluation import evaluate_simulation
+
+        typer.echo("\nEvaluating against UK calibration targets...")
+        report = evaluate_simulation(result, warm_up=warm_up)
+        typer.echo(report.summary())
+
+        _write_json(output / "evaluation_report.json", report.as_dict())
+        typer.echo(f"\n  Evaluation report -> {output / 'evaluation_report.json'}")
+
+    typer.echo("Done.")
+
+
 @app.command()
 def serve(
     host: str = typer.Option(

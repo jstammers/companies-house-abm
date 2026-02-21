@@ -254,7 +254,7 @@ The model should reproduce:
 - Matrix operations for network analysis
 - Optimization routines
 
-**Visualization**: 
+**Visualization**:
 - Matplotlib/Plotly for time series
 - NetworkX for network visualization
 - Mesa's built-in dashboard
@@ -373,7 +373,7 @@ agents:
     sectors: ["manufacturing", "services", "construction", ...]
     entry_rate: 0.02  # per period
     exit_threshold: -0.5  # equity/assets ratio
-  
+
   households:
     count: 10000
     income_distribution: "lognormal"
@@ -389,7 +389,7 @@ markets:
   goods:
     price_adjustment_speed: 0.1
     inventory_target: 0.2  # of expected sales
-  
+
   labor:
     wage_stickiness: 0.8
     matching_efficiency: 0.3
@@ -405,7 +405,7 @@ policy:
       inflation_coefficient: 1.5
       output_gap_coefficient: 0.5
       smoothing: 0.8
-  
+
   government:
     spending_gdp_ratio: 0.40
     tax_rate_corporate: 0.19

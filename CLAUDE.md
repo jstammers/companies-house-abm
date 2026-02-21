@@ -103,10 +103,11 @@ make pysentry       # Dependency vulnerability scan
 
 ### 1. Initial Setup
 
-After cloning the repository, install all dependencies:
+After cloning the repository, install all dependencies and activate pre-commit hooks:
 
 ```bash
 make install        # Runs: uv sync --all-groups
+uv run prek install # Install pre-commit hooks (required)
 ```
 
 This installs:
@@ -114,6 +115,11 @@ This installs:
 - Dev dependencies (pytest, pytest-cov, ruff, ty, hatch, prek, pysentry-rs)
 - Docs dependencies (mkdocs, mkdocs-material, mkdocstrings-python)
 - ABM dependencies (mesa, networkx, numpy, scipy, matplotlib, pyyaml, marimo, fastapi, uvicorn, pydantic)
+
+**Pre-commit hooks are required.** `prek install` registers a `.git/hooks/pre-commit` script that
+automatically runs linting, formatting, and type-checking before every commit. Without it, hook
+checks are silently skipped. Always run `uv run prek install` after cloning, even in automated /
+coding-agent environments where git hooks are not installed by default.
 
 ### 2. Development Cycle
 
@@ -250,23 +256,34 @@ Type errors usually require manual fixes. Check the error message and:
 uv run pytest tests/ -v -m "not slow"
 ```
 
-### 6. Git Pre-commit Hooks (Optional)
+### 6. Git Pre-commit Hooks (Required)
 
-For automatic checking before every commit:
+Pre-commit hooks must be installed before making any commits:
 
 ```bash
-prek install        # Install pre-commit hooks
-prek run --all-files  # Run on all files manually
+uv run prek install         # Install hooks into .git/hooks/pre-commit
+uv run prek run --all-files # Run all hooks manually on every file
 ```
 
-This will automatically run `make verify` before each commit.
+The hooks run automatically on every `git commit` and enforce:
+- Trailing whitespace removal and end-of-file normalisation
+- YAML and TOML validity
+- No accidentally committed large files or merge conflict markers
+- No debug statements (`breakpoint()`, `pdb`, etc.)
+- Ruff linting (`--fix`) and formatting
+- ty type checking
+
+**Important for coding agents**: git hooks are not installed automatically when a repo is cloned;
+`uv run prek install` must be run explicitly. If a commit fails due to a hook, fix the reported
+issues (usually running `make fix` is sufficient), stage the changes, and commit again. Do not
+bypass hooks with `--no-verify`.
 
 ### 7. CI/CD Pipeline
 
 When you push to GitHub, the CI pipeline runs:
 
 1. **Lint Check**: `ruff check` + `ruff format --check`
-2. **Type Check**: `ty check`  
+2. **Type Check**: `ty check`
 3. **Tests**: pytest across Python 3.10–3.13 with coverage
 4. **Security**: Gitleaks (secrets) + pysentry-rs (dependencies)
 5. **SAST**: Semgrep static analysis
@@ -278,6 +295,8 @@ When you push to GitHub, the CI pipeline runs:
 | Command | Purpose | When to Use |
 |---------|---------|-------------|
 | `make install` | Install dependencies | First setup, after dependency changes |
+| `uv run prek install` | Install pre-commit hooks | First setup (required, run after `make install`) |
+| `uv run prek run --all-files` | Run all hooks manually | Verify hook state, fix accumulated issues |
 | `make fix` | Auto-fix lint/format | Before committing |
 | `make verify` | Check all quality | Before committing (required) |
 | `make test` | Run tests | Before committing (required) |

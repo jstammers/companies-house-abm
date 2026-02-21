@@ -6,9 +6,9 @@ This file provides guidance for AI assistants working on the Companies House ABM
 
 Companies House ABM is a Python library and CLI tool for ingesting and processing financial data from Companies House XBRL accounts. It transforms XBRL data into Parquet format using Polars for downstream agent-based modelling.
 
-**Status**: Alpha (v0.1.0)
+**Status**: Alpha (v0.2.0)
 **License**: MIT
-**Python**: >=3.13 (CI tests 3.10–3.13)
+**Python**: >=3.10 (CI tests 3.10–3.13)
 
 ## Repository Structure
 
@@ -17,7 +17,21 @@ src/companies_house_abm/     # Production code
 ├── __init__.py               # Package version
 ├── cli.py                    # Typer CLI (ingest, hello, fetch-data, profile-firms, serve, --version)
 ├── ingest.py                 # ETL pipeline: schema, dedup, zip/stream ingest, merge
-├── py.typed                  # PEP 561 marker
+├── data_sources/             # Public data fetchers for ABM calibration
+│   ├── __init__.py           # Module exports
+│   ├── _http.py              # Shared HTTP utilities (urllib-based, in-memory cache)
+│   ├── boe.py                # Bank of England: Bank Rate, lending rates, CET1
+│   ├── calibration.py        # Translate fetched data into ModelConfig parameters
+│   ├── hmrc.py               # HMRC: income tax bands, NI, corporation tax, VAT
+│   └── ons.py                # ONS: GDP, household income, labour market, IO tables
+├── webapp/                   # FastAPI economy simulator web application
+│   ├── __init__.py
+│   ├── app.py                # FastAPI app (REST API + static file serving)
+│   ├── models.py             # Pydantic request/response models
+│   └── static/               # Frontend assets
+│       ├── index.html        # Single-page application entry point
+│       ├── app.js            # Simulation UI logic
+│       └── styles.css        # Application styles
 └── abm/                      # Agent-based model module
     ├── __init__.py           # ABM package exports (Simulation, ModelConfig, load_config)
     ├── config.py             # Dataclass configuration and YAML loader
@@ -60,14 +74,18 @@ tests/                        # Pytest test suite
 ├── test_abm_config.py        # Configuration loading tests
 ├── test_data_sources.py      # Data source and calibration tests
 ├── test_firm_distributions.py # Firm profiling and distribution fitting tests
-└── test_abm_performance.py   # Performance benchmark tests
+├── test_abm_performance.py   # Performance benchmarks for ABM simulation
+└── test_data_sources.py      # Data sources and calibration tests
 config/                       # Configuration files
 ├── README.md                 # Configuration usage guide
 └── model_parameters.yml      # ABM model parameters (200+ parameters)
 docs/                         # MkDocs documentation
 ├── abm-design.md             # ABM design document
 ├── modelling-approach.md     # Implemented modelling approach
-└── ...                       # Other documentation
+├── stochastic-bounded-rationality.md  # Plan for stochastic extensions
+├── api.md                    # API reference (mkdocstrings)
+├── contributing.md           # Contributor guide
+└── index.md                  # Documentation home page
 scripts/                      # Utility scripts (download, extract, import)
 notebooks/                    # Marimo interactive notebooks
 ├── firm_agent.py             # Firm agent explorer
@@ -100,17 +118,23 @@ make pysentry       # Dependency vulnerability scan
 
 ### 1. Initial Setup
 
-After cloning the repository, install all dependencies:
+After cloning the repository, install all dependencies and activate pre-commit hooks:
 
 ```bash
 make install        # Runs: uv sync --all-groups
+uv run prek install # Install pre-commit hooks (required)
 ```
 
 This installs:
 - Core dependencies (polars, stream-read-xbrl, typer)
 - Dev dependencies (pytest, pytest-cov, ruff, ty, hatch, prek, pysentry-rs)
 - Docs dependencies (mkdocs, mkdocs-material, mkdocstrings-python)
-- ABM dependencies (mesa, networkx, numpy, scipy, matplotlib, pyyaml)
+- ABM dependencies (mesa, networkx, numpy, scipy, matplotlib, pyyaml, marimo, fastapi, uvicorn, pydantic)
+
+**Pre-commit hooks are required.** `prek install` registers a `.git/hooks/pre-commit` script that
+automatically runs linting, formatting, and type-checking before every commit. Without it, hook
+checks are silently skipped. Always run `uv run prek install` after cloning, even in automated /
+coding-agent environments where git hooks are not installed by default.
 
 ### 2. Development Cycle
 
@@ -247,16 +271,27 @@ Type errors usually require manual fixes. Check the error message and:
 uv run pytest tests/ -v -m "not slow"
 ```
 
-### 6. Git Pre-commit Hooks (Optional)
+### 6. Git Pre-commit Hooks (Required)
 
-For automatic checking before every commit:
+Pre-commit hooks must be installed before making any commits:
 
 ```bash
-prek install        # Install pre-commit hooks
-prek run --all-files  # Run on all files manually
+uv run prek install         # Install hooks into .git/hooks/pre-commit
+uv run prek run --all-files # Run all hooks manually on every file
 ```
 
-This will automatically run `make verify` before each commit.
+The hooks run automatically on every `git commit` and enforce:
+- Trailing whitespace removal and end-of-file normalisation
+- YAML and TOML validity
+- No accidentally committed large files or merge conflict markers
+- No debug statements (`breakpoint()`, `pdb`, etc.)
+- Ruff linting (`--fix`) and formatting
+- ty type checking
+
+**Important for coding agents**: git hooks are not installed automatically when a repo is cloned;
+`uv run prek install` must be run explicitly. If a commit fails due to a hook, fix the reported
+issues (usually running `make fix` is sufficient), stage the changes, and commit again. Do not
+bypass hooks with `--no-verify`.
 
 ### 7. CI/CD Pipeline
 
@@ -275,6 +310,8 @@ When you push to GitHub, the CI pipeline runs:
 | Command | Purpose | When to Use |
 |---------|---------|-------------|
 | `make install` | Install dependencies | First setup, after dependency changes |
+| `uv run prek install` | Install pre-commit hooks | First setup (required, run after `make install`) |
+| `uv run prek run --all-files` | Run all hooks manually | Verify hook state, fix accumulated issues |
 | `make fix` | Auto-fix lint/format | Before committing |
 | `make verify` | Check all quality | Before committing (required) |
 | `make test` | Run tests | Before committing (required) |
@@ -320,8 +357,10 @@ ty has specific rule overrides due to Polars stubs and dynamic YAML loading:
 
 ### Key modules
 
-- **`cli.py`**: Typer-based CLI. The `ingest` command supports two modes: local ZIP processing (`--zip-dir`) and streaming from the Companies House API (default). Lazy-imports ingest functions to keep CLI startup fast.
+- **`cli.py`**: Typer-based CLI. Commands: `ingest` (XBRL to Parquet, local ZIP or streaming mode), `fetch-data` (download ONS/BoE/HMRC calibration data), `serve` (launch economy simulator web app), `hello`. Lazy-imports heavy modules to keep CLI startup fast.
 - **`ingest.py`**: Core ETL logic. `COMPANIES_HOUSE_SCHEMA` defines 39 columns with Polars types. Financial fields use `Decimal(20, 2)`. Deduplication uses `company_id`, `balance_sheet_date`, `period_start`, `period_end` as composite key. Data is always written as Parquet.
+- **`data_sources/`**: Fetches publicly available UK economic data using the standard-library `urllib` (no extra runtime dependencies). Responses are cached in memory. Sub-modules: `ons.py` (national accounts, labour market, IO tables), `boe.py` (Bank Rate, lending rates, capital ratios), `hmrc.py` (income tax, NI, corporation tax, VAT), `calibration.py` (translates fetched data into `ModelConfig` parameters).
+- **`webapp/`**: FastAPI application serving a single-page economy simulator. The `serve` CLI command launches it via uvicorn. Static frontend assets live in `webapp/static/`.
 
 ### Data flow
 
@@ -429,6 +468,9 @@ Conventional commits are required because the project uses **git-cliff** (`cliff
 - **matplotlib** (>=3.8.0): Visualization
 - **pyyaml** (>=6.0.0): YAML configuration parsing
 - **marimo** (>=0.10.0): Interactive notebook framework
+- **fastapi** (>=0.115.0): Web framework for the economy simulator API
+- **uvicorn[standard]** (>=0.30.0): ASGI server for serving the web app
+- **pydantic** (>=2.0.0): Data validation for API request/response models
 
 ### Build
 

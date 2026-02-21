@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "companies_house_abm"
-version = "0.2.0"
+version = "0.3.0"
 description = "Agent-Based Modelling using Companies House Account Data"
 readme = "README.md"
 license = "MIT"
@@ -125,10 +125,6 @@ known-first-party = ["companies_house_abm"]
 # =============================================================================
 # ty (Astral type checker)
 # =============================================================================
-
-[tool.ty.src]
-root = "."
-include = ["src/", "tests/"]
 
 [tool.ty.rules]
 # Polars stubs don't fully align with ty's inference yet

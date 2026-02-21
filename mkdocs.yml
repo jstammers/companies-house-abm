@@ -63,5 +63,6 @@ nav:
   - ABM Design: abm-design.md
   - Modelling Approach: modelling-approach.md
   - Firm Data Analysis: firm-data-analysis.md
+  - Stochastic Behaviour & Bounded Rationality: stochastic-bounded-rationality.md
   - API Reference: api.md
   - Contributing: contributing.md

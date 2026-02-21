@@ -390,7 +390,7 @@ markets:
     price_adjustment_speed: 0.1
     inventory_target: 0.2  # of expected sales
 
-  Labour:
+  labor:
     wage_stickiness: 0.8
     matching_efficiency: 0.3
 

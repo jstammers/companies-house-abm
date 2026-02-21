@@ -6,17 +6,32 @@ This file provides guidance for AI assistants working on the Companies House ABM
 
 Companies House ABM is a Python library and CLI tool for ingesting and processing financial data from Companies House XBRL accounts. It transforms XBRL data into Parquet format using Polars for downstream agent-based modelling.
 
-**Status**: Alpha (v0.1.0)
+**Status**: Alpha (v0.2.0)
 **License**: MIT
-**Python**: >=3.13 (CI tests 3.10–3.13)
+**Python**: >=3.10 (CI tests 3.10–3.13)
 
 ## Repository Structure
 
 ```
 src/companies_house_abm/     # Production code
 ├── __init__.py               # Package version
-├── cli.py                    # Typer CLI (ingest, hello, --version)
+├── cli.py                    # Typer CLI (ingest, fetch-data, serve, hello, --version)
 ├── ingest.py                 # ETL pipeline: schema, dedup, zip/stream ingest, merge
+├── data_sources/             # Public data fetchers for ABM calibration
+│   ├── __init__.py           # Module exports
+│   ├── _http.py              # Shared HTTP utilities (urllib-based, in-memory cache)
+│   ├── boe.py                # Bank of England: Bank Rate, lending rates, CET1
+│   ├── calibration.py        # Translate fetched data into ModelConfig parameters
+│   ├── hmrc.py               # HMRC: income tax bands, NI, corporation tax, VAT
+│   └── ons.py                # ONS: GDP, household income, labour market, IO tables
+├── webapp/                   # FastAPI economy simulator web application
+│   ├── __init__.py
+│   ├── app.py                # FastAPI app (REST API + static file serving)
+│   ├── models.py             # Pydantic request/response models
+│   └── static/               # Frontend assets
+│       ├── index.html        # Single-page application entry point
+│       ├── app.js            # Simulation UI logic
+│       └── styles.css        # Application styles
 └── abm/                      # Agent-based model module
     ├── __init__.py           # ABM package exports (Simulation, ModelConfig, load_config)
     ├── config.py             # Dataclass configuration and YAML loader
@@ -43,14 +58,19 @@ tests/                        # Pytest test suite
 ├── test_abm_agents.py        # Agent class tests (~400 lines)
 ├── test_abm_markets.py       # Market mechanism tests
 ├── test_abm_model.py         # Simulation model tests
-└── test_abm_config.py        # Configuration loading tests
+├── test_abm_config.py        # Configuration loading tests
+├── test_abm_performance.py   # Performance benchmarks for ABM simulation
+└── test_data_sources.py      # Data sources and calibration tests
 config/                       # Configuration files
 ├── README.md                 # Configuration usage guide
 └── model_parameters.yml      # ABM model parameters (200+ parameters)
 docs/                         # MkDocs documentation
 ├── abm-design.md             # ABM design document
 ├── modelling-approach.md     # Implemented modelling approach
-└── ...                       # Other documentation
+├── stochastic-bounded-rationality.md  # Plan for stochastic extensions
+├── api.md                    # API reference (mkdocstrings)
+├── contributing.md           # Contributor guide
+└── index.md                  # Documentation home page
 scripts/                      # Utility scripts (download, extract, import)
 notebooks/                    # Marimo interactive notebooks
 ├── firm_agent.py             # Firm agent explorer
@@ -93,7 +113,7 @@ This installs:
 - Core dependencies (polars, stream-read-xbrl, typer)
 - Dev dependencies (pytest, pytest-cov, ruff, ty, hatch, prek, pysentry-rs)
 - Docs dependencies (mkdocs, mkdocs-material, mkdocstrings-python)
-- ABM dependencies (mesa, networkx, numpy, scipy, matplotlib, pyyaml)
+- ABM dependencies (mesa, networkx, numpy, scipy, matplotlib, pyyaml, marimo, fastapi, uvicorn, pydantic)
 
 ### 2. Development Cycle
 
@@ -303,8 +323,10 @@ ty has specific rule overrides due to Polars stubs and dynamic YAML loading:
 
 ### Key modules
 
-- **`cli.py`**: Typer-based CLI. The `ingest` command supports two modes: local ZIP processing (`--zip-dir`) and streaming from the Companies House API (default). Lazy-imports ingest functions to keep CLI startup fast.
+- **`cli.py`**: Typer-based CLI. Commands: `ingest` (XBRL to Parquet, local ZIP or streaming mode), `fetch-data` (download ONS/BoE/HMRC calibration data), `serve` (launch economy simulator web app), `hello`. Lazy-imports heavy modules to keep CLI startup fast.
 - **`ingest.py`**: Core ETL logic. `COMPANIES_HOUSE_SCHEMA` defines 39 columns with Polars types. Financial fields use `Decimal(20, 2)`. Deduplication uses `company_id`, `balance_sheet_date`, `period_start`, `period_end` as composite key. Data is always written as Parquet.
+- **`data_sources/`**: Fetches publicly available UK economic data using the standard-library `urllib` (no extra runtime dependencies). Responses are cached in memory. Sub-modules: `ons.py` (national accounts, labour market, IO tables), `boe.py` (Bank Rate, lending rates, capital ratios), `hmrc.py` (income tax, NI, corporation tax, VAT), `calibration.py` (translates fetched data into `ModelConfig` parameters).
+- **`webapp/`**: FastAPI application serving a single-page economy simulator. The `serve` CLI command launches it via uvicorn. Static frontend assets live in `webapp/static/`.
 
 ### Data flow
 
@@ -412,6 +434,9 @@ Conventional commits are required because the project uses **git-cliff** (`cliff
 - **matplotlib** (>=3.8.0): Visualization
 - **pyyaml** (>=6.0.0): YAML configuration parsing
 - **marimo** (>=0.10.0): Interactive notebook framework
+- **fastapi** (>=0.115.0): Web framework for the economy simulator API
+- **uvicorn[standard]** (>=0.30.0): ASGI server for serving the web app
+- **pydantic** (>=2.0.0): Data validation for API request/response models
 
 ### Build
 

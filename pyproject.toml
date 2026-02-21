@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "companies_house_abm"
-version = "0.1.0"
+version = "0.2.0"
 description = "Agent-Based Modelling using Companies House Account Data"
 readme = "README.md"
 license = "MIT"

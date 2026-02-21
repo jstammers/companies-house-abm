@@ -322,11 +322,17 @@ class TestBoeCapitalRatio:
 
 
 _FAKE_ONS_RESPONSE: dict[str, Any] = {
-    "observations": [
+    "quarters": [
         {"date": "2023 Q1", "value": "600000"},
         {"date": "2023 Q2", "value": "605000"},
         {"date": "2023 Q3", "value": "610000"},
         {"date": "2023 Q4", "value": "615000"},
+    ]
+}
+
+_FAKE_ONS_MONTHLY_RESPONSE: dict[str, Any] = {
+    "months": [
+        {"date": "2024 Jan", "value": "4.2"},
     ]
 }
 
@@ -408,10 +414,9 @@ class TestOnsLabourMarket:
         from companies_house_abm.data_sources import _http
 
         _http.clear_cache()
-        fake = {"observations": [{"date": "2024 Jan", "value": "4.2"}]}
         with patch(
             "companies_house_abm.data_sources.ons.retry",
-            return_value=fake,
+            return_value=_FAKE_ONS_MONTHLY_RESPONSE,
         ):
             from companies_house_abm.data_sources.ons import fetch_labour_market
 
@@ -556,14 +561,15 @@ class TestCalibrateHouseholds:
         from companies_house_abm.data_sources import _http
 
         _http.clear_cache()
-        fake_savings = {"observations": [{"value": "8.0"}]}  # 8% savings ratio
-        fake_labour: dict[str, Any] = {"observations": []}
+        fake_savings = {"quarters": [{"value": "8.0"}]}  # 8% savings ratio
+        fake_labour: dict[str, Any] = {"months": []}
         call_count = 0
 
         def _fake_retry(fn: Any, url: str) -> Any:
             nonlocal call_count
             call_count += 1
-            if "DGRP" in url:
+            # NRJS is the savings ratio series (replaced DGRP)
+            if "nrjs" in url.lower():
                 return fake_savings
             return fake_labour
 

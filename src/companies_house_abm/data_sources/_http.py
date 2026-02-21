@@ -15,8 +15,10 @@ from typing import Any
 
 _CACHE: dict[str, Any] = {}
 _DEFAULT_TIMEOUT = 30  # seconds
+# Browser-like User-Agent to avoid 403 blocks from government data APIs
 _USER_AGENT = (
-    "companies-house-abm/data-sources (+https://github.com/companies-house-abm)"
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 )
 
 

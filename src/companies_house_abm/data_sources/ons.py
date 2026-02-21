@@ -31,10 +31,10 @@ from companies_house_abm.data_sources._http import retry
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# ONS Beta API root
+# ONS API root
 # ---------------------------------------------------------------------------
 
-_ONS_API = "https://api.beta.ons.gov.uk/v1"
+_ONS_API = "https://api.ons.gov.uk"
 
 # ---------------------------------------------------------------------------
 # Dataset series IDs
@@ -43,17 +43,49 @@ _ONS_API = "https://api.beta.ons.gov.uk/v1"
 # UK GDP at market prices (SA, GBP m, quarterly)
 _GDP_SERIES = "ABMI"
 
-# Households' real disposable income (SA, GBP m, quarterly)
+# Households' & NPISH gross disposable income (SA, GBP m, quarterly)
 _HOUSEHOLD_INCOME_SERIES = "RPHQ"
 
-# Household saving ratio (%, SA, quarterly)
-_SAVINGS_RATIO_SERIES = "DGRP"
+# HH & NPISH saving ratio (%, SA, quarterly)
+_SAVINGS_RATIO_SERIES = "NRJS"
 
 # Unemployment rate (%, SA, monthly)
 _UNEMPLOYMENT_RATE_SERIES = "MGSX"
 
 # Average weekly earnings (GBP, SA, monthly)
 _AVERAGE_EARNINGS_SERIES = "KAB9"
+
+# ---------------------------------------------------------------------------
+# Series → ONS dataset mapping
+# Each ONS timeseries belongs to one or more named datasets; this mapping
+# selects the canonical dataset to use for each series code.
+# ---------------------------------------------------------------------------
+
+_SERIES_DATASET: dict[str, str] = {
+    # National accounts (UK Economic Accounts)
+    "ABMI": "ukea",
+    "RPHQ": "ukea",
+    "NRJS": "ukea",
+    # Labour market (Labour Market Statistics bulletin)
+    "MGSX": "lms",
+    "KAB9": "lms",
+    # GVA by industry (UK Economic Accounts)
+    "L2KL": "ukea",
+    "L2KP": "ukea",
+    "L2N8": "ukea",
+    "L2NC": "ukea",
+    "L2ND": "ukea",
+    "L2NE": "ukea",
+    "L2NF": "ukea",
+    "L2NG": "ukea",
+    "L2NI": "ukea",
+    "L2NJ": "ukea",
+    "L2NK": "ukea",
+    "L2NL": "ukea",
+    "L2NM": "ukea",
+}
+
+_DEFAULT_DATASET = "ukea"
 
 
 def _get_json(url: str) -> Any:
@@ -74,14 +106,23 @@ def _fetch_timeseries(series_id: str, limit: int = 20) -> list[dict[str, Any]]:
         List of observation dicts with keys ``"date"`` (str) and
         ``"value"`` (str).
     """
-    url = f"{_ONS_API}/datasets/timeseries/{series_id}/data"
+    dataset_id = _SERIES_DATASET.get(series_id.upper(), _DEFAULT_DATASET)
+    url = f"{_ONS_API}/timeseries/{series_id.lower()}/dataset/{dataset_id}/data"
     try:
         data = retry(_get_json, url)
     except Exception:
         logger.warning("ONS API unavailable for series %s, returning []", series_id)
         return []
 
-    observations: list[dict[str, Any]] = data.get("observations", [])
+    # The ONS API returns observations in frequency-keyed arrays:
+    # "quarters" for quarterly series, "months" for monthly, "years" for annual.
+    observations: list[dict[str, Any]] = (
+        data.get("quarters")
+        or data.get("months")
+        or data.get("years")
+        or data.get("observations")
+        or []
+    )
     return observations[-limit:] if len(observations) > limit else observations
 
 

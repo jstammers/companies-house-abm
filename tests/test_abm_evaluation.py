@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 import math
+from typing import TYPE_CHECKING
 
 import pytest
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 from companies_house_abm.abm.evaluation import (
     DEFAULT_TARGETS,
@@ -15,7 +19,6 @@ from companies_house_abm.abm.evaluation import (
     evaluate_simulation,
 )
 from companies_house_abm.abm.model import PeriodRecord, SimulationResult
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -101,9 +104,12 @@ class TestComputeSimulationStats:
         assert stats["government_debt_gdp"] == pytest.approx(0.85, rel=0.01)
 
     def test_wage_share(self) -> None:
-        # wage_share = avg_wage * employment / gdp
         result = _make_result(
-            n=10, gdp_start=1_000_000.0, avg_wage=1_100.0, employment=500, gdp_growth=0.0
+            n=10,
+            gdp_start=1_000_000.0,
+            avg_wage=1_100.0,
+            employment=500,
+            gdp_growth=0.0,
         )
         stats = compute_simulation_stats(result)
         # wage_share = 1100 * 500 / 1_000_000 = 0.55
@@ -242,7 +248,7 @@ class TestEvaluateSimulation:
 
 
 class TestRunSimulationCli:
-    def test_run_simulation_creates_csv(self, tmp_path: "Path") -> None:
+    def test_run_simulation_creates_csv(self, tmp_path: Path) -> None:
         from typer.testing import CliRunner
 
         from companies_house_abm.cli import app
@@ -266,7 +272,7 @@ class TestRunSimulationCli:
         lines = csv_file.read_text().splitlines()
         assert len(lines) == 6  # header + 5 data rows
 
-    def test_run_simulation_with_evaluate(self, tmp_path: "Path") -> None:
+    def test_run_simulation_with_evaluate(self, tmp_path: Path) -> None:
         from typer.testing import CliRunner
 
         from companies_house_abm.cli import app
@@ -290,7 +296,7 @@ class TestRunSimulationCli:
         eval_file = tmp_path / "evaluation_report.json"
         assert eval_file.exists()
 
-    def test_run_simulation_json_format(self, tmp_path: "Path") -> None:
+    def test_run_simulation_json_format(self, tmp_path: Path) -> None:
         import json
 
         from typer.testing import CliRunner
@@ -316,7 +322,7 @@ class TestRunSimulationCli:
         data = json.loads(json_file.read_text())
         assert len(data) == 3
 
-    def test_invalid_format_exits_with_error(self, tmp_path: "Path") -> None:
+    def test_invalid_format_exits_with_error(self, tmp_path: Path) -> None:
         from typer.testing import CliRunner
 
         from companies_house_abm.cli import app

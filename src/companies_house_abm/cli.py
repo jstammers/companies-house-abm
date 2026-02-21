@@ -585,6 +585,145 @@ def run_simulation(
     typer.echo("Done.")
 
 
+@app.command(name="run-sector-model")
+def run_sector_model(
+    output: Annotated[
+        Path,
+        typer.Option(
+            "--output",
+            "-o",
+            help="Directory to write results.",
+        ),
+    ] = Path("results/sector"),
+    periods: Annotated[
+        int,
+        typer.Option(
+            "--periods",
+            "-n",
+            help="Number of periods to simulate.",
+        ),
+    ] = 80,
+    n_households: Annotated[
+        int,
+        typer.Option(
+            "--households",
+            help="Number of household agents.",
+        ),
+    ] = 1000,
+    n_banks: Annotated[
+        int,
+        typer.Option(
+            "--banks",
+            help="Number of bank agents.",
+        ),
+    ] = 5,
+    seed: Annotated[
+        int,
+        typer.Option(
+            "--seed",
+            help="Random seed.",
+        ),
+    ] = 42,
+    evaluate: Annotated[
+        bool,
+        typer.Option(
+            "--evaluate/--no-evaluate",
+            help="Print evaluation report against UK calibration targets.",
+        ),
+    ] = True,
+    warm_up: Annotated[
+        int,
+        typer.Option(
+            "--warm-up",
+            help="Periods to skip when computing evaluation statistics.",
+        ),
+    ] = 20,
+) -> None:
+    """Run the sector-representative ABM (one firm per sector).
+
+    Creates a simplified simulation with exactly one representative firm per
+    UK industry sector, calibrated to ONS Blue Book 2023 macroeconomic data.
+    The aggregate of firm outputs approximates real UK GDP, employment and
+    wage shares.
+
+    Examples:
+
+    \\b
+        # Run 80 quarters and evaluate against UK targets
+        companies_house_abm run-sector-model
+
+    \\b
+        # Run with a larger household population
+        companies_house_abm run-sector-model --households 5000 --periods 120
+    """
+    import dataclasses
+
+    from companies_house_abm.abm.sector_model import (
+        SECTOR_PROFILES,
+        create_sector_representative_simulation,
+    )
+
+    typer.echo(
+        f"Creating sector-representative simulation: "
+        f"{len(SECTOR_PROFILES)} sectors, "
+        f"{n_households} households, {n_banks} banks"
+    )
+
+    sim = create_sector_representative_simulation(
+        n_households=n_households,
+        n_banks=n_banks,
+        seed=seed,
+        periods=periods,
+    )
+
+    typer.echo(
+        f"Agents initialised: {len(sim.firms)} sector firms, "
+        f"{len(sim.households)} households, {len(sim.banks)} banks"
+    )
+
+    # Print sector summary
+    typer.echo("\nSector firms:")
+    total_turnover = sum(f.turnover for f in sim.firms)
+    for firm in sim.firms:
+        share = firm.turnover / total_turnover if total_turnover > 0 else 0.0
+        typer.echo(
+            f"  {firm.sector:<30}  "
+            f"turnover=£{firm.turnover / 1e9:.1f}B/q  "
+            f"employees={firm.employees:,}  "
+            f"share={share:.1%}"
+        )
+    typer.echo(f"  {'TOTAL':<30}  turnover=£{total_turnover / 1e9:.1f}B/q\n")
+
+    result = sim.run(periods=periods)
+    typer.echo(f"Simulation complete: {len(result.records)} periods.")
+
+    output.mkdir(parents=True, exist_ok=True)
+
+    # Write CSV results
+    import csv
+
+    records_data = [dataclasses.asdict(r) for r in result.records]
+    csv_path = output / "sector_model_results.csv"
+    with csv_path.open("w", newline="", encoding="utf-8") as fh:
+        if records_data:
+            writer = csv.DictWriter(fh, fieldnames=records_data[0].keys())
+            writer.writeheader()
+            writer.writerows(records_data)
+    typer.echo(f"  Results -> {csv_path}")
+
+    if evaluate:
+        from companies_house_abm.abm.evaluation import evaluate_simulation
+
+        typer.echo("\nEvaluating against UK calibration targets...")
+        report = evaluate_simulation(result, warm_up=warm_up)
+        typer.echo(report.summary())
+        _write_json(output / "sector_evaluation_report.json", report.as_dict())
+        report_path = output / "sector_evaluation_report.json"
+        typer.echo(f"\n  Evaluation report -> {report_path}")
+
+    typer.echo("Done.")
+
+
 @app.command()
 def serve(
     host: str = typer.Option(

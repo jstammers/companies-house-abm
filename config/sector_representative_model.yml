@@ -1,0 +1,87 @@
+# Sector-Representative Model Configuration
+#
+# One representative firm per sector, calibrated to UK macroeconomic
+# statistics (ONS Blue Book 2023, LFS Q1 2023).
+#
+# Agent populations and balance sheets are set by
+# companies_house_abm.abm.sector_model.SECTOR_PROFILES; this file controls
+# behavioral parameters, market mechanisms and policy rules only.
+
+simulation:
+  periods: 80          # 20 years of quarterly data
+  time_step: "quarter"
+  seed: 42
+  warm_up_periods: 20  # discard first 5 years for evaluation
+
+# Agent behavioral parameters
+behavior:
+  firms:
+    price_markup: 0.15              # overridden per sector at runtime
+    markup_adjustment_speed: 0.05   # slower adjustment for smoother dynamics
+    inventory_target_ratio: 0.15
+    capacity_utilization_target: 0.85
+    investment_sensitivity: 1.5
+    wage_adjustment_speed: 0.03
+
+  households:
+    job_search_intensity: 0.3
+    reservation_wage_ratio: 0.9
+    consumption_smoothing: 0.7
+
+  banks:
+    base_interest_markup: 0.02
+    risk_premium_sensitivity: 0.03
+    lending_threshold: 0.25
+    capital_buffer: 0.03
+
+# Market mechanisms
+markets:
+  goods:
+    market_structure: "monopolistic_competition"
+    price_adjustment_speed: 0.08
+    quantity_adjustment_speed: 0.25
+    search_intensity: 0.5
+
+  labor:
+    wage_stickiness: 0.85
+    matching_efficiency: 0.35
+    separation_rate: 0.04
+    phillips_curve_slope: -0.4
+
+  credit:
+    rationing: true
+    collateral_requirement: 0.4
+    default_rate_base: 0.005
+
+# Policy rules
+policy:
+  central_bank:
+    taylor_rule:
+      active: true
+      inflation_target: 0.02
+      inflation_coefficient: 1.5
+      output_gap_coefficient: 0.5
+      interest_rate_smoothing: 0.85
+      lower_bound: 0.001
+
+  government:
+    fiscal_rule:
+      active: true
+      spending_gdp_ratio: 0.40
+      tax_rate_corporate: 0.19
+      tax_rate_income_base: 0.20
+      tax_progressivity: 0.1
+      deficit_target: 0.03
+      deficit_adjustment_speed: 0.08
+    transfers:
+      unemployment_benefit_ratio: 0.4
+      pension_ratio: 0.3
+
+# Validation targets (UK 2015-2024 averages)
+validation:
+  gdp_growth_mean: 0.005
+  gdp_growth_std: 0.010
+  unemployment_mean: 0.045
+  inflation_mean: 0.005
+  government_debt_gdp: 0.85
+  wage_share: 0.55

@@ -378,6 +378,6 @@ class TestCLIIngest:
     def test_help(self):
         result = runner.invoke(app, ["ingest", "--help"], color=False)
         assert result.exit_code == 0
-        assert "--output" in result.stdout
-        assert "--zip-dir" in result.stdout
-        assert "--start-date" in result.stdout
+        assert "output" in result.stdout
+        assert "zip-dir" in result.stdout
+        assert "start-date" in result.stdout

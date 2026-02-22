@@ -14,6 +14,8 @@ from companies_house_abm.abm.markets.base import BaseMarket
 if TYPE_CHECKING:
     from typing import Any
 
+    import numpy as np
+
     from companies_house_abm.abm.agents.bank import Bank
     from companies_house_abm.abm.agents.firm import Firm
     from companies_house_abm.abm.config import CreditMarketConfig
@@ -42,20 +44,26 @@ class CreditMarket(BaseMarket):
 
         self._firms: list[Firm] = []
         self._banks: list[Bank] = []
+        self._rng: np.random.Generator | None = None
 
     def set_agents(
         self,
         firms: list[Firm],
         banks: list[Bank],
+        rng: np.random.Generator | None = None,
     ) -> None:
         """Register participating agents.
 
         Args:
             firms: Firm agents that may demand credit.
             banks: Bank agents that supply credit.
+            rng: Optional random number generator forwarded to
+                :meth:`~companies_house_abm.abm.agents.bank.Bank.evaluate_loan`
+                to enable stochastic credit scoring.
         """
         self._firms = firms
         self._banks = banks
+        self._rng = rng
 
     def clear(self) -> dict[str, Any]:
         """Clear the credit market.
@@ -121,6 +129,7 @@ class CreditMarket(BaseMarket):
                 amount,
                 borrower_equity=firm.equity,
                 borrower_revenue=firm.turnover,
+                rng=self._rng,
             )
 
             rationing = self._config.rationing if self._config else True

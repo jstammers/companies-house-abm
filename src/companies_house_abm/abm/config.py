@@ -59,6 +59,10 @@ class FirmBehaviorConfig:
     capacity_utilization_target: float = 0.85
     investment_sensitivity: float = 2.0
     wage_adjustment_speed: float = 0.05
+    # Bounded rationality: satisficing markup heuristic (Simon 1955)
+    satisficing_aspiration_rate: float = 0.5
+    satisficing_window: int = 4
+    markup_noise_std: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -82,6 +86,8 @@ class HouseholdBehaviorConfig:
     job_search_intensity: float = 0.3
     reservation_wage_ratio: float = 0.9
     consumption_smoothing: float = 0.7
+    # Bounded rationality: adaptive expectations (Dosi et al. 2010)
+    expectation_adaptation_speed: float = 0.3
 
 
 @dataclass(frozen=True)
@@ -102,6 +108,8 @@ class BankBehaviorConfig:
     risk_premium_sensitivity: float = 0.05
     lending_threshold: float = 0.3
     capital_buffer: float = 0.02
+    # Bounded rationality: noisy composite credit scoring (Gabaix 2014)
+    credit_score_noise_std: float = 0.0
 
 
 @dataclass(frozen=True)

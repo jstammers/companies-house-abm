@@ -13,6 +13,8 @@ from companies_house_abm.abm.agents.base import BaseAgent
 if TYPE_CHECKING:
     from typing import Any
 
+    import numpy as np
+
     from companies_house_abm.abm.config import BankBehaviorConfig, BankConfig
 
 
@@ -132,13 +134,25 @@ class Bank(BaseAgent):
         amount: float,
         borrower_equity: float,
         borrower_revenue: float,
+        rng: np.random.Generator | None = None,
     ) -> bool:
         """Decide whether to extend a loan.
+
+        When ``credit_score_noise_std > 0`` and an RNG is provided, the
+        decision uses a bounded-rationality composite credit score (Gabaix
+        2014): each criterion is normalised to its threshold value and the
+        weighted average is perturbed by Gaussian noise before comparing
+        against a score of 1.0.  This models lender imprecision and produces
+        realistic cross-sectional dispersion in credit outcomes.
+
+        When ``credit_score_noise_std == 0`` or no RNG is given, the original
+        deterministic hard-threshold decision rule is used.
 
         Args:
             amount: Requested loan amount.
             borrower_equity: Borrower's equity / net assets.
             borrower_revenue: Borrower's revenue.
+            rng: Optional random number generator for noisy scoring.
 
         Returns:
             True if the loan is approved.
@@ -147,13 +161,26 @@ class Bank(BaseAgent):
             return False
 
         collateral_req = 0.5
-        if borrower_equity < amount * collateral_req:
-            return False
-
         threshold = self._behavior.lending_threshold if self._behavior else 0.3
+        noise_std = self._behavior.credit_score_noise_std if self._behavior else 0.0
+
         if borrower_revenue <= 0:
             return False
 
+        if noise_std > 0 and rng is not None:
+            # Bounded rationality: composite score with Gaussian noise
+            # Each component is normalised so that 1.0 = exactly at threshold.
+            collateral_score = borrower_equity / max(amount * collateral_req, 1e-9)
+            coverage_score = (
+                borrower_revenue / max(amount * self.interest_rate, 1e-9)
+            ) / max(threshold, 1e-9)
+            composite = 0.5 * collateral_score + 0.5 * coverage_score
+            noise = float(rng.normal(0, noise_std))
+            return composite + noise > 1.0
+
+        # Deterministic hard-threshold rule (original behaviour)
+        if borrower_equity < amount * collateral_req:
+            return False
         debt_service_coverage = borrower_revenue / max(
             amount * self.interest_rate, 1e-9
         )

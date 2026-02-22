@@ -2,11 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.3.0] - 2026-02-21
+## [0.4.0] - 2026-02-22
 
 ### Bug Fixes
 
 - Resolve linting errors and test failure
+- **data_sources:** Correct ONS and BoE API endpoints to resolve 403 errors
 
 ### Documentation
 
@@ -25,6 +26,13 @@ All notable changes to this project will be documented in this file.
 - **abm:** Add Rust ABM core via krabmaga and performance benchmarks
 - **abm:** Add Rust ABM core via krabmaga and performance benchmarks
 - Add public data sources for ABM calibration and fix CLI test colours
+- **data:** Add firm distribution analysis and profiling
+- **data_sources:** Add Companies House SIC code fetcher
+- **webapp:** Expose all ModelConfig parameters and load defaults from config
+- **abm:** Add evaluation framework and run-simulation CLI command
+- **abm:** Add sector-representative one-firm-per-sector model
+- **abm:** Add parameter sweep and calibration utilities
+- **abm:** Add bounded-rationality mechanisms to agents
 
 ### Miscellaneous Tasks
 
@@ -33,6 +41,7 @@ All notable changes to this project will be documented in this file.
 - Disable rich force terminal
 - Bump version to 0.2.0
 - Update uv.lock
+- Bump version to 0.3.0, fix linting errors, and update changelog
 
 ### Refactor
 

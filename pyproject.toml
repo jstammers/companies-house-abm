@@ -129,6 +129,8 @@ known-first-party = ["companies_house_abm"]
 [tool.ty.rules]
 # Polars stubs don't fully align with ty's inference yet
 invalid-assignment = "ignore"
+# Polars LazyFrame chains: .collect() return type not inferred through Polars stubs
+invalid-return-type = "warn"
 # Dynamic dict unpacking (**kwargs) for YAML config and Polars stubs
 invalid-argument-type = "warn"
 unresolved-attribute = "warn"

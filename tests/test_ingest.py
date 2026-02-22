@@ -27,7 +27,15 @@ from companies_house_abm.ingest import (
     merge_and_write,
 )
 
-runner = CliRunner()
+# NO_COLOR=1 prevents ANSI colour codes. FORCE_COLOR=None *deletes* the key
+# from os.environ during each test invocation (Click CliRunner treats a None
+# value as "unset this variable"). This is necessary because CI sets
+# FORCE_COLOR=1 globally; when FORCE_COLOR is merely set to "" Rich still sees
+# the key present in os.environ via `if "FORCE_COLOR" in os.environ`, which
+# some code paths use to force colour output regardless of the value, splitting
+# option names like --zip-dir across ANSI escape sequences and breaking
+# substring assertions such as `"zip-dir" in result.stdout`.
+runner = CliRunner(env={"NO_COLOR": "1", "FORCE_COLOR": None})
 
 # ---------------------------------------------------------------------------
 # Helpers

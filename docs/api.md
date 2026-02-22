@@ -140,7 +140,7 @@
       show_root_heading: true
       show_source: true
 
-::: companies_house_abm.abm.markets.Labour.LabourMarket
+::: companies_house_abm.abm.markets.labor.LaborMarket
     options:
       show_root_heading: true
       show_source: true

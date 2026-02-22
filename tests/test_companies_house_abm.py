@@ -5,11 +5,12 @@ from typer.testing import CliRunner
 from companies_house_abm import __version__
 from companies_house_abm.cli import app
 
-# NO_COLOR=1 and FORCE_COLOR='' prevent ANSI escape codes in captured output,
-# ensuring tests pass consistently regardless of whether FORCE_COLOR is set in
-# CI (where FORCE_COLOR=1 would otherwise cause Rich to insert escape sequences
-# that break substring assertions).
-runner = CliRunner(env={"NO_COLOR": "1", "FORCE_COLOR": ""})
+# NO_COLOR=1 prevents ANSI colour codes. FORCE_COLOR=None *deletes* the key
+# from os.environ during each test invocation (Click CliRunner treats a None
+# value as "unset this variable"). This is necessary because CI sets
+# FORCE_COLOR=1 globally; merely setting FORCE_COLOR="" leaves the key present
+# and some code paths check key presence rather than value truthiness.
+runner = CliRunner(env={"NO_COLOR": "1", "FORCE_COLOR": None})
 
 
 def test_version() -> None:

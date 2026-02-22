@@ -847,7 +847,7 @@ class TestProfileFirmsCLI:
 
         from companies_house_abm.cli import app
 
-        runner = CliRunner()
+        runner = CliRunner(env={"NO_COLOR": "1", "FORCE_COLOR": None})
         result = runner.invoke(app, ["profile-firms", "--help"])
         assert result.exit_code == 0
         assert "profile-firms" in result.output.lower() or "Profile" in result.output
@@ -857,7 +857,7 @@ class TestProfileFirmsCLI:
 
         from companies_house_abm.cli import app
 
-        runner = CliRunner()
+        runner = CliRunner(env={"NO_COLOR": "1", "FORCE_COLOR": None})
         result = runner.invoke(
             app,
             ["profile-firms", "--parquet", str(tmp_path / "nonexistent.parquet")],
@@ -871,7 +871,7 @@ class TestProfileFirmsCLI:
 
         from companies_house_abm.cli import app
 
-        runner = CliRunner()
+        runner = CliRunner(env={"NO_COLOR": "1", "FORCE_COLOR": None})
         result = runner.invoke(
             app,
             [
@@ -891,7 +891,7 @@ class TestProfileFirmsCLI:
 
         from companies_house_abm.cli import app
 
-        runner = CliRunner()
+        runner = CliRunner(env={"NO_COLOR": "1", "FORCE_COLOR": None})
         output = tmp_path / "output.yml"
         result = runner.invoke(
             app,
@@ -913,7 +913,7 @@ class TestProfileFirmsCLI:
 
         from companies_house_abm.cli import app
 
-        runner = CliRunner()
+        runner = CliRunner(env={"NO_COLOR": "1", "FORCE_COLOR": None})
         output = tmp_path / "output.json"
         result = runner.invoke(
             app,
@@ -939,7 +939,7 @@ class TestProfileFirmsCLI:
 
         from companies_house_abm.cli import app
 
-        runner = CliRunner()
+        runner = CliRunner(env={"NO_COLOR": "1", "FORCE_COLOR": None})
         output = tmp_path / "output.yml"
         result = runner.invoke(
             app,

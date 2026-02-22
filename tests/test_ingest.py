@@ -27,7 +27,11 @@ from companies_house_abm.ingest import (
     merge_and_write,
 )
 
-runner = CliRunner()
+# NO_COLOR=1 and FORCE_COLOR='' prevent ANSI escape codes in captured output,
+# ensuring tests pass consistently regardless of whether FORCE_COLOR is set in
+# CI (where FORCE_COLOR=1 would otherwise split option names like --zip-dir
+# across multiple ANSI escape sequences, breaking substring assertions).
+runner = CliRunner(env={"NO_COLOR": "1", "FORCE_COLOR": ""})
 
 # ---------------------------------------------------------------------------
 # Helpers

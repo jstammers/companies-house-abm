@@ -46,12 +46,12 @@ def run_simulation(params: SimulationParams) -> SimulationResponse:
     synchronously.  Results include one record per simulated quarter.
     """
     from companies_house_abm.abm.config import (
-        BankBehaviourConfig,
+        BankBehaviorConfig,
         BankConfig,
-        FirmBehaviourConfig,
+        FirmBehaviorConfig,
         FirmConfig,
         FiscalRuleConfig,
-        HouseholdBehaviourConfig,
+        HouseholdBehaviorConfig,
         HouseholdConfig,
         ModelConfig,
         SimulationConfig,
@@ -67,19 +67,19 @@ def run_simulation(params: SimulationParams) -> SimulationResponse:
         firms=FirmConfig(
             sample_size=params.n_firms,
         ),
-        firm_Behaviour=FirmBehaviourConfig(
+        firm_behavior=FirmBehaviorConfig(
             price_markup=params.price_markup,
         ),
         households=HouseholdConfig(
             count=params.n_households,
             mpc_mean=params.mpc_mean,
         ),
-        household_Behaviour=HouseholdBehaviourConfig(),
+        household_behavior=HouseholdBehaviorConfig(),
         banks=BankConfig(
             count=params.n_banks,
             capital_requirement=params.capital_requirement,
         ),
-        bank_Behaviour=BankBehaviourConfig(),
+        bank_behavior=BankBehaviorConfig(),
         taylor_rule=TaylorRuleConfig(
             inflation_target=params.inflation_target,
             inflation_coefficient=params.inflation_coefficient,

@@ -5,9 +5,11 @@ from typer.testing import CliRunner
 from companies_house_abm import __version__
 from companies_house_abm.cli import app
 
-# NO_COLOR=1 prevents ANSI escape codes in captured output, ensuring tests
-# pass consistently regardless of whether FORCE_COLOR is set in CI.
-runner = CliRunner(env={"NO_COLOR": "1"})
+# NO_COLOR=1 and FORCE_COLOR='' prevent ANSI escape codes in captured output,
+# ensuring tests pass consistently regardless of whether FORCE_COLOR is set in
+# CI (where FORCE_COLOR=1 would otherwise cause Rich to insert escape sequences
+# that break substring assertions).
+runner = CliRunner(env={"NO_COLOR": "1", "FORCE_COLOR": ""})
 
 
 def test_version() -> None:

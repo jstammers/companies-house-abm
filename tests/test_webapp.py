@@ -124,7 +124,7 @@ class TestConfigToParams:
         """Values exceeding Pydantic bounds are clamped, not rejected."""
         import dataclasses
 
-        from companies_house_abm.abm.config import FirmConfig, ModelConfig, load_config
+        from companies_house_abm.abm.config import load_config
         from companies_house_abm.webapp.app import _config_to_params
 
         cfg = load_config()

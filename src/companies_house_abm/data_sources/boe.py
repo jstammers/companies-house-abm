@@ -20,6 +20,7 @@ See https://www.bankofengland.co.uk/legal for details.
 from __future__ import annotations
 
 import logging
+from datetime import date
 
 from companies_house_abm.data_sources._http import get_text, retry
 
@@ -29,7 +30,7 @@ logger = logging.getLogger(__name__)
 # BoE Interactive Database (IADB) CSV endpoint
 # ---------------------------------------------------------------------------
 
-_BOE_IADB = "https://www.bankofengland.co.uk/boeapps/database/fromshowcolumns.asp"
+_BOE_IADB = "https://www.bankofengland.co.uk/boeapps/database/_iadb-FromShowColumns.asp"
 
 # Series codes
 _BANK_RATE_SERIES = "IUMABEDR"  # Official Bank Rate (%)
@@ -43,20 +44,26 @@ _FALLBACK_BUSINESS_RATE = 0.065  # Effective SME lending rate ~6.5%
 _FALLBACK_CAPITAL_RATIO = 0.148  # CET1 ratio ~14.8% (BoE FSR 2023)
 
 
-def _build_iadb_url(series: str) -> str:
+def _build_iadb_url(series: str, years_back: int = 10) -> str:
     """Build an IADB CSV download URL for a given series.
 
     Args:
         series: BoE IADB series code.
+        years_back: Number of years of history to request.
 
     Returns:
         Full URL string.
     """
+    from_year = date.today().year - years_back
+    from_date = f"01/Jan/{from_year}"
     return (
         f"{_BOE_IADB}"
-        f"?Travel=NIxSUx&FromSeries=1&ToSeries=50"
-        f"&DAT=RNG&FNY=&CSVF=TT&C={series}"
+        f"?csv.x=yes"
+        f"&Datefrom={from_date}"
+        f"&SeriesCodes={series}"
+        f"&CSVF=TT"
         f"&VPD=Y"
+        f"&VFD=N"
     )
 
 

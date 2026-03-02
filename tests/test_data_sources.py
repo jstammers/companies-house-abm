@@ -322,11 +322,17 @@ class TestBoeCapitalRatio:
 
 
 _FAKE_ONS_RESPONSE: dict[str, Any] = {
-    "observations": [
+    "quarters": [
         {"date": "2023 Q1", "value": "600000"},
         {"date": "2023 Q2", "value": "605000"},
         {"date": "2023 Q3", "value": "610000"},
         {"date": "2023 Q4", "value": "615000"},
+    ]
+}
+
+_FAKE_ONS_MONTHLY_RESPONSE: dict[str, Any] = {
+    "months": [
+        {"date": "2024 Jan", "value": "4.2"},
     ]
 }
 
@@ -408,10 +414,9 @@ class TestOnsLabourMarket:
         from companies_house_abm.data_sources import _http
 
         _http.clear_cache()
-        fake = {"observations": [{"date": "2024 Jan", "value": "4.2"}]}
         with patch(
             "companies_house_abm.data_sources.ons.retry",
-            return_value=fake,
+            return_value=_FAKE_ONS_MONTHLY_RESPONSE,
         ):
             from companies_house_abm.data_sources.ons import fetch_labour_market
 
@@ -556,14 +561,15 @@ class TestCalibrateHouseholds:
         from companies_house_abm.data_sources import _http
 
         _http.clear_cache()
-        fake_savings = {"observations": [{"value": "8.0"}]}  # 8% savings ratio
-        fake_labour: dict[str, Any] = {"observations": []}
+        fake_savings = {"quarters": [{"value": "8.0"}]}  # 8% savings ratio
+        fake_labour: dict[str, Any] = {"months": []}
         call_count = 0
 
         def _fake_retry(fn: Any, url: str) -> Any:
             nonlocal call_count
             call_count += 1
-            if "DGRP" in url:
+            # NRJS is the savings ratio series (replaced DGRP)
+            if "nrjs" in url.lower():
                 return fake_savings
             return fake_labour
 
@@ -788,6 +794,275 @@ class TestHttpRetry:
 
 
 # ---------------------------------------------------------------------------
+# Companies House SIC code fetcher tests (mocked network)
+# ---------------------------------------------------------------------------
+
+
+def _make_fake_bulk_zip(rows: list[dict[str, str]]) -> bytes:
+    """Build an in-memory ZIP containing a minimal Companies House CSV."""
+    import csv
+    import io as _io
+    import zipfile as _zf
+
+    buf = _io.StringIO()
+    fieldnames = ["CompanyNumber", "SICCode.SicText_1", "CompanyName"]
+    writer = csv.DictWriter(buf, fieldnames=fieldnames)
+    writer.writeheader()
+    for row in rows:
+        writer.writerow(row)
+    csv_bytes = buf.getvalue().encode("utf-8")
+
+    zip_buf = _io.BytesIO()
+    with _zf.ZipFile(zip_buf, "w") as zf:
+        zf.writestr("BasicCompanyDataAsOneFile-2025-01-01.csv", csv_bytes)
+    return zip_buf.getvalue()
+
+
+class TestFetchSicCodesNormalise:
+    def test_extracts_company_number_and_sic(self) -> None:
+        import polars as pl
+
+        from companies_house_abm.data_sources.companies_house import _normalise
+
+        raw = pl.DataFrame(
+            {
+                "CompanyNumber": ["12345678", "  87654321  "],
+                "SICCode.SicText_1": [
+                    "62020 - Computer programming",
+                    "45110 - Sale of cars",
+                ],
+            }
+        )
+        df = _normalise(raw)
+        assert "companies_house_registered_number" in df.columns
+        assert "sic_code" in df.columns
+        assert len(df) == 2
+
+    def test_zero_pads_short_company_numbers(self) -> None:
+        import polars as pl
+
+        from companies_house_abm.data_sources.companies_house import _normalise
+
+        raw = pl.DataFrame(
+            {
+                "CompanyNumber": ["1234"],
+                "SICCode.SicText_1": ["62020 - Computer programming"],
+            }
+        )
+        df = _normalise(raw)
+        assert df["companies_house_registered_number"][0] == "00001234"
+
+    def test_extracts_five_digit_sic_code(self) -> None:
+        import polars as pl
+
+        from companies_house_abm.data_sources.companies_house import _normalise
+
+        raw = pl.DataFrame(
+            {
+                "CompanyNumber": ["12345678"],
+                "SICCode.SicText_1": ["62020 - Computer programming, consultancy"],
+            }
+        )
+        df = _normalise(raw)
+        assert df["sic_code"][0] == "62020"
+
+    def test_drops_non_numeric_sic_codes(self) -> None:
+        import polars as pl
+
+        from companies_house_abm.data_sources.companies_house import _normalise
+
+        raw = pl.DataFrame(
+            {
+                "CompanyNumber": ["12345678", "87654321"],
+                "SICCode.SicText_1": ["None supplied", "62020 - valid"],
+            }
+        )
+        df = _normalise(raw)
+        assert len(df) == 1
+        assert df["sic_code"][0] == "62020"
+
+    def test_drops_null_rows(self) -> None:
+        import polars as pl
+
+        from companies_house_abm.data_sources.companies_house import _normalise
+
+        raw = pl.DataFrame(
+            {
+                "CompanyNumber": ["12345678", None],
+                "SICCode.SicText_1": [None, "62020 - valid"],
+            }
+        )
+        df = _normalise(raw)
+        assert len(df) == 0
+
+    def test_deduplicates_per_company(self) -> None:
+        import polars as pl
+
+        from companies_house_abm.data_sources.companies_house import _normalise
+
+        raw = pl.DataFrame(
+            {
+                "CompanyNumber": ["12345678", "12345678"],
+                "SICCode.SicText_1": [
+                    "62020 - first entry",
+                    "45110 - second entry",
+                ],
+            }
+        )
+        df = _normalise(raw)
+        assert len(df) == 1
+
+
+class TestParseBulkZip:
+    def test_parses_csv_from_zip(self, tmp_path: Any) -> None:
+        from companies_house_abm.data_sources.companies_house import _parse_bulk_zip
+
+        rows = [
+            {
+                "CompanyNumber": "12345678",
+                "SICCode.SicText_1": "62020 - Computer programming",
+                "CompanyName": "Test Co",
+            }
+        ]
+        zip_bytes = _make_fake_bulk_zip(rows)
+        zip_path = str(tmp_path / "test.zip")
+        (tmp_path / "test.zip").write_bytes(zip_bytes)
+
+        raw = _parse_bulk_zip(zip_path)
+        assert "CompanyNumber" in raw.columns
+        assert "SICCode.SicText_1" in raw.columns
+        assert len(raw) == 1
+
+    def test_raises_on_zip_with_no_csv(self, tmp_path: Any) -> None:
+        import io as _io
+        import zipfile as _zf
+
+        from companies_house_abm.data_sources.companies_house import _parse_bulk_zip
+
+        zip_buf = _io.BytesIO()
+        with _zf.ZipFile(zip_buf, "w") as zf:
+            zf.writestr("readme.txt", "no csv here")
+        zip_path = str(tmp_path / "empty.zip")
+        (tmp_path / "empty.zip").write_bytes(zip_buf.getvalue())
+
+        with pytest.raises(ValueError, match="No CSV"):
+            _parse_bulk_zip(zip_path)
+
+
+class TestFetchSicCodes:
+    def test_returns_dataframe_on_success(self, tmp_path: Any) -> None:
+        rows = [
+            {
+                "CompanyNumber": "12345678",
+                "SICCode.SicText_1": "62020 - Computer programming",
+                "CompanyName": "Test Co",
+            },
+            {
+                "CompanyNumber": "87654321",
+                "SICCode.SicText_1": "45110 - Sale of cars",
+                "CompanyName": "Car Sales Ltd",
+            },
+        ]
+        fake_zip = _make_fake_bulk_zip(rows)
+
+        with patch(
+            "companies_house_abm.data_sources.companies_house._stream_to_tempfile",
+        ) as mock_stream:
+            zip_path = str(tmp_path / "fake.zip")
+            (tmp_path / "fake.zip").write_bytes(fake_zip)
+            mock_stream.return_value = zip_path
+
+            from companies_house_abm.data_sources.companies_house import (
+                fetch_sic_codes,
+            )
+
+            df = fetch_sic_codes()
+
+        assert "companies_house_registered_number" in df.columns
+        assert "sic_code" in df.columns
+        assert len(df) == 2
+
+    def test_saves_parquet_when_output_path_given(self, tmp_path: Any) -> None:
+        rows = [
+            {
+                "CompanyNumber": "12345678",
+                "SICCode.SicText_1": "62020 - Computer programming",
+                "CompanyName": "Test Co",
+            }
+        ]
+        fake_zip = _make_fake_bulk_zip(rows)
+        out_path = tmp_path / "sic_codes.parquet"
+
+        with patch(
+            "companies_house_abm.data_sources.companies_house._stream_to_tempfile",
+        ) as mock_stream:
+            zip_path = str(tmp_path / "fake.zip")
+            (tmp_path / "fake.zip").write_bytes(fake_zip)
+            mock_stream.return_value = zip_path
+
+            from companies_house_abm.data_sources.companies_house import (
+                fetch_sic_codes,
+            )
+
+            fetch_sic_codes(output_path=out_path)
+
+        assert out_path.exists()
+        import polars as pl
+
+        loaded = pl.read_parquet(out_path)
+        assert "sic_code" in loaded.columns
+
+    def test_raises_when_all_urls_fail(self) -> None:
+        import urllib.error
+
+        with patch(
+            "companies_house_abm.data_sources.companies_house._stream_to_tempfile",
+            side_effect=urllib.error.URLError("connection refused"),
+        ):
+            from companies_house_abm.data_sources.companies_house import (
+                fetch_sic_codes,
+            )
+
+            with pytest.raises(RuntimeError, match="Could not download"):
+                fetch_sic_codes()
+
+    def test_falls_back_to_previous_month_url(self, tmp_path: Any) -> None:
+        import urllib.error
+
+        rows = [
+            {
+                "CompanyNumber": "11111111",
+                "SICCode.SicText_1": "62020 - Computer programming",
+                "CompanyName": "Fallback Co",
+            }
+        ]
+        fake_zip = _make_fake_bulk_zip(rows)
+        call_count = 0
+
+        def _fake_stream(url: str) -> str:
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                raise urllib.error.URLError("current month not ready")
+            zip_path = str(tmp_path / "fallback.zip")
+            (tmp_path / "fallback.zip").write_bytes(fake_zip)
+            return zip_path
+
+        with patch(
+            "companies_house_abm.data_sources.companies_house._stream_to_tempfile",
+            side_effect=_fake_stream,
+        ):
+            from companies_house_abm.data_sources.companies_house import (
+                fetch_sic_codes,
+            )
+
+            df = fetch_sic_codes()
+
+        assert call_count == 2  # tried current month, then fell back
+        assert len(df) == 1
+
+
+# ---------------------------------------------------------------------------
 # CLI fetch-data command tests
 # ---------------------------------------------------------------------------
 
@@ -826,6 +1101,10 @@ class TestFetchDataCli:
             patch(
                 "companies_house_abm.data_sources.boe.fetch_bank_rate",
                 return_value=[],
+            ),
+            patch(
+                "companies_house_abm.data_sources.companies_house._stream_to_tempfile",
+                side_effect=Exception("no network"),
             ),
         ):
             result = cli_runner.invoke(

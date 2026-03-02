@@ -126,7 +126,7 @@ def fetch_data(
             "--source",
             "-s",
             help=(
-                "Data source to fetch: ons, boe, hmrc, io-tables, all. "
+                "Data source to fetch: ons, boe, hmrc, io-tables, sic, all. "
                 "May be repeated. Defaults to all."
             ),
         ),
@@ -274,6 +274,18 @@ def fetch_data(
             f", effective wedge at 35k: {wedge['effective_rate']:.1%}"
             " -> hmrc_tax.json"
         )
+
+    # -------------------------------------------------- SIC codes (Companies House)
+    if fetch_all or "sic" in requested:
+        typer.echo("Fetching Companies House SIC codes (bulk download ~400 MB)...")
+        from companies_house_abm.data_sources.companies_house import fetch_sic_codes
+
+        sic_output = output / "sic_codes.parquet"
+        try:
+            df = fetch_sic_codes(output_path=sic_output)
+            typer.echo(f"  SIC codes: {len(df):,} companies -> {sic_output.name}")
+        except RuntimeError as exc:
+            typer.echo(f"  Warning: could not fetch SIC codes: {exc}", err=True)
 
     # ----------------------------------------------------------- Calibration
     if calibrate:

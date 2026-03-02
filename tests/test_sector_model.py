@@ -2,18 +2,22 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 from companies_house_abm.abm.sector_model import (
     SECTOR_PROFILES,
-    SectorProfile,
     UK_EMPLOYMENT,
     UK_GDP_QUARTERLY,
     UK_WAGE_QUARTERLY,
+    SectorProfile,
     create_sector_representative_simulation,
     get_sector_profiles,
 )
-
 
 # ---------------------------------------------------------------------------
 # SectorProfile
@@ -188,7 +192,7 @@ class TestCreateSectorRepresentativeSimulation:
 
 
 class TestRunSectorModelCli:
-    def test_creates_csv_output(self, tmp_path: "Path") -> None:
+    def test_creates_csv_output(self, tmp_path: Path) -> None:
         from typer.testing import CliRunner
 
         from companies_house_abm.cli import app
@@ -215,7 +219,7 @@ class TestRunSectorModelCli:
         lines = csv_file.read_text().splitlines()
         assert len(lines) == 6  # header + 5 periods
 
-    def test_sector_summary_in_output(self, tmp_path: "Path") -> None:
+    def test_sector_summary_in_output(self, tmp_path: Path) -> None:
         from typer.testing import CliRunner
 
         from companies_house_abm.cli import app
@@ -240,7 +244,7 @@ class TestRunSectorModelCli:
         assert "manufacturing" in result.output
         assert "financial" in result.output
 
-    def test_evaluate_writes_report(self, tmp_path: "Path") -> None:
+    def test_evaluate_writes_report(self, tmp_path: Path) -> None:
         from typer.testing import CliRunner
 
         from companies_house_abm.cli import app

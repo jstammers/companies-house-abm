@@ -159,6 +159,7 @@ class TestFirm:
             "equity",
             "profit",
             "markup",
+            "aspiration_rate",
             "bankrupt",
         }
         assert set(state.keys()) == expected_keys
@@ -267,6 +268,7 @@ class TestHousehold:
             "agent_id",
             "agent_type",
             "income",
+            "expected_income",
             "wealth",
             "consumption",
             "savings",

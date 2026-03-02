@@ -359,7 +359,7 @@ def create_sector_representative_simulation(
     # ── Wire markets ───────────────────────────────────────────────────────
     sim.goods_market.set_agents(sim.firms, sim.households, sim.government)
     sim.labor_market.set_agents(sim.firms, sim.households, rng)
-    sim.credit_market.set_agents(sim.firms, sim.banks)
+    sim.credit_market.set_agents(sim.firms, sim.banks, rng)
 
     return sim
 

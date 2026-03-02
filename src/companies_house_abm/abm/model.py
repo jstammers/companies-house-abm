@@ -208,7 +208,7 @@ class Simulation:
         # --- Wire markets ---
         self.goods_market.set_agents(self.firms, self.households, self.government)
         self.labor_market.set_agents(self.firms, self.households, self._rng)
-        self.credit_market.set_agents(self.firms, self.banks)
+        self.credit_market.set_agents(self.firms, self.banks, self._rng)
 
     def _initial_employment(self) -> None:
         """Assign households to firms for initial employment."""

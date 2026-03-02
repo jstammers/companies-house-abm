@@ -69,17 +69,25 @@ behavior:
     capacity_utilization_target: 0.85  # Desired capacity utilization
     investment_sensitivity: 2.0  # Sensitivity of investment to profitability
     wage_adjustment_speed: 0.05  # Speed of wage adjustments
+    # Bounded rationality: satisficing markup heuristic (Simon 1955)
+    satisficing_aspiration_rate: 0.5  # Target profit/turnover ratio
+    satisficing_window: 4  # Quarters of history for rolling aspiration
+    markup_noise_std: 0.0  # Std dev of markup adjustment noise (0 = off)
 
   households:
     job_search_intensity: 0.3  # Fraction of unemployed searching per period
     reservation_wage_ratio: 0.9  # Reservation wage as fraction of market wage
     consumption_smoothing: 0.7  # Weight on permanent vs current income
+    # Bounded rationality: adaptive expectations (Dosi et al. 2010)
+    expectation_adaptation_speed: 0.3  # EMA weight on new income observation
 
   banks:
     base_interest_markup: 0.02  # Markup over policy rate for loans
     risk_premium_sensitivity: 0.05  # How risk affects interest rates
     lending_threshold: 0.3  # Minimum debt service coverage ratio
     capital_buffer: 0.02  # Buffer above regulatory minimum
+    # Bounded rationality: noisy composite credit scoring (Gabaix 2014)
+    credit_score_noise_std: 0.0  # Std dev of credit score noise (0 = off)
 
 # Market mechanisms
 markets:

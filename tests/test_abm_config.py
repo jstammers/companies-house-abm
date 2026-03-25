@@ -19,8 +19,11 @@ from companies_house_abm.abm.config import (
     GoodsMarketConfig,
     HouseholdBehaviorConfig,
     HouseholdConfig,
+    HousingMarketConfig,
     LaborMarketConfig,
     ModelConfig,
+    MortgageConfig,
+    PropertyConfig,
     SimulationConfig,
     TaylorRuleConfig,
     TransfersConfig,
@@ -95,10 +98,34 @@ class TestDefaults:
         cfg = CreditMarketConfig()
         assert cfg.rationing is True
 
+    def test_property_config_defaults(self):
+        cfg = PropertyConfig()
+        assert cfg.count == 12_000
+        assert cfg.average_price == 285_000.0
+        assert len(cfg.regions) == 11
+        assert len(cfg.types) == 4
+        assert len(cfg.type_shares) == 4
+
+    def test_housing_market_config_defaults(self):
+        cfg = HousingMarketConfig()
+        assert cfg.search_intensity == 10
+        assert cfg.initial_markup == 0.05
+        assert cfg.backward_expectation_weight == 0.65
+
+    def test_mortgage_config_defaults(self):
+        cfg = MortgageConfig()
+        assert cfg.max_ltv == 0.90
+        assert cfg.max_dti == 4.5
+        assert cfg.default_term_months == 300
+        assert cfg.mortgage_risk_weight == 0.35
+
     def test_model_config_defaults(self):
         cfg = ModelConfig()
         assert cfg.simulation.periods == 400
         assert cfg.firms.sample_size == 50_000
+        assert cfg.properties.count == 12_000
+        assert cfg.housing_market.search_intensity == 10
+        assert cfg.mortgage.max_ltv == 0.90
 
 
 # ---------------------------------------------------------------------------
@@ -150,3 +177,28 @@ class TestLoadConfig:
     def test_sectors_converted_to_tuple(self):
         cfg = load_config()
         assert isinstance(cfg.firms.sectors, tuple)
+
+    def test_load_housing_config(self):
+        cfg = load_config()
+        assert cfg.properties.count == 12_000
+        assert isinstance(cfg.properties.regions, tuple)
+        assert isinstance(cfg.properties.types, tuple)
+        assert isinstance(cfg.properties.type_shares, tuple)
+        assert cfg.housing_market.search_intensity == 10
+        assert cfg.mortgage.max_ltv == 0.90
+
+    def test_load_custom_housing_config(self, tmp_path: Path):
+        custom = {
+            "agents": {"properties": {"count": 5000, "average_price": 300000}},
+            "markets": {"housing": {"search_intensity": 20}},
+            "behavior": {"banks": {"mortgage": {"max_ltv": 0.85}}},
+        }
+        config_path = tmp_path / "housing_config.yml"
+        with config_path.open("w") as fh:
+            yaml.dump(custom, fh)
+
+        cfg = load_config(config_path)
+        assert cfg.properties.count == 5000
+        assert cfg.properties.average_price == 300_000.0
+        assert cfg.housing_market.search_intensity == 20
+        assert cfg.mortgage.max_ltv == 0.85

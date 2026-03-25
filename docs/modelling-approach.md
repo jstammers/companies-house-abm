@@ -27,22 +27,28 @@ Key attributes: `sector`, `employees`, `turnover`, `capital`, `cash`, `debt`, `e
 
 ### Household
 
-Households supply labour and consume goods.  Each period:
+Households supply labour, consume goods, and participate in the housing market.  Each period:
 
 1. **Receive income** — wages if employed, transfer income if not.
-2. **Consume** — a consumption function combining a fraction of income (MPC) and a small draw on wealth.
-3. **Save** — unspent income accumulates as deposits/wealth.
+2. **Make housing payment** — mortgage amortisation (if owner) or rent payment (if renter).
+3. **Consume** — a consumption function combining a fraction of remaining income (MPC) and a small draw on wealth.
+4. **Save** — unspent income accumulates as deposits/wealth.
+5. **Decide buy or rent** — compare expected cost of owning vs renting using backward/forward-looking price expectations (Farmer 2025).
 
-Key attributes: `income`, `wealth`, `mpc`, `employed`, `wage`.
+Key attributes: `income`, `wealth`, `mpc`, `employed`, `wage`, `tenure`, `property_id`, `mortgage`, `rent`, `housing_wealth`, `wants_to_buy`.
 
 ### Bank
 
-Banks accept deposits, extend credit and must satisfy regulatory constraints.  Each period:
+Banks accept deposits, extend credit, originate mortgages, and must satisfy regulatory constraints.  Each period:
 
 1. **Set lending rate** — policy rate plus a markup, with a risk premium that rises with non-performing loans (NPLs).
-2. **Evaluate loans** — check collateral coverage and debt-service coverage ratios.
-3. **Record income/expense** — interest income on loans, interest expense on deposits, provisions for NPLs.
-4. **Update capital** — profit added to equity.
+2. **Set mortgage rate** — policy rate plus a spread and risk premium.
+3. **Evaluate loans** — check collateral coverage and debt-service coverage ratios.
+4. **Evaluate mortgages** — apply FPC macroprudential checks (LTV, DTI, affordability stress test).
+5. **Originate mortgages** — create mortgage contracts for approved applications.
+6. **Assess foreclosures** — foreclose on mortgages with 3+ months of arrears.
+7. **Record income/expense** — interest income on loans, interest expense on deposits, provisions for NPLs.
+8. **Update capital** — profit added to equity.  Mortgage book included in risk-weighted assets at 0.35 weight.
 
 Regulatory constraints follow Basel III: a minimum capital-adequacy ratio and a capital buffer above that minimum.
 
@@ -79,23 +85,39 @@ Matching occurs with frictions:
 
 Firms with negative cash balances apply for loans.  Applications are distributed across banks in round-robin fashion.  Each bank evaluates the application against collateral and debt-service-coverage thresholds.  When credit rationing is enabled, applications that fail the evaluation are rejected outright.
 
+### Housing Market
+
+The housing market uses **bilateral matching with aspiration-level pricing** (Farmer 2025), fundamentally different from the equilibrium-clearing approach used for goods and labour.  Each period:
+
+1. **Sellers update asking prices** — unsold listings are reduced by 10% per period; after 6 months they are delisted (aspiration-level adaptation).
+2. **Buyers search** — each buyer visits up to 10 listed properties within their budget and selects the best value.
+3. **Mortgage evaluation** — banks apply FPC macroprudential checks: LTV cap (90%), DTI limit (4.5x), and an affordability stress test (+3% rate buffer).
+4. **Transactions** — if the mortgage is approved, ownership transfers, the bank creates a mortgage, and aggregate statistics are updated.
+
+Properties are passive assets (not agents) with region, type, quality, and price attributes.  Mortgages are shared reference objects between banks and households.
+
+See [Housing Market](housing-market.md) for full documentation.
+
 ## Within-Period Sequence
 
-Each simulation period follows this sequence:
+Each simulation period follows this 16-step sequence:
 
 1. Government resets period flows.
 2. Central bank sets the policy rate (Taylor rule).
-3. Banks update lending rates from the new policy rate.
+3. Banks update lending rates **and mortgage rates** from the new policy rate.
 4. Credit market clears (firms borrow, defaults processed).
 5. Firms step (plan, price, labour demand, produce, financials).
 6. Labour market clears (separations, matching).
-7. Households step (income, consumption, saving).
-8. Government calculates spending.
-9. Goods market clears (demand allocated, markup adaptation).
-10. Taxes collected (corporate and income).
-11. Government ends period (deficit, debt).
-12. Central bank observes inflation and output gap.
-13. Banks step (income calculation, capital update).
+7. **Banks assess foreclosures** (mortgages in arrears).
+8. Households step (income, **housing payment**, consumption, saving).
+9. **Households make buy/sell decisions** (buy-vs-rent comparison, owner sell probability).
+10. **Housing market clears** (bilateral matching, mortgage origination).
+11. Government calculates spending.
+12. Goods market clears (demand allocated, markup adaptation).
+13. Taxes collected (corporate and income).
+14. Government ends period (deficit, debt).
+15. Central bank observes inflation and output gap.
+16. Banks step (income calculation, capital update).
 
 ## Configuration
 
@@ -105,9 +127,12 @@ All parameters are stored in `config/model_parameters.yml` and loaded into froze
 |---------|----------|
 | `simulation` | `periods`, `seed`, `warm_up_periods` |
 | `agents.firms` | `sample_size`, `sectors`, `entry_rate` |
-| `Behaviour.firms` | `price_markup`, `inventory_target_ratio` |
+| `behavior.firms` | `price_markup`, `inventory_target_ratio` |
 | `agents.households` | `count`, `mpc_mean`, `income_mean` |
 | `agents.banks` | `count`, `capital_requirement` |
+| `agents.properties` | `count`, `regions`, `types`, `average_price` |
+| `behavior.banks.mortgage` | `max_ltv`, `max_dti`, `stress_test_buffer` |
+| `markets.housing` | `search_intensity`, `price_reduction_rate`, `rental_yield` |
 | `policy.central_bank` | Taylor rule coefficients |
 | `policy.government` | Tax rates, spending ratio, transfers |
 | `markets.*` | Price adjustment speed, matching efficiency |
@@ -124,6 +149,10 @@ The model aims to reproduce the following UK stylised facts:
 | Inflation | Mean $\approx 2\%$ |
 | Wage share of income | $\approx 55\%$ |
 | Investment / GDP | $\approx 17\%$ |
+| Homeownership rate | $\approx 64\%$ |
+| Average house price | $\approx$ £285,000 |
+| Price-to-income ratio | $\approx 8.3$ |
+| Gross rental yield | $4{-}5\%$ |
 
 ## Interactive Exploration
 

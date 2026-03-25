@@ -1,7 +1,7 @@
 """Bank agent for the ABM.
 
-Banks accept deposits, extend credit to firms, and must satisfy
-regulatory capital and reserve requirements.
+Banks accept deposits, extend credit to firms, originate mortgages,
+and must satisfy regulatory capital and reserve requirements.
 """
 
 from __future__ import annotations
@@ -13,7 +13,12 @@ from companies_house_abm.abm.agents.base import BaseAgent
 if TYPE_CHECKING:
     from typing import Any
 
-    from companies_house_abm.abm.config import BankBehaviorConfig, BankConfig
+    from companies_house_abm.abm.assets.mortgage import Mortgage
+    from companies_house_abm.abm.config import (
+        BankBehaviorConfig,
+        BankConfig,
+        MortgageConfig,
+    )
 
 
 class Bank(BaseAgent):
@@ -39,6 +44,7 @@ class Bank(BaseAgent):
         deposits: float = 0.0,
         config: BankConfig | None = None,
         behavior: BankBehaviorConfig | None = None,
+        mortgage_config: MortgageConfig | None = None,
     ) -> None:
         super().__init__(agent_id)
         self.capital = capital
@@ -51,8 +57,15 @@ class Bank(BaseAgent):
         self._interest_income: float = 0.0
         self._interest_expense: float = 0.0
 
+        # Mortgage state
+        self.mortgage_book: float = 0.0
+        self.mortgage_npl: float = 0.0
+        self.mortgage_rate: float = 0.04
+        self.mortgage_count: int = 0
+
         self._config = config
         self._behavior = behavior
+        self._mortgage_config = mortgage_config
 
     # ------------------------------------------------------------------
     # Regulatory ratios
@@ -62,7 +75,12 @@ class Bank(BaseAgent):
     def capital_ratio(self) -> float:
         """Capital adequacy ratio (capital / risk-weighted assets)."""
         rw = self._config.risk_weight if self._config else 1.0
-        risk_weighted = self.loans * rw
+        mortgage_rw = (
+            self._mortgage_config.mortgage_risk_weight
+            if self._mortgage_config
+            else 0.35
+        )
+        risk_weighted = self.loans * rw + self.mortgage_book * mortgage_rw
         if risk_weighted <= 0:
             return 1.0
         return self.capital / risk_weighted
@@ -189,6 +207,178 @@ class Bank(BaseAgent):
         self.loans = max(self.loans - amount, 0.0)
 
     # ------------------------------------------------------------------
+    # Mortgage interface used by the housing market
+    # ------------------------------------------------------------------
+
+    def set_mortgage_rate(self, policy_rate: float) -> None:
+        """Set the mortgage rate based on the policy rate.
+
+        Args:
+            policy_rate: Current central bank policy rate.
+        """
+        spread = (
+            self._mortgage_config.mortgage_spread if self._mortgage_config else 0.015
+        )
+        risk = self._behavior.risk_premium_sensitivity if self._behavior else 0.05
+        npl_ratio = (
+            self.mortgage_npl / self.mortgage_book if self.mortgage_book > 0 else 0.0
+        )
+        self.mortgage_rate = policy_rate + spread + risk * npl_ratio
+
+    def evaluate_mortgage(
+        self,
+        annual_income: float,
+        deposit: float,
+        property_value: float,
+    ) -> bool:
+        """Decide whether to approve a mortgage application.
+
+        Applies FPC macroprudential checks: LTV cap, DTI limit, and
+        affordability stress test.
+
+        Args:
+            annual_income: Borrower's gross annual income.
+            deposit: Cash deposit available.
+            property_value: Value of the property to purchase.
+
+        Returns:
+            True if the mortgage is approved.
+        """
+        if not self.meets_capital_requirement:
+            return False
+
+        loan_amount = property_value - deposit
+        if loan_amount <= 0:
+            return True  # cash purchase, no mortgage needed
+
+        max_ltv = self._mortgage_config.max_ltv if self._mortgage_config else 0.90
+        max_dti = self._mortgage_config.max_dti if self._mortgage_config else 4.5
+        stress_buffer = (
+            self._mortgage_config.stress_test_buffer if self._mortgage_config else 0.03
+        )
+
+        # LTV check
+        ltv = loan_amount / property_value
+        if ltv > max_ltv:
+            return False
+
+        # DTI check
+        if annual_income <= 0:
+            return False
+        dti = loan_amount / annual_income
+        if dti > max_dti:
+            return False
+
+        # Affordability stress test: can they pay at rate + buffer?
+        stressed_rate = self.mortgage_rate + stress_buffer
+        monthly_rate = stressed_rate / 12.0
+        term = (
+            self._mortgage_config.default_term_months if self._mortgage_config else 300
+        )
+        if monthly_rate > 0:
+            factor = (1.0 + monthly_rate) ** term
+            stressed_payment = loan_amount * monthly_rate * factor / (factor - 1.0)
+        else:
+            stressed_payment = loan_amount / term
+
+        monthly_income = annual_income / 12.0
+        # Affordability: stressed payment should be < 40% of gross monthly income
+        return stressed_payment < monthly_income * 0.40
+
+    def originate_mortgage(
+        self,
+        borrower_id: str,
+        property_id: str,
+        loan_amount: float,
+        property_value: float,
+        annual_income: float,
+        period: int,
+    ) -> Mortgage:
+        """Create a new mortgage and update the bank's books.
+
+        Args:
+            borrower_id: Household agent_id.
+            property_id: Property being purchased.
+            loan_amount: Principal amount.
+            property_value: Property value.
+            annual_income: Borrower's annual income.
+            period: Current simulation period.
+
+        Returns:
+            A new :class:`Mortgage` instance.
+        """
+        from companies_house_abm.abm.assets.mortgage import Mortgage
+
+        term = (
+            self._mortgage_config.default_term_months if self._mortgage_config else 300
+        )
+        rate_type = "fixed"
+        if self._mortgage_config:
+            import random
+
+            rate_type = (
+                "fixed"
+                if random.random() < self._mortgage_config.fixed_rate_share
+                else "variable"
+            )
+
+        mortgage = Mortgage(
+            borrower_id=borrower_id,
+            lender_id=self.agent_id,
+            property_id=property_id,
+            principal=loan_amount,
+            outstanding=loan_amount,
+            interest_rate=self.mortgage_rate,
+            rate_type=rate_type,
+            term_months=term,
+            remaining_months=term,
+            ltv_at_origination=(
+                loan_amount / property_value if property_value > 0 else 0
+            ),
+            dti_at_origination=(
+                loan_amount / annual_income if annual_income > 0 else 0
+            ),
+            start_period=period,
+        )
+
+        self.mortgage_book += loan_amount
+        self.mortgage_count += 1
+        self.deposits += loan_amount  # loan creates deposit
+        return mortgage
+
+    def assess_foreclosure(self, mortgage: Mortgage) -> bool:
+        """Decide whether to foreclose on a mortgage in arrears.
+
+        Args:
+            mortgage: The mortgage to assess.
+
+        Returns:
+            True if the bank decides to foreclose.
+        """
+        threshold = (
+            self._mortgage_config.foreclosure_threshold if self._mortgage_config else 3
+        )
+        return mortgage.in_arrears and mortgage.arrears_months >= threshold
+
+    def record_mortgage_default(self, amount: float) -> None:
+        """Record a mortgage default.
+
+        Args:
+            amount: Outstanding balance of the defaulted mortgage.
+        """
+        self.mortgage_npl += amount
+        self.mortgage_book = max(self.mortgage_book - amount, 0.0)
+        self.mortgage_count = max(self.mortgage_count - 1, 0)
+
+    def record_mortgage_repayment(self, amount: float) -> None:
+        """Record a mortgage principal repayment.
+
+        Args:
+            amount: The principal portion repaid.
+        """
+        self.mortgage_book = max(self.mortgage_book - amount, 0.0)
+
+    # ------------------------------------------------------------------
     # State reporting
     # ------------------------------------------------------------------
 
@@ -205,4 +395,8 @@ class Bank(BaseAgent):
             "interest_rate": self.interest_rate,
             "capital_ratio": self.capital_ratio,
             "profit": self.profit,
+            "mortgage_book": self.mortgage_book,
+            "mortgage_npl": self.mortgage_npl,
+            "mortgage_rate": self.mortgage_rate,
+            "mortgage_count": self.mortgage_count,
         }

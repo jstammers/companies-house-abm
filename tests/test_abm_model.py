@@ -23,6 +23,9 @@ class TestPeriodRecord:
         assert rec.period == 0
         assert rec.gdp == 0.0
         assert rec.inflation == 0.0
+        assert rec.average_house_price == 0.0
+        assert rec.housing_transactions == 0
+        assert rec.homeownership_rate == 0.0
 
     def test_custom_values(self):
         rec = PeriodRecord(period=5, gdp=1_000_000.0, inflation=0.02)
@@ -163,3 +166,58 @@ class TestSimulationStep:
         result = sim.run(periods=5)
         for rec in result.records:
             assert rec.gdp >= 0
+
+
+# ---------------------------------------------------------------------------
+# Housing integration
+# ---------------------------------------------------------------------------
+
+
+class TestHousingIntegration:
+    def _make_sim(self) -> Simulation:
+        cfg = ModelConfig(simulation=SimulationConfig(periods=5, seed=42))
+        sim = Simulation(cfg)
+        sim.initialize_agents()
+        # Trim for speed
+        sim.firms = sim.firms[:10]
+        sim.households = sim.households[:50]
+        sim.properties = sim.properties[:100]
+        # Re-wire markets with trimmed populations
+        sim.goods_market.set_agents(sim.firms, sim.households, sim.government)
+        sim.labor_market.set_agents(sim.firms, sim.households, sim._rng)
+        sim.credit_market.set_agents(sim.firms, sim.banks)
+        sim.housing_market.set_agents(
+            sim.properties, sim.households, sim.banks, sim.mortgages, rng=sim._rng
+        )
+        return sim
+
+    def test_properties_created(self):
+        sim = Simulation.from_config()
+        assert len(sim.properties) > 0
+
+    def test_initial_tenure_assignment(self):
+        sim = Simulation.from_config()
+        owners = [hh for hh in sim.households if hh.tenure == "owner_occupier"]
+        renters = [hh for hh in sim.households if hh.tenure == "renter"]
+        total = len(owners) + len(renters)
+        assert total == len(sim.households)
+        # Ownership rate should be approximately 64%
+        rate = len(owners) / len(sim.households)
+        assert 0.5 < rate < 0.8
+
+    def test_step_returns_housing_stats(self):
+        sim = self._make_sim()
+        record = sim.step()
+        assert record.average_house_price > 0
+        assert record.homeownership_rate >= 0
+
+    def test_run_with_housing(self):
+        sim = self._make_sim()
+        result = sim.run(periods=3)
+        assert len(result.house_price_series) == 3
+        assert all(p > 0 for p in result.house_price_series)
+
+    def test_banks_have_mortgage_config(self):
+        sim = Simulation.from_config()
+        for bank in sim.banks:
+            assert bank._mortgage_config is not None

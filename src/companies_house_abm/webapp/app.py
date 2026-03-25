@@ -53,7 +53,9 @@ def run_simulation(params: SimulationParams) -> SimulationResponse:
         FiscalRuleConfig,
         HouseholdBehaviorConfig,
         HouseholdConfig,
+        HousingMarketConfig,
         ModelConfig,
+        MortgageConfig,
         SimulationConfig,
         TaylorRuleConfig,
     )
@@ -90,6 +92,13 @@ def run_simulation(params: SimulationParams) -> SimulationResponse:
             tax_rate_corporate=params.corporate_tax_rate,
             tax_rate_income_base=params.income_tax_rate,
         ),
+        housing_market=HousingMarketConfig(
+            search_intensity=params.search_intensity,
+        ),
+        mortgage=MortgageConfig(
+            max_ltv=params.max_ltv,
+            max_dti=params.max_dti,
+        ),
     )
 
     sim = Simulation(config)
@@ -109,6 +118,13 @@ def run_simulation(params: SimulationParams) -> SimulationResponse:
             total_lending=r.total_lending,
             firm_bankruptcies=r.firm_bankruptcies,
             total_employment=r.total_employment,
+            average_house_price=r.average_house_price,
+            housing_transactions=r.housing_transactions,
+            housing_listings=r.housing_listings,
+            homeownership_rate=r.homeownership_rate,
+            house_price_inflation=r.house_price_inflation,
+            total_mortgage_lending=r.total_mortgage_lending,
+            foreclosures=r.foreclosures,
         )
         for r in result.records
     ]

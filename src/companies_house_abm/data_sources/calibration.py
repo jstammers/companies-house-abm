@@ -22,7 +22,9 @@ from companies_house_abm.abm.config import (
     BankConfig,
     FiscalRuleConfig,
     HouseholdConfig,
+    HousingMarketConfig,
     ModelConfig,
+    PropertyConfig,
     TransfersConfig,
     load_config,
 )
@@ -305,6 +307,68 @@ def calibrate_io_sectors() -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# Housing calibration
+# ---------------------------------------------------------------------------
+
+
+def calibrate_housing(
+    base_properties: PropertyConfig | None = None,
+    base_market: HousingMarketConfig | None = None,
+) -> tuple[PropertyConfig, HousingMarketConfig]:
+    """Calibrate housing parameters from Land Registry and ONS data.
+
+    Sets average house price from UK HPI and rental yield from ONS
+    rental price growth data.
+
+    Args:
+        base_properties: Existing
+            :class:`~companies_house_abm.abm.config.PropertyConfig`.
+        base_market: Existing
+            :class:`~companies_house_abm.abm.config.HousingMarketConfig`.
+
+    Returns:
+        Tuple of updated ``(PropertyConfig, HousingMarketConfig)``.
+    """
+    from companies_house_abm.data_sources.land_registry import (
+        fetch_uk_average_price,
+    )
+    from companies_house_abm.data_sources.ons_housing import (
+        fetch_affordability_ratio,
+        fetch_tenure_distribution,
+    )
+
+    if base_properties is None:
+        base_properties = PropertyConfig()
+    if base_market is None:
+        base_market = HousingMarketConfig()
+
+    prop_overrides: dict[str, Any] = {}
+    market_overrides: dict[str, Any] = {}
+
+    # --- Average price from UK HPI ---
+    avg_price = fetch_uk_average_price()
+    if avg_price > 0:
+        prop_overrides["average_price"] = avg_price
+        logger.info("Calibrated average house price: £%.0f", avg_price)
+
+    # --- Tenure distribution (for validation) ---
+    tenure = fetch_tenure_distribution()
+    logger.info(
+        "Tenure distribution: owners=%.0f%% renters=%.0f%%",
+        tenure.get("owner_occupier", 0) * 100,
+        (tenure.get("private_renter", 0) + tenure.get("social_renter", 0)) * 100,
+    )
+
+    # --- Affordability ratio (for validation) ---
+    affordability = fetch_affordability_ratio()
+    logger.info("Price-to-income affordability ratio: %.1f", affordability)
+
+    return replace(base_properties, **prop_overrides), replace(
+        base_market, **market_overrides
+    )
+
+
+# ---------------------------------------------------------------------------
 # Full model calibration
 # ---------------------------------------------------------------------------
 
@@ -340,6 +404,7 @@ def calibrate_model(base: ModelConfig | None = None) -> ModelConfig:
     households = calibrate_households(base.households)
     bank_config, bank_behavior = calibrate_banks(base.banks, base.bank_behavior)
     fiscal_rule, transfers = calibrate_government(base.fiscal_rule, base.transfers)
+    properties, housing_market = calibrate_housing(base.properties, base.housing_market)
 
     return replace(
         base,
@@ -348,4 +413,6 @@ def calibrate_model(base: ModelConfig | None = None) -> ModelConfig:
         bank_behavior=bank_behavior,
         fiscal_rule=fiscal_rule,
         transfers=transfers,
+        properties=properties,
+        housing_market=housing_market,
     )

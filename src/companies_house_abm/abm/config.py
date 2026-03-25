@@ -167,6 +167,63 @@ class CreditMarketConfig:
 
 
 @dataclass(frozen=True)
+class PropertyConfig:
+    """Configuration for the housing stock."""
+
+    count: int = 12_000
+    regions: tuple[str, ...] = (
+        "london",
+        "south_east",
+        "east",
+        "south_west",
+        "west_midlands",
+        "east_midlands",
+        "north_west",
+        "north_east",
+        "yorkshire",
+        "scotland",
+        "wales",
+    )
+    types: tuple[str, ...] = ("detached", "semi_detached", "terraced", "flat")
+    type_shares: tuple[float, ...] = (0.16, 0.24, 0.28, 0.32)
+    average_price: float = 285_000.0
+
+
+@dataclass(frozen=True)
+class HousingMarketConfig:
+    """Configuration for the housing market mechanism.
+
+    The housing market uses bilateral matching with aspiration-level pricing,
+    following the Farmer/Geanakoplos approach (Farmer 2025).
+    """
+
+    search_intensity: int = 10
+    initial_markup: float = 0.05
+    price_reduction_rate: float = 0.10
+    max_months_listed: int = 6
+    backward_expectation_weight: float = 0.65
+    expectation_lookback: int = 12
+    transaction_cost: float = 0.05
+    maintenance_cost: float = 0.01
+    rental_yield: float = 0.045
+
+
+@dataclass(frozen=True)
+class MortgageConfig:
+    """Configuration for mortgage lending (FPC macroprudential toolkit)."""
+
+    max_ltv: float = 0.90
+    max_dti: float = 4.5
+    stress_test_buffer: float = 0.03
+    default_term_months: int = 300
+    fixed_rate_share: float = 0.75
+    fixed_rate_period: int = 24
+    mortgage_risk_weight: float = 0.35
+    foreclosure_threshold: int = 3
+    mortgage_spread: float = 0.015
+
+
+@dataclass(frozen=True)
 class ModelConfig:
     """Complete model configuration."""
 
@@ -185,6 +242,9 @@ class ModelConfig:
     goods_market: GoodsMarketConfig = field(default_factory=GoodsMarketConfig)
     labor_market: LaborMarketConfig = field(default_factory=LaborMarketConfig)
     credit_market: CreditMarketConfig = field(default_factory=CreditMarketConfig)
+    properties: PropertyConfig = field(default_factory=PropertyConfig)
+    housing_market: HousingMarketConfig = field(default_factory=HousingMarketConfig)
+    mortgage: MortgageConfig = field(default_factory=MortgageConfig)
 
 
 def _extract(raw: dict[str, Any], section: str, *keys: str) -> dict[str, Any]:
@@ -233,6 +293,22 @@ def load_config(path: Path | None = None) -> ModelConfig:
     # Handle size_classes key that's in YAML but not in the dataclass
     firms_raw = {k: v for k, v in firms_raw.items() if k != "size_classes"}
 
+    # Housing: properties, housing market, and mortgage config
+    properties_raw = agents.get("properties", {})
+    if "regions" in properties_raw and isinstance(properties_raw["regions"], list):
+        properties_raw = {**properties_raw, "regions": tuple(properties_raw["regions"])}
+    if "types" in properties_raw and isinstance(properties_raw["types"], list):
+        properties_raw = {**properties_raw, "types": tuple(properties_raw["types"])}
+    if "type_shares" in properties_raw and isinstance(
+        properties_raw["type_shares"], list
+    ):
+        properties_raw = {
+            **properties_raw,
+            "type_shares": tuple(properties_raw["type_shares"]),
+        }
+
+    mortgage_raw = _extract(behavior, "banks", "mortgage")
+
     return ModelConfig(
         simulation=SimulationConfig(**sim_raw),
         firms=FirmConfig(**firms_raw),
@@ -240,11 +316,16 @@ def load_config(path: Path | None = None) -> ModelConfig:
         households=HouseholdConfig(**hh_raw),
         household_behavior=HouseholdBehaviorConfig(**behavior.get("households", {})),
         banks=BankConfig(**banks_raw),
-        bank_behavior=BankBehaviorConfig(**behavior.get("banks", {})),
+        bank_behavior=BankBehaviorConfig(
+            **{k: v for k, v in behavior.get("banks", {}).items() if k != "mortgage"}
+        ),
         taylor_rule=TaylorRuleConfig(**_extract(policy, "central_bank", "taylor_rule")),
         fiscal_rule=FiscalRuleConfig(**_extract(policy, "government", "fiscal_rule")),
         transfers=TransfersConfig(**_extract(policy, "government", "transfers")),
         goods_market=GoodsMarketConfig(**markets.get("goods", {})),
         labor_market=LaborMarketConfig(**markets.get("labor", {})),
         credit_market=CreditMarketConfig(**markets.get("credit", {})),
+        properties=PropertyConfig(**properties_raw),
+        housing_market=HousingMarketConfig(**markets.get("housing", {})),
+        mortgage=MortgageConfig(**mortgage_raw),
     )

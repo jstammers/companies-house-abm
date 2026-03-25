@@ -274,6 +274,11 @@ class TestHousehold:
             "employer_id",
             "wage",
             "mpc",
+            "tenure",
+            "property_id",
+            "rent",
+            "housing_wealth",
+            "has_mortgage",
         }
         assert set(state.keys()) == expected_keys
 
@@ -398,6 +403,10 @@ class TestBank:
             "interest_rate",
             "capital_ratio",
             "profit",
+            "mortgage_book",
+            "mortgage_npl",
+            "mortgage_rate",
+            "mortgage_count",
         }
         assert set(state.keys()) == expected_keys
 

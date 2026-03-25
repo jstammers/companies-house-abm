@@ -34,6 +34,7 @@ from companies_house_abm.data_sources.calibration import (
     calibrate_io_sectors,
     calibrate_model,
 )
+from companies_house_abm.data_sources.companies_house import fetch_sic_codes
 from companies_house_abm.data_sources.firm_distributions import (
     run_profile_pipeline,
 )
@@ -78,6 +79,7 @@ __all__ = [
     "fetch_regional_prices",
     "fetch_rental_growth",
     "fetch_savings_ratio",
+    "fetch_sic_codes",
     "fetch_tenure_distribution",
     "fetch_uk_average_price",
     "get_corporation_tax_rate",

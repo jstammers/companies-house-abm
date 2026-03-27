@@ -133,6 +133,8 @@ invalid-assignment = "ignore"
 invalid-argument-type = "warn"
 unresolved-attribute = "warn"
 not-subscriptable = "ignore"
+# Polars .collect() returns InProcessQuery | DataFrame in stubs; actual type is DataFrame
+invalid-return-type = "warn"
 
 # =============================================================================
 # Pytest

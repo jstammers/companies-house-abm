@@ -577,7 +577,7 @@ wheels = [
 
 [[package]]
 name = "companies-house"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "src/companies_house" }
 dependencies = [
     { name = "duckdb" },
@@ -631,7 +631,7 @@ provides-extras = ["xbrl", "pdf", "llm", "analysis", "all"]
 
 [[package]]
 name = "companies-house-abm"
-version = "0.3.0"
+version = "0.4.0"
 source = { editable = "." }
 dependencies = [
     { name = "companies-house", extra = ["analysis", "xbrl"] },

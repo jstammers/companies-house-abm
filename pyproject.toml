@@ -1,3 +1,9 @@
+[tool.uv.workspace]
+members = ["src/companies_house"]
+
+[tool.uv.sources]
+companies-house = { workspace = true }
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
@@ -26,6 +32,7 @@ classifiers = [
 ]
 keywords = []
 dependencies = [
+    "companies-house[xbrl,analysis]",
     "polars>=1.38.1",
     "pyzmq>=27.1.0",
     "stream-read-xbrl>=0.1.1",
@@ -80,7 +87,7 @@ include = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/companies_house_abm"]
+packages = ["src/companies_house_abm", "src/companies_house"]
 
 # Matrix testing across Python versions
 [tool.hatch.envs.test]
@@ -115,16 +122,26 @@ select = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["companies_house_abm"]
+known-first-party = ["companies_house_abm", "companies_house"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["ARG001"]
+# Pydantic models need runtime access to datetime/Decimal despite __future__ annotations
+"src/companies_house/schema.py" = ["TCH003"]
+"src/companies_house/api/models.py" = ["TCH003"]
 # Marimo notebooks use bare expressions to display output
 "notebooks/**/*.py" = ["B018", "E501"]
 
 # =============================================================================
 # ty (Astral type checker)
 # =============================================================================
+
+[tool.ty]
+# kreuzberg and litellm are optional deps - not installed in dev by default
+[[tool.ty.overrides]]
+include = ["src/companies_house/ingest/pdf.py"]
+[tool.ty.overrides.rules]
+unresolved-import = "ignore"
 
 [tool.ty.rules]
 # Polars stubs don't fully align with ty's inference yet
@@ -158,7 +175,7 @@ markers = [
 # =============================================================================
 
 [tool.coverage.run]
-source = ["src/companies_house_abm"]
+source = ["src/companies_house_abm", "src/companies_house"]
 branch = true
 parallel = true
 

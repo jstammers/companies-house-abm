@@ -12,14 +12,27 @@ Agent-Based Modelling using Companies House Account Data
 
 ## Features
 
+- **uv workspace monorepo** — standalone `companies-house` data package + ABM simulation package
 - Fast and modern Python toolchain using Astral's tools (uv, ruff, ty)
 - Type-safe with full type annotations
 - Command-line interface built with Typer
-- XBRL ingestion pipeline transforming Companies House accounts to Parquet
+- XBRL and PDF ingestion for Companies House accounts data
+- DuckDB storage with upsert semantics for efficient OLAP queries
+- Companies House REST API client (search, filings, document download)
+- LLM-powered PDF extraction via litellm (Anthropic, OpenAI, Ollama, etc.)
 - Agent-based model (ABM) simulating UK macroeconomic dynamics
 - Public data fetcher for ONS, Bank of England, and HMRC calibration data
 - Interactive economy simulator web application
 - Comprehensive documentation with MkDocs — [View Docs](https://jstammers.github.io/companies-house-abm/)
+
+## Packages
+
+This repository contains two packages:
+
+| Package | Install | Description |
+|---------|---------|-------------|
+| `companies-house` | `pip install companies-house[xbrl,llm]` | Standalone data ingestion and analysis |
+| `companies_house_abm` | `pip install companies_house_abm` | ABM simulation (depends on `companies-house`) |
 
 ## Installation
 
@@ -47,12 +60,31 @@ import companies_house_abm
 print(companies_house_abm.__version__)
 ```
 
-### CLI Usage
+### Companies House CLI
 
 ```bash
-# Show version
-companies_house_abm --version
+# Search for a company
+companies-house search "Exel Computer Systems"
 
+# List filing history
+companies-house filings 01873499 --category accounts --api-key YOUR_KEY
+
+# Fetch filings and store in DuckDB (XBRL + PDF via LLM)
+companies-house fetch 01873499 --db companies.duckdb --api-key YOUR_KEY
+
+# Ingest bulk XBRL data into DuckDB
+companies-house ingest --archive-dir ./zips/ --db companies.duckdb
+
+# Query the DuckDB database
+companies-house db-query "SELECT company_id, turnover_gross_operating_revenue FROM filings LIMIT 10" --db companies.duckdb
+
+# Generate a financial analysis report
+companies-house report "Exel Computer Systems" --parquet accounts.parquet
+```
+
+### ABM CLI
+
+```bash
 # Ingest Companies House XBRL data into Parquet
 companies_house_abm ingest --output accounts.parquet
 

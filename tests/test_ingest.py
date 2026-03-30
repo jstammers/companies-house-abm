@@ -106,7 +106,7 @@ def _mock_stream_read_xbrl_zip(rows: list[tuple]):
     def fake_zip(zip_bytes_iter, zip_url=None):
         yield (_COLUMNS, iter(rows))
 
-    with patch("companies_house_abm.ingest.stream_read_xbrl_zip", fake_zip):
+    with patch("companies_house.ingest.xbrl.stream_read_xbrl_zip", fake_zip):
         yield
 
 
@@ -119,7 +119,7 @@ def _mock_stream_read_xbrl_zip_error():
         raise RuntimeError("Corrupt ZIP")
         yield  # pragma: no cover
 
-    with patch("companies_house_abm.ingest.stream_read_xbrl_zip", fake_zip):
+    with patch("companies_house.ingest.xbrl.stream_read_xbrl_zip", fake_zip):
         yield
 
 
@@ -139,7 +139,7 @@ def _mock_stream_read_xbrl_sync(
 
         yield (_COLUMNS, batches())
 
-    with patch("companies_house_abm.ingest.stream_read_xbrl_sync", fake_sync):
+    with patch("companies_house.ingest.xbrl.stream_read_xbrl_sync", fake_sync):
         yield
 
 

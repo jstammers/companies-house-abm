@@ -60,6 +60,7 @@ markdown_extensions:
 
 nav:
   - Home: index.md
+  - Companies House Package: companies-house-package.md
   - ABM Design: abm-design.md
   - Modelling Approach: modelling-approach.md
   - Firm Data Analysis: firm-data-analysis.md

@@ -136,13 +136,6 @@ known-first-party = ["companies_house_abm", "companies_house"]
 # ty (Astral type checker)
 # =============================================================================
 
-[tool.ty]
-# kreuzberg and litellm are optional deps - not installed in dev by default
-[[tool.ty.overrides]]
-include = ["src/companies_house/ingest/pdf.py"]
-[tool.ty.overrides.rules]
-unresolved-import = "ignore"
-
 [tool.ty.rules]
 # Polars stubs don't fully align with ty's inference yet
 invalid-assignment = "ignore"
@@ -152,6 +145,12 @@ unresolved-attribute = "warn"
 not-subscriptable = "ignore"
 # Polars .collect() returns InProcessQuery | DataFrame in stubs; actual type is DataFrame
 invalid-return-type = "warn"
+
+# kreuzberg and litellm are optional deps - not installed in dev by default
+[[tool.ty.overrides]]
+include = ["src/companies_house/ingest/pdf.py"]
+[tool.ty.overrides.rules]
+unresolved-import = "ignore"
 
 # =============================================================================
 # Pytest

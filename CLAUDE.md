@@ -10,7 +10,7 @@ This is a **uv workspace monorepo** containing two Python packages:
 
 2. **`companies_house_abm`** — Agent-Based Model of the UK economy calibrated from Companies House data. Depends on `companies-house[xbrl,analysis]`. Contains ABM agents/markets/simulation, public data fetchers (ONS/BoE/HMRC), and a FastAPI economy simulator webapp.
 
-**Status**: Alpha (v0.3.0 ABM / v0.1.0 companies-house)
+**Status**: Alpha (v0.4.0 ABM / v0.2.0 companies-house)
 **License**: MIT
 **Python**: >=3.10 (CI tests 3.10-3.13)
 
@@ -89,6 +89,10 @@ make format-check   # Check formatting with ruff
 make docs           # Build documentation (mkdocs build)
 make docs-serve     # Serve documentation locally
 make pysentry       # Dependency vulnerability scan
+make format         # Auto-format in-place (ruff format .)
+make test-matrix    # Run tests across Python 3.10-3.13 (hatch)
+make build-rust     # Build optional Rust ABM extension (requires cargo + maturin)
+make benchmark      # Run Python vs Rust ABM performance benchmark
 ```
 
 ## Workspace Architecture
@@ -133,6 +137,19 @@ PDF bytes → kreuzberg (text extraction) → litellm (structured output) → Co
 `companies_house_abm.ingest` and `companies_house_abm.company_analysis` are thin re-export wrappers. All existing imports continue to work. New code should import from `companies_house` directly.
 
 When patching in tests, target the actual module: `companies_house.ingest.xbrl.stream_read_xbrl_zip` (not the wrapper).
+
+### pyproject.toml TOML Structure Gotcha
+
+`[tool.ty.rules]` **must** appear before `[[tool.ty.overrides]]`. Defining the
+`[[...]]` array-of-tables first and then re-opening the parent table with
+`[tool.ty.rules]` triggers a "duplicate key" TOML parse error in strict parsers
+(uv in CI, for example). The pre-commit `check-toml` hook does **not** catch this.
+
+### Environment Variables
+
+| Variable | Required | Purpose |
+|----------|----------|---------|
+| `COMPANIES_HOUSE_API_KEY` | For API commands | HTTP Basic auth username for Companies House REST API |
 
 ## Development Workflow
 

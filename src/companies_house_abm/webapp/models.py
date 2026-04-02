@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 from pydantic import BaseModel, Field
+from pydantic.dataclasses import dataclass
 
 
-class SimulationParams(BaseModel):
+@dataclass
+class SimulationParams:
     """Parameters configuring a simulation run."""
 
     # ── Simulation ────────────────────────────────────────────────────────────
@@ -202,7 +204,8 @@ class SimulationParams(BaseModel):
     )
 
 
-class PeriodData(BaseModel):
+@dataclass
+class PeriodData:
     """Aggregate statistics for a single period."""
 
     period: int

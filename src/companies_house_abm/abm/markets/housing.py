@@ -257,11 +257,10 @@ class HousingMarket(BaseMarket):
                     seller.tenure = "renter"
                     seller.housing_wealth = 0.0
                     # Clear seller's mortgage on this property
-                    has_mortgage = (
+                    if (
                         seller.mortgage
                         and seller.mortgage.property_id == prop.property_id
-                    )
-                    if has_mortgage:
+                    ):
                         remaining = seller.mortgage.outstanding
                         seller.wealth -= remaining  # pay off mortgage
                         bank_id = seller.mortgage.lender_id

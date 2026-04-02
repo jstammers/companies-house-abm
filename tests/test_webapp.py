@@ -2,14 +2,20 @@
 
 from __future__ import annotations
 
+import dataclasses
+
 import pytest
+from pydantic import ValidationError
+
+from companies_house_abm.abm.config import load_config
+from companies_house_abm.webapp.app import _config_to_params, _params_to_config
+from companies_house_abm.webapp.models import SimulationParams
 
 
 class TestSimulationParams:
     """Tests for the expanded SimulationParams model."""
 
     def test_default_construction(self) -> None:
-        from companies_house_abm.webapp.models import SimulationParams
 
         p = SimulationParams()
         assert p.periods == 80
@@ -19,7 +25,6 @@ class TestSimulationParams:
         assert p.n_banks == 10
 
     def test_all_new_fields_present(self) -> None:
-        from companies_house_abm.webapp.models import SimulationParams
 
         p = SimulationParams()
         # Firms behaviour
@@ -77,9 +82,6 @@ class TestSimulationParams:
         assert p.default_rate_base == pytest.approx(0.01)
 
     def test_validation_rejects_out_of_range(self) -> None:
-        from pydantic import ValidationError
-
-        from companies_house_abm.webapp.models import SimulationParams
 
         with pytest.raises(ValidationError):
             SimulationParams(periods=5)  # below ge=10
@@ -96,8 +98,6 @@ class TestConfigToParams:
 
     def test_roundtrip_default_config(self) -> None:
         """Config → params → config should preserve all values."""
-        from companies_house_abm.abm.config import load_config
-        from companies_house_abm.webapp.app import _config_to_params, _params_to_config
 
         cfg = load_config()
         params = _config_to_params(cfg)
@@ -122,10 +122,6 @@ class TestConfigToParams:
 
     def test_clamping_of_large_sample_size(self) -> None:
         """Values exceeding Pydantic bounds are clamped, not rejected."""
-        import dataclasses
-
-        from companies_house_abm.abm.config import load_config
-        from companies_house_abm.webapp.app import _config_to_params
 
         cfg = load_config()
         # Patch in an oversized sample_size

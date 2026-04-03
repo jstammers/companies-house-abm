@@ -289,17 +289,24 @@ class TestHousehold:
 
 
 class TestBank:
-    def _make_bank(self, **kwargs):
-        defaults = {
-            "capital": 1_000_000.0,
-            "reserves": 100_000.0,
-            "loans": 5_000_000.0,
-            "deposits": 4_000_000.0,
-            "config": BankConfig(),
-            "behavior": BankBehaviorConfig(),
-        }
-        defaults.update(kwargs)
-        return Bank(agent_id="b1", **defaults)
+    def _make_bank(
+        self,
+        capital: float = 1_000_000.0,
+        reserves: float = 100_000.0,
+        loans: float = 5_000_000.0,
+        deposits: float = 4_000_000.0,
+        config: BankConfig | None = None,
+        behavior: BankBehaviorConfig | None = None,
+    ) -> Bank:
+        return Bank(
+            agent_id="b1",
+            capital=capital,
+            reserves=reserves,
+            loans=loans,
+            deposits=deposits,
+            config=config if config is not None else BankConfig(),
+            behavior=behavior if behavior is not None else BankBehaviorConfig(),
+        )
 
     def test_init_defaults(self):
         bank = Bank()

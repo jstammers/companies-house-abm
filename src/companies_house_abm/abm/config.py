@@ -4,12 +4,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import Any
 
 import yaml
-
-if TYPE_CHECKING:
-    from typing import Any
 
 _DEFAULT_CONFIG_PATH = Path(__file__).resolve().parents[3] / "config"
 
@@ -287,31 +284,27 @@ def load_config(path: Path | None = None) -> ModelConfig:
     banks_raw = agents.get("banks", {})
 
     # Sectors arrive as a list; convert to tuple for the frozen dataclass
-    if "sectors" in firms_raw and isinstance(firms_raw["sectors"], list):
-        firms_raw = {**firms_raw, "sectors": tuple(firms_raw["sectors"])}
-
-    # Handle size_classes key that's in YAML but not in the dataclass
-    firms_raw = {k: v for k, v in firms_raw.items() if k != "size_classes"}
+    firms_raw_d: dict[str, Any] = dict(firms_raw)
+    if "sectors" in firms_raw_d and isinstance(firms_raw_d["sectors"], list):
+        firms_raw_d["sectors"] = tuple(firms_raw_d["sectors"])
+    firms_raw_d.pop("size_classes", None)
 
     # Housing: properties, housing market, and mortgage config
-    properties_raw = agents.get("properties", {})
-    if "regions" in properties_raw and isinstance(properties_raw["regions"], list):
-        properties_raw = {**properties_raw, "regions": tuple(properties_raw["regions"])}
-    if "types" in properties_raw and isinstance(properties_raw["types"], list):
-        properties_raw = {**properties_raw, "types": tuple(properties_raw["types"])}
-    if "type_shares" in properties_raw and isinstance(
-        properties_raw["type_shares"], list
+    properties_raw_d: dict[str, Any] = dict(agents.get("properties", {}))
+    if "regions" in properties_raw_d and isinstance(properties_raw_d["regions"], list):
+        properties_raw_d["regions"] = tuple(properties_raw_d["regions"])
+    if "types" in properties_raw_d and isinstance(properties_raw_d["types"], list):
+        properties_raw_d["types"] = tuple(properties_raw_d["types"])
+    if "type_shares" in properties_raw_d and isinstance(
+        properties_raw_d["type_shares"], list
     ):
-        properties_raw = {
-            **properties_raw,
-            "type_shares": tuple(properties_raw["type_shares"]),
-        }
+        properties_raw_d["type_shares"] = tuple(properties_raw_d["type_shares"])
 
     mortgage_raw = _extract(behavior, "banks", "mortgage")
 
     return ModelConfig(
         simulation=SimulationConfig(**sim_raw),
-        firms=FirmConfig(**firms_raw),
+        firms=FirmConfig(**firms_raw_d),
         firm_behavior=FirmBehaviorConfig(**behavior.get("firms", {})),
         households=HouseholdConfig(**hh_raw),
         household_behavior=HouseholdBehaviorConfig(**behavior.get("households", {})),
@@ -325,7 +318,7 @@ def load_config(path: Path | None = None) -> ModelConfig:
         goods_market=GoodsMarketConfig(**markets.get("goods", {})),
         labor_market=LaborMarketConfig(**markets.get("labor", {})),
         credit_market=CreditMarketConfig(**markets.get("credit", {})),
-        properties=PropertyConfig(**properties_raw),
+        properties=PropertyConfig(**properties_raw_d),
         housing_market=HousingMarketConfig(**markets.get("housing", {})),
         mortgage=MortgageConfig(**mortgage_raw),
     )

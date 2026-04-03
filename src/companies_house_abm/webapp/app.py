@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from fastapi import FastAPI
+
+if TYPE_CHECKING:
+    from companies_house_abm.abm.config import ModelConfig
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -121,7 +125,7 @@ def _config_to_params(cfg: object) -> SimulationParams:
     )
 
 
-def _params_to_config(params: SimulationParams) -> object:
+def _params_to_config(params: SimulationParams) -> ModelConfig:
     """Convert a flat :class:`SimulationParams` to a :class:`ModelConfig`."""
     from companies_house_abm.abm.config import (
         BankBehaviorConfig,
@@ -252,7 +256,7 @@ def run_simulation(params: SimulationParams) -> SimulationResponse:
     from companies_house_abm.abm.model import Simulation
 
     config = _params_to_config(params)
-    sim = Simulation(config)  # type: ignore[arg-type]
+    sim = Simulation(config)
     sim.initialize_agents()
     result = sim.run(periods=params.periods)
 

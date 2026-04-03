@@ -26,12 +26,12 @@ def reset_typer_force_terminal() -> Generator[None]:
     stale cached value.
     """
     ru = sys.modules.get("typer.rich_utils")
-    old = ru.FORCE_TERMINAL if ru is not None else None
+    old = getattr(ru, "FORCE_TERMINAL", None) if ru is not None else None
     if ru is not None:
-        ru.FORCE_TERMINAL = None
+        ru.FORCE_TERMINAL = None  # type: ignore[attr-defined]
     yield
     if ru is not None:
-        ru.FORCE_TERMINAL = old
+        ru.FORCE_TERMINAL = old  # type: ignore[attr-defined]
 
 
 @pytest.fixture

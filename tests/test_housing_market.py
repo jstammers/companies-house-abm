@@ -15,17 +15,24 @@ from companies_house_abm.abm.config import (
 from companies_house_abm.abm.markets.housing import HousingMarket
 
 
-def _make_bank(**overrides):
-    defaults = {
-        "capital": 10_000_000.0,
-        "reserves": 1_000_000.0,
-        "loans": 50_000_000.0,
-        "deposits": 60_000_000.0,
-        "config": BankConfig(),
-        "mortgage_config": MortgageConfig(),
-    }
-    defaults.update(overrides)
-    bank = Bank(**defaults)
+def _make_bank(
+    capital: float = 10_000_000.0,
+    reserves: float = 1_000_000.0,
+    loans: float = 50_000_000.0,
+    deposits: float = 60_000_000.0,
+    config: BankConfig | None = None,
+    mortgage_config: MortgageConfig | None = None,
+) -> Bank:
+    bank = Bank(
+        capital=capital,
+        reserves=reserves,
+        loans=loans,
+        deposits=deposits,
+        config=config if config is not None else BankConfig(),
+        mortgage_config=(
+            mortgage_config if mortgage_config is not None else MortgageConfig()
+        ),
+    )
     bank.mortgage_rate = 0.04
     return bank
 
@@ -48,15 +55,18 @@ def _make_owner(property_id="p1", wealth=20_000.0, wage=3_000.0):
     return hh
 
 
-def _make_listed_property(price=200_000.0, **overrides):
-    defaults = {
-        "market_value": price,
-        "on_market": True,
-        "asking_price": price * 1.05,
-        "quality": 0.5,
-    }
-    defaults.update(overrides)
-    return Property(**defaults)
+def _make_listed_property(
+    price: float = 200_000.0,
+    quality: float = 0.5,
+    owner_id: str | None = None,
+) -> Property:
+    return Property(
+        market_value=price,
+        on_market=True,
+        asking_price=price * 1.05,
+        quality=quality,
+        owner_id=owner_id,
+    )
 
 
 class TestHousingMarketBasics:

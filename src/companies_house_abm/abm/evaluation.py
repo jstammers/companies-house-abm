@@ -164,23 +164,32 @@ class EvaluationReport:
 def compute_simulation_stats(
     result: SimulationResult,
     warm_up: int = 0,
+    gdp_coverage: float = 1.0,
 ) -> dict[str, float]:
     """Compute aggregate statistics from a simulation result.
 
     Args:
         result: The simulation output.
         warm_up: Number of leading periods to discard (initial transients).
+        gdp_coverage: Fraction of the full economy represented by the
+            simulation's firm sector (default 1.0 — all sectors modelled).
+            When using the sector-representative model (13 sectors covering
+            ~85.7% of UK GDP), pass ``SECTOR_GDP_COVERAGE`` here so that
+            debt-to-GDP and wage-share statistics are normalised to a
+            whole-economy denominator rather than the simulated partial GDP.
 
     Returns:
         Dictionary mapping statistic name to its value.  Keys:
 
         - ``gdp_growth_mean`` — mean quarterly GDP growth rate.
-        - ``gdp_growth_std``  — std dev of quarterly GDP growth rate.
+        - ``gdp_growth_std``  — sample std dev of quarterly GDP growth rate.
         - ``unemployment_mean`` — mean unemployment rate.
         - ``inflation_mean``  — mean quarterly inflation rate.
-        - ``inflation_std``   — std dev of quarterly inflation rate.
-        - ``government_debt_gdp`` — mean government debt / GDP ratio.
-        - ``wage_share``      — mean labour-income share of GDP.
+        - ``inflation_std``   — sample std dev of quarterly inflation rate.
+        - ``government_debt_gdp`` — mean government debt / GDP ratio
+          (normalised by ``gdp_coverage``).
+        - ``wage_share``      — mean labour-income share of GDP
+          (normalised by ``gdp_coverage``).
     """
     records = result.records[warm_up:]
     n = len(records)
@@ -198,8 +207,10 @@ def compute_simulation_stats(
         sum(gdp_growths) / len(gdp_growths) if gdp_growths else float("nan")
     )
     if len(gdp_growths) > 1:
+        # Sample std (÷ N-1) — consistent with calibration targets.
         std_gdp_growth = math.sqrt(
-            sum((g - mean_gdp_growth) ** 2 for g in gdp_growths) / len(gdp_growths)
+            sum((g - mean_gdp_growth) ** 2 for g in gdp_growths)
+            / (len(gdp_growths) - 1)
         )
     else:
         std_gdp_growth = 0.0
@@ -208,7 +219,7 @@ def compute_simulation_stats(
     inflations = [r.inflation for r in records]
     mean_inflation = sum(inflations) / n
     std_inflation = (
-        math.sqrt(sum((x - mean_inflation) ** 2 for x in inflations) / n)
+        math.sqrt(sum((x - mean_inflation) ** 2 for x in inflations) / (n - 1))
         if n > 1
         else 0.0
     )
@@ -217,14 +228,18 @@ def compute_simulation_stats(
     mean_unemployment = sum(r.unemployment_rate for r in records) / n
 
     # ── Government debt / GDP ─────────────────────────────────────────────
-    debt_gdp_pairs = [r.government_debt / r.gdp for r in records if r.gdp > 0]
+    # Divide simulated debt/GDP by gdp_coverage so the ratio is normalised to
+    # the full economy (e.g. if only 85.7% of sectors are modelled, simulated
+    # GDP is ~85.7% of real GDP, inflating debt/GDP by ~1/0.857).
+    _cov = gdp_coverage if gdp_coverage > 0 else 1.0
+    debt_gdp_pairs = [(r.government_debt / r.gdp) / _cov for r in records if r.gdp > 0]
     mean_debt_gdp = (
         sum(debt_gdp_pairs) / len(debt_gdp_pairs) if debt_gdp_pairs else float("nan")
     )
 
     # ── Wage share ────────────────────────────────────────────────────────
     wage_shares = [
-        (r.average_wage * r.total_employment) / r.gdp
+        ((r.average_wage * r.total_employment) / r.gdp) / _cov
         for r in records
         if r.gdp > 0 and r.total_employment > 0
     ]
@@ -311,6 +326,7 @@ def evaluate_simulation(
     result: SimulationResult,
     targets: list[TargetStat] | None = None,
     warm_up: int = 0,
+    gdp_coverage: float = 1.0,
 ) -> EvaluationReport:
     """Evaluate a simulation result against calibration targets.
 
@@ -321,6 +337,11 @@ def evaluate_simulation(
         warm_up: Number of leading periods to skip when computing statistics.
             Use the same value as
             :attr:`~companies_house_abm.abm.config.SimulationConfig.warm_up_periods`.
+        gdp_coverage: Fraction of the full economy represented by the
+            simulation's firm sector.  Pass ``SECTOR_GDP_COVERAGE`` from
+            :mod:`~companies_house_abm.abm.sector_model` when evaluating a
+            sector-representative simulation so that debt/GDP and wage-share
+            targets are compared against economy-normalised values.
 
     Returns:
         An :class:`EvaluationReport` with per-target pass/fail results and
@@ -339,7 +360,7 @@ def evaluate_simulation(
     if targets is None:
         targets = DEFAULT_TARGETS
 
-    stats = compute_simulation_stats(result, warm_up=warm_up)
+    stats = compute_simulation_stats(result, warm_up=warm_up, gdp_coverage=gdp_coverage)
     stat_results: list[StatResult] = []
 
     for t in targets:

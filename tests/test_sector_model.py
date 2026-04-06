@@ -152,10 +152,14 @@ class TestCreateSectorRepresentativeSimulation:
         sim = create_sector_representative_simulation(
             n_households=100, n_banks=2, seed=0, periods=5
         )
-        # After employment assignment, firm.employees is redistributed by share
-        # Just check that employee counts are non-negative
+        # firm.employees retains the calibrated UK-level headcount set at
+        # initialisation; _assign_employment must not overwrite it.
         for firm in sim.firms:
-            assert firm.employees >= 0
+            profile = SECTOR_PROFILES.get(firm.sector)
+            if profile is not None:
+                assert firm.employees == pytest.approx(profile.employees, rel=0.01)
+            # Simulated household assignments are stored separately.
+            assert hasattr(firm, "n_assigned_households")
 
     def test_markets_wired(self) -> None:
         sim = create_sector_representative_simulation(

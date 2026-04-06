@@ -525,7 +525,7 @@ class Simulation:
         self.government.calculate_spending()
 
         # 12. Goods market clears
-        goods_state = self.goods_market.clear()
+        goods_state = self.goods_market.clear(rng=self._rng)
 
         # 13. Tax collection
         for firm in self.firms:

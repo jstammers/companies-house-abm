@@ -211,6 +211,12 @@ SECTOR_PROFILES: dict[str, SectorProfile] = {
     ),
 }
 
+#: Sum of GDP shares across all modelled sectors.  Less than 1.0 because
+#: some sectors (mining, utilities, etc.) are not represented as agents.
+#: Use this to normalise simulated-GDP-relative statistics so that
+#: calibration targets remain comparable regardless of sector coverage.
+SECTOR_GDP_COVERAGE: float = sum(p.gdp_share for p in SECTOR_PROFILES.values())
+
 
 # ---------------------------------------------------------------------------
 # Factory function
@@ -390,9 +396,10 @@ def _assign_employment(sim: Simulation, rng: np.random.Generator) -> None:
             hh.become_employed(firm.agent_id, firm.wage_rate)
             assigned += 1
 
-        # Update firm's employee count to match assigned households
-        firm.employees = n_to_assign
-        firm.wage_bill = firm.employees * firm.wage_rate
+        # Track the number of simulated household agents attached to this firm.
+        # Do NOT overwrite firm.employees, which holds the calibrated UK-level
+        # headcount used for wage-bill and productivity calculations.
+        firm.n_assigned_households = n_to_assign
 
 
 def get_sector_profiles() -> dict[str, SectorProfile]:

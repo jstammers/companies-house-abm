@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 from pydantic import BaseModel, Field
+from pydantic.dataclasses import dataclass
 
 
-class SimulationParams(BaseModel):
+@dataclass
+class SimulationParams:
     """Parameters configuring a simulation run."""
 
     # ── Simulation ────────────────────────────────────────────────────────────
@@ -190,8 +192,20 @@ class SimulationParams(BaseModel):
         0.01, ge=0.0, le=0.10, description="Base loan default probability per period"
     )
 
+    # Housing
+    max_ltv: float = Field(
+        0.90, ge=0.50, le=1.0, description="Maximum loan-to-value ratio"
+    )
+    max_dti: float = Field(
+        4.5, ge=2.0, le=7.0, description="Maximum debt-to-income ratio"
+    )
+    search_intensity: int = Field(
+        10, ge=1, le=50, description="Number of properties a buyer visits per period"
+    )
 
-class PeriodData(BaseModel):
+
+@dataclass
+class PeriodData:
     """Aggregate statistics for a single period."""
 
     period: int
@@ -205,6 +219,14 @@ class PeriodData(BaseModel):
     total_lending: float
     firm_bankruptcies: int
     total_employment: int
+    # Housing
+    average_house_price: float = 0.0
+    housing_transactions: int = 0
+    housing_listings: int = 0
+    homeownership_rate: float = 0.0
+    house_price_inflation: float = 0.0
+    total_mortgage_lending: float = 0.0
+    foreclosures: int = 0
 
 
 class SimulationResponse(BaseModel):

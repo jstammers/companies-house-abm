@@ -60,6 +60,28 @@ agents:
   government:
     exists: true  # Whether to include government agent
 
+  properties:
+    count: 12000  # Number of housing units (> households for vacancy)
+    regions:
+      - "london"
+      - "south_east"
+      - "east"
+      - "south_west"
+      - "west_midlands"
+      - "east_midlands"
+      - "north_west"
+      - "north_east"
+      - "yorkshire"
+      - "scotland"
+      - "wales"
+    types:
+      - "detached"
+      - "semi_detached"
+      - "terraced"
+      - "flat"
+    type_shares: [0.16, 0.24, 0.28, 0.32]
+    average_price: 285000  # UK average house price (GBP, 2024)
+
 # Behavioral parameters
 behavior:
   firms:
@@ -80,6 +102,16 @@ behavior:
     risk_premium_sensitivity: 0.05  # How risk affects interest rates
     lending_threshold: 0.3  # Minimum debt service coverage ratio
     capital_buffer: 0.02  # Buffer above regulatory minimum
+    mortgage:
+      max_ltv: 0.90  # FPC LTV limit
+      max_dti: 4.5  # FPC flow limit (max debt-to-income multiple)
+      stress_test_buffer: 0.03  # BoE stress test: affordability at rate + 3%
+      default_term_months: 300  # 25 years
+      fixed_rate_share: 0.75  # 75% of new mortgages are fixed rate
+      fixed_rate_period: 24  # 2-year fixed period
+      mortgage_risk_weight: 0.35  # Basel standardised for UK residential
+      foreclosure_threshold: 3  # Months in arrears before foreclosure
+      mortgage_spread: 0.015  # Spread over Bank Rate for mortgage pricing
 
 # Market mechanisms
 markets:
@@ -99,6 +131,17 @@ markets:
     rationing: true  # Whether credit rationing can occur
     collateral_requirement: 0.5  # Required collateral as fraction of loan
     default_rate_base: 0.01  # Base default probability
+
+  housing:
+    search_intensity: 10  # Properties visited per buyer per period
+    initial_markup: 0.05  # Seller asks 5% above recent comparables
+    price_reduction_rate: 0.10  # 10% price reduction per unsold period
+    max_months_listed: 6  # Delist after 6 months
+    backward_expectation_weight: 0.65  # Weight on extrapolative expectations
+    expectation_lookback: 12  # Periods of price history for expectations
+    transaction_cost: 0.05  # Stamp duty + fees as fraction of price
+    maintenance_cost: 0.01  # Annual maintenance as fraction of value
+    rental_yield: 0.045  # Average gross rental yield
 
   interbank:
     active: true  # Whether interbank market operates
@@ -204,6 +247,15 @@ validation:
   wage_share: 0.55  # Labor share of income
   investment_gdp_ratio: 0.17  # Investment as fraction of GDP
   government_debt_gdp: 0.85  # Government debt to GDP ratio
+  # Housing validation targets
+  homeownership_rate: 0.64  # English Housing Survey
+  average_house_price: 285000  # ONS UK HPI 2024
+  price_to_income_ratio: 8.3  # ONS Affordability
+  house_price_growth_mean: 0.035  # Annual, ONS HPI long-run
+  house_price_growth_std: 0.06  # ONS HPI
+  mortgage_ltv_mean: 0.70  # BoE MLAR
+  mortgage_arrears_rate: 0.01  # BoE FSR
+  rental_yield: 0.045  # ONS Rental Index
 
 # Technical settings
 technical:

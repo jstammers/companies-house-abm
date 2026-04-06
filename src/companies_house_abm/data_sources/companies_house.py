@@ -186,7 +186,7 @@ def _normalise(raw: pl.DataFrame) -> pl.DataFrame:
         Clean DataFrame with columns ``companies_house_registered_number``
         and ``sic_code``.
     """
-    return (
+    result: pl.DataFrame = (
         raw.lazy()
         .filter(
             pl.col(_COL_COMPANY_NUMBER).is_not_null() & pl.col(_COL_SIC_1).is_not_null()
@@ -206,6 +206,7 @@ def _normalise(raw: pl.DataFrame) -> pl.DataFrame:
         .unique(subset=["companies_house_registered_number"], keep="first")
         .collect()
     )
+    return result
 
 
 # ---------------------------------------------------------------------------

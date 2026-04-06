@@ -65,19 +65,32 @@ class CompaniesHouseClient:
         return f"Basic {encoded}"
 
     def _rate_limit(self) -> None:
-        """Block if we would exceed the rate limit."""
-        with self._lock:
-            now = time.monotonic()
-            window_start = now - self.config.window_seconds
-            # Prune old timestamps
-            self._request_times = [t for t in self._request_times if t > window_start]
-            if len(self._request_times) >= self.config.requests_per_window:
+        """Block if we would exceed the rate limit.
+
+        The lock is released before sleeping so other threads can make
+        progress (e.g. detect that the window has already cleared) instead
+        of blocking for up to ``window_seconds`` while one thread sleeps.
+        After sleeping we re-acquire the lock and re-check the window, since
+        another thread may have consumed quota during the sleep.
+        """
+        while True:
+            with self._lock:
+                now = time.monotonic()
+                window_start = now - self.config.window_seconds
+                self._request_times = [
+                    t for t in self._request_times if t > window_start
+                ]
+                if len(self._request_times) < self.config.requests_per_window:
+                    self._request_times.append(time.monotonic())
+                    return
+                # Compute how long until the oldest request falls out of the window.
                 oldest = self._request_times[0]
                 sleep_time = oldest - window_start
-                if sleep_time > 0:
-                    logger.debug("Rate limit: sleeping %.1fs", sleep_time)
-                    time.sleep(sleep_time)
-            self._request_times.append(time.monotonic())
+            # Sleep outside the lock so other threads are not blocked.
+            if sleep_time > 0:
+                logger.debug("Rate limit: sleeping %.1fs", sleep_time)
+                time.sleep(sleep_time)
+            # Loop and re-check — another thread may have consumed quota.
 
     def request(
         self,

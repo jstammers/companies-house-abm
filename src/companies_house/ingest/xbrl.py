@@ -282,17 +282,20 @@ class _TailBuffer(io.RawIOBase):
         if self._pos >= self._total:
             return b""
         end = self._total if (n is None or n < 0) else min(self._pos + n, self._total)
-        buf = bytearray()
         if self._pos < self._tail_start:
-            pre_end = min(end, self._tail_start)
-            buf.extend(b"\x00" * (pre_end - self._pos))
-            self._pos = pre_end
-        if self._pos < end and self._pos >= self._tail_start:
-            buf_start = self._pos - self._tail_start
-            buf_end = min(end - self._tail_start, len(self._data))
-            buf.extend(bytes(self._data[buf_start:buf_end]))
-            self._pos = self._tail_start + buf_end
-        return bytes(buf)
+            # Returning zero bytes here would silently corrupt Zip64 EOCD parsing.
+            # Raise instead so fetch_zip_index catches OSError and retries with a
+            # larger range rather than misreading the archive structure.
+            raise io.UnsupportedOperation(
+                f"Read at offset {self._pos} is before the buffered tail "
+                f"(tail starts at {self._tail_start}). "
+                "Retry with a larger range."
+            )
+        buf_start = self._pos - self._tail_start
+        buf_end = min(end - self._tail_start, len(self._data))
+        result = bytes(self._data[buf_start:buf_end])
+        self._pos = self._tail_start + buf_end
+        return result
 
     def readinto(  # type: ignore[override]
         self, b: bytearray | memoryview
@@ -343,9 +346,15 @@ def fetch_zip_index(url: str, *, timeout: int = 30) -> list[str]:
         try:
             with zipfile.ZipFile(io.BufferedReader(buf)) as zf:
                 return zf.namelist()
-        except zipfile.BadZipFile:
+        except (zipfile.BadZipFile, OSError):
+            # BadZipFile: central directory not in this tail range.
+            # OSError (including io.UnsupportedOperation): _TailBuffer read
+            # crossed into pre-buffer region (Zip64 EOCD locator read-back).
             if range_bytes == _RETRY_RANGE_BYTES:
-                raise
+                raise zipfile.BadZipFile(
+                    f"Could not parse ZIP central directory from {url} "
+                    f"within {_RETRY_RANGE_BYTES} bytes"
+                ) from None
             logger.debug(
                 "Central directory not within %d bytes of %s; retrying with %d bytes.",
                 range_bytes,
@@ -359,15 +368,25 @@ def fetch_zip_index(url: str, *, timeout: int = 30) -> list[str]:
 
 
 def check_company_in_zip(zip_path: Path, company_id: str) -> bool:
-    """Return True if *company_id* appears in any member filename of *zip_path*.
+    """Return True if *company_id* is the third segment of any member filename.
+
+    Companies House ZIPs use filenames like
+    ``Prod224_0012_01873499_20230131.html`` where the 8-digit company number
+    is the third underscore-separated segment (index 2).  Segment matching
+    avoids false positives from company IDs that appear elsewhere in filenames.
 
     Returns False on any error (corrupt archive, missing file, etc.).
     """
     from pathlib import Path as _Path
 
+    def _id_in_name(name: str, cid: str) -> bool:
+        basename = name.rsplit("/", 1)[-1]
+        parts = basename.split("_")
+        return len(parts) >= 3 and parts[2] == cid
+
     try:
         with zipfile.ZipFile(_Path(zip_path)) as zf:
-            return any(company_id in name for name in zf.namelist())
+            return any(_id_in_name(name, company_id) for name in zf.namelist())
     except Exception:
         logger.warning(
             "Could not inspect ZIP %s for company %s",

@@ -55,15 +55,20 @@ class CompaniesHouseDB:
         logger.debug("Ensured filings table exists")
 
     def upsert(self, df: pl.DataFrame) -> int:
-        """Insert or replace rows from a Polars DataFrame.
+        """Insert or update rows from a Polars DataFrame.
 
-        Uses DuckDB's ``INSERT OR REPLACE`` with the composite primary key
-        to handle deduplication automatically.
+        Rows that match an existing composite primary key
+        (company_id, balance_sheet_date, period_start, period_end) are fully
+        replaced — all columns are overwritten, not merged.  Rows that do not
+        match are inserted.  The entire batch runs inside a single transaction
+        so a crash mid-batch leaves the DB unchanged.
 
         Parameters
         ----------
         df:
-            DataFrame conforming to ``COMPANIES_HOUSE_SCHEMA``.
+            DataFrame conforming to ``COMPANIES_HOUSE_SCHEMA``.  All schema
+            columns must be present; missing columns should be filled with
+            ``None`` before calling.
 
         Returns
         -------
@@ -73,21 +78,29 @@ class CompaniesHouseDB:
         if df.is_empty():
             return 0
 
-        # Ensure column order matches the schema
+        # Ensure every schema column is present (fill missing ones with null).
         cols = list(COMPANIES_HOUSE_SCHEMA.keys())
-        existing_cols = [c for c in cols if c in df.columns]
-        df_ordered = df.select(existing_cols)
+        for c in cols:
+            if c not in df.columns:
+                df = df.with_columns(pl.lit(None).alias(c))
+        df_ordered = df.select(cols)
 
-        # Register as a DuckDB relation and upsert
+        # Register as a DuckDB relation and upsert atomically.
         self.conn.register("_staging", df_ordered.to_arrow())
-
-        col_list = ", ".join(existing_cols)
-        placeholders = ", ".join(f"_staging.{c}" for c in existing_cols)
-        self.conn.execute(
-            f"INSERT OR REPLACE INTO filings ({col_list}) "
-            f"SELECT {placeholders} FROM _staging"
-        )
-        self.conn.unregister("_staging")
+        try:
+            self.conn.execute("BEGIN")
+            col_list = ", ".join(cols)
+            placeholders = ", ".join(f"_staging.{c}" for c in cols)
+            self.conn.execute(
+                f"INSERT OR REPLACE INTO filings ({col_list}) "
+                f"SELECT {placeholders} FROM _staging"
+            )
+            self.conn.execute("COMMIT")
+        except Exception:
+            self.conn.execute("ROLLBACK")
+            raise
+        finally:
+            self.conn.unregister("_staging")
 
         row_count = len(df_ordered)
         logger.info("Upserted %d rows into filings", row_count)
@@ -147,8 +160,34 @@ class CompaniesHouseDB:
         return self.upsert(df)
 
     def execute_query(self, sql: str) -> pl.DataFrame:
-        """Execute an arbitrary SQL query and return results as DataFrame."""
-        result = self.conn.execute(sql)
+        """Execute a read-only SQL query and return results as a DataFrame.
+
+        The query runs on a separate read-only connection so it cannot modify
+        the database.  Only ``SELECT`` and other non-mutating statements are
+        accepted; DML/DDL will raise a ``duckdb.PermissionException``.
+
+        Parameters
+        ----------
+        sql:
+            SQL statement to execute.  Must be a read-only query.
+
+        Returns
+        -------
+        pl.DataFrame
+            Query results.
+
+        Raises
+        ------
+        duckdb.PermissionException
+            If the query attempts to write to the database.
+        """
+        if self.db_path is None:
+            # In-memory DB: open a separate read-only view if possible,
+            # otherwise fall back to the existing connection.
+            result = self.conn.execute(sql)
+        else:
+            with duckdb.connect(str(self.db_path), read_only=True) as ro_conn:
+                result = ro_conn.execute(sql)
         return pl.from_arrow(result.to_arrow_table())
 
     def close(self) -> None:

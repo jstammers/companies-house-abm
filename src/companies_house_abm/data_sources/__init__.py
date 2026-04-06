@@ -30,9 +30,11 @@ from companies_house_abm.data_sources.calibration import (
     calibrate_banks,
     calibrate_government,
     calibrate_households,
+    calibrate_housing,
     calibrate_io_sectors,
     calibrate_model,
 )
+from companies_house_abm.data_sources.companies_house import fetch_sic_codes
 from companies_house_abm.data_sources.firm_distributions import (
     run_profile_pipeline,
 )
@@ -42,6 +44,10 @@ from companies_house_abm.data_sources.hmrc import (
     get_national_insurance_rates,
     get_vat_rate,
 )
+from companies_house_abm.data_sources.land_registry import (
+    fetch_regional_prices,
+    fetch_uk_average_price,
+)
 from companies_house_abm.data_sources.ons import (
     fetch_gdp,
     fetch_household_income,
@@ -49,13 +55,20 @@ from companies_house_abm.data_sources.ons import (
     fetch_labour_market,
     fetch_savings_ratio,
 )
+from companies_house_abm.data_sources.ons_housing import (
+    fetch_affordability_ratio,
+    fetch_rental_growth,
+    fetch_tenure_distribution,
+)
 
 __all__ = [
     "calibrate_banks",
     "calibrate_government",
     "calibrate_households",
+    "calibrate_housing",
     "calibrate_io_sectors",
     "calibrate_model",
+    "fetch_affordability_ratio",
     "fetch_bank_rate",
     "fetch_bank_rate_current",
     "fetch_gdp",
@@ -63,7 +76,12 @@ __all__ = [
     "fetch_input_output_table",
     "fetch_labour_market",
     "fetch_lending_rates",
+    "fetch_regional_prices",
+    "fetch_rental_growth",
     "fetch_savings_ratio",
+    "fetch_sic_codes",
+    "fetch_tenure_distribution",
+    "fetch_uk_average_price",
     "get_corporation_tax_rate",
     "get_income_tax_bands",
     "get_national_insurance_rates",

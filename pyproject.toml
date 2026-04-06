@@ -48,6 +48,9 @@ dev = [
     "hatch>=1.16.3",
     "prek>=0.1.0",
     "pysentry-rs>=0.1.0",
+    "cryptography>=46.0.6",
+    "pygments>=2.20.0",
+    "requests>=2.33.0",
 ]
 docs = [
     "mkdocs>=1.6.0",
@@ -139,6 +142,8 @@ known-first-party = ["companies_house_abm", "companies_house"]
 [tool.ty.rules]
 # Polars stubs don't fully align with ty's inference yet
 invalid-assignment = "ignore"
+# Polars LazyFrame chains: .collect() return type not inferred through Polars stubs
+invalid-return-type = "warn"
 # Dynamic dict unpacking (**kwargs) for YAML config and Polars stubs
 invalid-argument-type = "warn"
 unresolved-attribute = "warn"

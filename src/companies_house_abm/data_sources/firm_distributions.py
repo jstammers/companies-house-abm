@@ -450,20 +450,23 @@ def profile_field(
     if q_low is not None and q_high is not None:
         outlier_count = int(((non_null < q_low) | (non_null > q_high)).sum())
 
+    def _f(v: object) -> float | None:
+        return float(v) if v is not None else None  # type: ignore[arg-type]
+
     return FieldProfile(
         name=series.name,
         count=total,
         null_count=null_count,
         null_pct=null_pct,
-        mean=non_null.mean(),
-        std=non_null.std(),
-        min=non_null.min(),
-        q25=non_null.quantile(0.25, interpolation="linear"),
-        median=non_null.median(),
-        q75=non_null.quantile(0.75, interpolation="linear"),
-        max=non_null.max(),
-        outlier_low=q_low,
-        outlier_high=q_high,
+        mean=_f(non_null.mean()),
+        std=_f(non_null.std()),
+        min=_f(non_null.min()),
+        q25=_f(non_null.quantile(0.25, interpolation="linear")),
+        median=_f(non_null.median()),
+        q75=_f(non_null.quantile(0.75, interpolation="linear")),
+        max=_f(non_null.max()),
+        outlier_low=_f(q_low),
+        outlier_high=_f(q_high),
         outlier_count=outlier_count,
     )
 
@@ -662,7 +665,7 @@ def compute_sector_year_parameters(
             results.append(
                 SectorYearParameters(
                     sector=str(sector),
-                    financial_year=int(fy),  # type: ignore[arg-type]
+                    financial_year=int(fy),
                     n_companies=len(group_df),
                     distributions=distributions,
                 )
@@ -780,10 +783,10 @@ def run_profile_pipeline(
     if sample_fraction is not None:
         logger.info("Sampling %.1f%% of data", sample_fraction * 100)
         # Collect and sample — sampling a lazy frame requires collecting
-        df = lf.collect()
+        df: pl.DataFrame = lf.collect()
         df = df.sample(fraction=sample_fraction, seed=42)
     else:
-        df = lf.collect()
+        df: pl.DataFrame = lf.collect()
 
     logger.info("Loaded %d rows for %d companies", len(df), df["company_id"].n_unique())
 

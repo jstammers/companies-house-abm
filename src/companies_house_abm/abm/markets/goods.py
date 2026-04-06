@@ -15,6 +15,8 @@ from companies_house_abm.abm.markets.base import BaseMarket
 if TYPE_CHECKING:
     from typing import Any
 
+    from numpy.random import Generator
+
     from companies_house_abm.abm.agents.firm import Firm
     from companies_house_abm.abm.agents.government import Government
     from companies_house_abm.abm.agents.household import Household
@@ -60,13 +62,17 @@ class GoodsMarket(BaseMarket):
         self._households = households
         self._government = government
 
-    def clear(self) -> dict[str, Any]:
+    def clear(self, rng: Generator | None = None) -> dict[str, Any]:
         """Clear the goods market.
 
         1. Compute total demand from households and government.
         2. Compute total supply from firms' inventory.
         3. Allocate demand across firms based on price competitiveness.
         4. Update firm turnover / inventory and household consumption.
+
+        Args:
+            rng: Seeded numpy RNG forwarded to :meth:`~Firm.adapt_markup` for
+                 reproducible stochastic markup adjustment.
 
         Returns:
             Aggregate market outcomes.
@@ -106,7 +112,7 @@ class GoodsMarket(BaseMarket):
 
             # Firms adapt markup based on their excess demand signal
             firm_excess = (demand_for_firm - available) / max(available, 1e-9)
-            firm.adapt_markup(firm_excess)
+            firm.adapt_markup(firm_excess, rng=rng)
 
         # ---- average price and inflation ----
         if active_firms:

@@ -111,8 +111,17 @@ from companies_house_abm.abm import Simulation, load_config
 
 config = load_config("config/model_parameters.yml")
 sim = Simulation(config)
-sim.run()
+sim.initialize_agents()
+result = sim.run(periods=60)
+
+# Access housing market results
+for rec in result.records:
+    print(f"Period {rec.period}: Price=£{rec.average_house_price:,.0f} "
+          f"Ownership={rec.homeownership_rate:.1%}")
 ```
+
+See the [Housing Market](housing-market.md) documentation for full details on
+running housing simulations, policy experiments, and calibration from live data.
 
 ## Development
 

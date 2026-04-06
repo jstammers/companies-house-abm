@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Any
 
+    from numpy.random import Generator
+
 
 class BaseMarket(ABC):
     """Abstract base class for all markets.
@@ -17,8 +19,12 @@ class BaseMarket(ABC):
     """
 
     @abstractmethod
-    def clear(self) -> dict[str, Any]:
+    def clear(self, rng: Generator | None = None) -> dict[str, Any]:
         """Execute the market clearing mechanism.
+
+        Args:
+            rng: Optional seeded numpy RNG for reproducible stochastic
+                 decisions within the market.
 
         Returns:
             Dictionary of aggregate market outcomes (e.g. total volume,

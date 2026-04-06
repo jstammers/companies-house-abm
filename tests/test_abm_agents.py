@@ -159,6 +159,7 @@ class TestFirm:
             "equity",
             "profit",
             "markup",
+            "aspiration_rate",
             "bankrupt",
         }
         assert set(state.keys()) == expected_keys
@@ -267,6 +268,7 @@ class TestHousehold:
             "agent_id",
             "agent_type",
             "income",
+            "expected_income",
             "wealth",
             "consumption",
             "savings",
@@ -274,6 +276,11 @@ class TestHousehold:
             "employer_id",
             "wage",
             "mpc",
+            "tenure",
+            "property_id",
+            "rent",
+            "housing_wealth",
+            "has_mortgage",
         }
         assert set(state.keys()) == expected_keys
 
@@ -284,17 +291,24 @@ class TestHousehold:
 
 
 class TestBank:
-    def _make_bank(self, **kwargs):
-        defaults = {
-            "capital": 1_000_000.0,
-            "reserves": 100_000.0,
-            "loans": 5_000_000.0,
-            "deposits": 4_000_000.0,
-            "config": BankConfig(),
-            "behavior": BankBehaviorConfig(),
-        }
-        defaults.update(kwargs)
-        return Bank(agent_id="b1", **defaults)
+    def _make_bank(
+        self,
+        capital: float = 1_000_000.0,
+        reserves: float = 100_000.0,
+        loans: float = 5_000_000.0,
+        deposits: float = 4_000_000.0,
+        config: BankConfig | None = None,
+        behavior: BankBehaviorConfig | None = None,
+    ) -> Bank:
+        return Bank(
+            agent_id="b1",
+            capital=capital,
+            reserves=reserves,
+            loans=loans,
+            deposits=deposits,
+            config=config if config is not None else BankConfig(),
+            behavior=behavior if behavior is not None else BankBehaviorConfig(),
+        )
 
     def test_init_defaults(self):
         bank = Bank()
@@ -398,6 +412,10 @@ class TestBank:
             "interest_rate",
             "capital_ratio",
             "profit",
+            "mortgage_book",
+            "mortgage_npl",
+            "mortgage_rate",
+            "mortgage_count",
         }
         assert set(state.keys()) == expected_keys
 

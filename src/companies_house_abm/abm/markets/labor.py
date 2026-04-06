@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from typing import Any
 
     import numpy as np
+    from numpy.random import Generator
 
     from companies_house_abm.abm.agents.firm import Firm
     from companies_house_abm.abm.agents.household import Household
@@ -63,7 +64,7 @@ class LaborMarket(BaseMarket):
         self._households = households
         self._rng = rng
 
-    def clear(self) -> dict[str, Any]:
+    def clear(self, rng: Generator | None = None) -> dict[str, Any]:  # noqa: ARG002
         """Clear the labor market.
 
         1. Exogenous separations.

@@ -158,9 +158,17 @@ def _make_accounts_df(
     return pl.DataFrame(rows, schema_overrides=schema_overrides)
 
 
-def _write_test_parquet(path: Path, n: int = 200, **kwargs: object) -> Path:
+def _write_test_parquet(
+    path: Path,
+    n: int = 200,
+    *,
+    include_dormant: bool = False,
+    include_errors: bool = False,
+) -> Path:
     """Write a synthetic accounts parquet file for testing."""
-    df = _make_accounts_df(n, **kwargs)
+    df = _make_accounts_df(
+        n, include_dormant=include_dormant, include_errors=include_errors
+    )
     path.parent.mkdir(parents=True, exist_ok=True)
     df.write_parquet(path)
     return path
@@ -373,7 +381,7 @@ class TestLoadAccounts:
 
     def test_loads_parquet(self, parquet_path: Path) -> None:
         lf = load_accounts(parquet_path)
-        df = lf.collect()
+        df: pl.DataFrame = lf.collect()
         assert len(df) > 0
         assert "financial_year" in df.columns
         assert "debt_total" in df.columns
@@ -381,21 +389,24 @@ class TestLoadAccounts:
     def test_drops_dormant_by_default(self, parquet_with_dormant: Path) -> None:
         lf_default = load_accounts(parquet_with_dormant)
         lf_keep = load_accounts(parquet_with_dormant, drop_dormant=False)
-        assert lf_default.collect().height <= lf_keep.collect().height
+        df_default: pl.DataFrame = lf_default.collect()
+        df_keep: pl.DataFrame = lf_keep.collect()
+        assert df_default.height <= df_keep.height
 
     def test_drops_errors_by_default(self, parquet_with_dormant: Path) -> None:
         lf_default = load_accounts(parquet_with_dormant)
         lf_keep = load_accounts(parquet_with_dormant, drop_errors=False)
-        assert lf_default.collect().height <= lf_keep.collect().height
+        df_default: pl.DataFrame = lf_default.collect()
+        df_keep: pl.DataFrame = lf_keep.collect()
+        assert df_default.height <= df_keep.height
 
     def test_financial_year_column_added(self, parquet_path: Path) -> None:
-        df = load_accounts(parquet_path).collect()
+        df: pl.DataFrame = load_accounts(parquet_path).collect()
         assert "financial_year" in df.columns
         assert df["financial_year"].dtype == pl.Int32
 
     def test_debt_total_column_added(self, parquet_path: Path) -> None:
-        df = load_accounts(parquet_path).collect()
-        assert "debt_total" in df.columns
+        df: pl.DataFrame = load_accounts(parquet_path).collect()
         # Debt should be non-negative where both creditor columns are non-null
         non_null_debt = df.filter(pl.col("debt_total").is_not_null())["debt_total"]
         assert (non_null_debt >= 0).all()
@@ -427,14 +438,14 @@ class TestAssignSectors:
     def test_no_sic_file_assigns_other_services(self, parquet_path: Path) -> None:
         lf = load_accounts(parquet_path)
         lf = assign_sectors(lf, sic_path=None)
-        df = lf.collect()
+        df: pl.DataFrame = lf.collect()
         assert "sector" in df.columns
         assert df["sector"].unique().to_list() == ["other_services"]
 
     def test_csv_sic_file(self, parquet_path: Path, sic_csv: Path) -> None:
         lf = load_accounts(parquet_path)
         lf = assign_sectors(lf, sic_path=sic_csv)
-        df = lf.collect()
+        df: pl.DataFrame = lf.collect()
         assert "sector" in df.columns
         sectors = df["sector"].unique().to_list()
         assert len(sectors) >= 1
@@ -442,7 +453,7 @@ class TestAssignSectors:
     def test_parquet_sic_file(self, parquet_path: Path, sic_parquet: Path) -> None:
         lf = load_accounts(parquet_path)
         lf = assign_sectors(lf, sic_path=sic_parquet)
-        df = lf.collect()
+        df: pl.DataFrame = lf.collect()
         assert "sector" in df.columns
 
     def test_nonexistent_sic_file_falls_back(self, parquet_path: Path) -> None:
@@ -506,7 +517,7 @@ class TestProfileField:
         assert p.outlier_count > 0
         assert p.outlier_low is not None
         assert p.outlier_high is not None
-        assert p.outlier_low < p.outlier_high  # type: ignore[operator]
+        assert p.outlier_low < p.outlier_high
 
     def test_single_value(self) -> None:
         series = pl.Series("single", [42.0])
@@ -519,7 +530,7 @@ class TestProfileAccounts:
     """Tests for full dataset profiling."""
 
     def test_profile_returns_dataprofile(self, parquet_path: Path) -> None:
-        df = load_accounts(parquet_path).collect()
+        df: pl.DataFrame = load_accounts(parquet_path).collect()
         df = df.with_columns(pl.lit("other_services").alias("sector"))
         profile = profile_accounts(df)
         assert isinstance(profile, DataProfile)
@@ -527,7 +538,7 @@ class TestProfileAccounts:
         assert profile.total_companies > 0
 
     def test_profile_has_field_profiles(self, parquet_path: Path) -> None:
-        df = load_accounts(parquet_path).collect()
+        df: pl.DataFrame = load_accounts(parquet_path).collect()
         df = df.with_columns(pl.lit("other_services").alias("sector"))
         profile = profile_accounts(df)
         assert len(profile.fields) > 0
@@ -537,7 +548,7 @@ class TestProfileAccounts:
             assert col in field_names
 
     def test_date_range(self, parquet_path: Path) -> None:
-        df = load_accounts(parquet_path).collect()
+        df: pl.DataFrame = load_accounts(parquet_path).collect()
         profile = profile_accounts(df)
         assert profile.date_range[0] != "N/A"
         assert profile.date_range[1] != "N/A"
@@ -661,7 +672,7 @@ class TestComputeSectorYearParameters:
     def test_returns_sector_year_parameters(self, parquet_path: Path) -> None:
         lf = load_accounts(parquet_path)
         lf = assign_sectors(lf, sic_path=None)
-        df = lf.collect()
+        df: pl.DataFrame = lf.collect()
 
         results = compute_sector_year_parameters(df)
         assert isinstance(results, list)
@@ -671,7 +682,7 @@ class TestComputeSectorYearParameters:
     def test_parameters_have_distributions(self, parquet_path: Path) -> None:
         lf = load_accounts(parquet_path)
         lf = assign_sectors(lf, sic_path=None)
-        df = lf.collect()
+        df: pl.DataFrame = lf.collect()
 
         results = compute_sector_year_parameters(df)
         for r in results:
@@ -684,7 +695,7 @@ class TestComputeSectorYearParameters:
     def test_results_sorted(self, parquet_path: Path) -> None:
         lf = load_accounts(parquet_path)
         lf = assign_sectors(lf, sic_path=None)
-        df = lf.collect()
+        df: pl.DataFrame = lf.collect()
 
         results = compute_sector_year_parameters(df)
         keys = [(r.sector, r.financial_year) for r in results]
@@ -693,7 +704,7 @@ class TestComputeSectorYearParameters:
     def test_custom_candidates(self, parquet_path: Path) -> None:
         lf = load_accounts(parquet_path)
         lf = assign_sectors(lf, sic_path=None)
-        df = lf.collect()
+        df: pl.DataFrame = lf.collect()
 
         results = compute_sector_year_parameters(df, candidates=("norm", "lognorm"))
         for r in results:

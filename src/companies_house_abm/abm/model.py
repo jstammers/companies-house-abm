@@ -237,7 +237,7 @@ class Simulation:
         # --- Wire markets ---
         self.goods_market.set_agents(self.firms, self.households, self.government)
         self.labor_market.set_agents(self.firms, self.households, self._rng)
-        self.credit_market.set_agents(self.firms, self.banks)
+        self.credit_market.set_agents(self.firms, self.banks, self._rng)
         self.housing_market.set_agents(
             self.properties, self.households, self.banks, self.mortgages, rng=self._rng
         )

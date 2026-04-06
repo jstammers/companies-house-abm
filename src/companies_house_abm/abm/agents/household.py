@@ -53,6 +53,9 @@ class Household(BaseAgent):
         self.savings: float = 0.0
         self.transfer_income: float = 0.0
 
+        # Bounded rationality: adaptive expectations (Dosi et al. 2010)
+        # Initialised to the agent's starting income as the first expectation.
+        self.expected_income: float = income
         # Housing state
         self.tenure: str = "renter"  # "owner_occupier", "renter", "homeless"
         self.property_id: str | None = None
@@ -84,9 +87,18 @@ class Household(BaseAgent):
         self._save()
 
     def _receive_income(self) -> None:
-        """Calculate total income for the period."""
+        """Calculate total income and update expected income via EMA.
+
+        Households form adaptive expectations (Dosi et al. 2010): the
+        expected income is an exponential moving average of realised income,
+        with adaptation speed ``expectation_adaptation_speed``.
+        """
         wage_income = self.wage if self.employed else 0.0
-        self.income = wage_income + self.transfer_income
+        realized = wage_income + self.transfer_income
+        self.income = realized
+
+        alpha = self._behavior.expectation_adaptation_speed if self._behavior else 0.3
+        self.expected_income = alpha * realized + (1.0 - alpha) * self.expected_income
 
     def _make_housing_payment(self) -> None:
         """Deduct housing costs from income.
@@ -110,15 +122,19 @@ class Household(BaseAgent):
     def _consume(self) -> None:
         """Determine consumption spending.
 
-        Uses a consumption function that depends on current (post-housing)
-        income and wealth, weighted by a smoothing parameter.
+        Uses a consumption function that depends on *expected* (post-housing)
+        income and wealth
+        (adaptive expectations) and wealth, weighted by a smoothing parameter.
+        Consuming from expected rather than realised income introduces
+        consumption smoothing: a temporarily unemployed household does not
+        immediately cut spending to zero if it expects to be re-employed soon.
         """
         smoothing = self._behavior.consumption_smoothing if self._behavior else 0.7
-        # Consumption out of income and a fraction of wealth
-        c_income = self.mpc * self.income
+        # Consumption out of expected income and a fraction of wealth
+        c_income = self.mpc * self.expected_income
         c_wealth = (1 - smoothing) * 0.04 * self.wealth  # ~4% of wealth
         desired = c_income + c_wealth
-        # Cannot consume more than income + wealth
+        # Cannot consume more than actual income + wealth
         self.consumption = max(0.0, min(desired, self.income + self.wealth))
 
     def _save(self) -> None:
@@ -235,6 +251,7 @@ class Household(BaseAgent):
             "agent_id": self.agent_id,
             "agent_type": self.agent_type,
             "income": self.income,
+            "expected_income": self.expected_income,
             "wealth": self.wealth,
             "consumption": self.consumption,
             "savings": self.savings,

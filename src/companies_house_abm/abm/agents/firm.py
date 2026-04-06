@@ -14,6 +14,8 @@ from companies_house_abm.abm.agents.base import BaseAgent
 if TYPE_CHECKING:
     from typing import Any
 
+    import numpy as np
+
     from companies_house_abm.abm.config import FirmBehaviorConfig
 
 
@@ -70,6 +72,9 @@ class Firm(BaseAgent):
         self.wage_rate: float = (wage_bill / employees) if employees > 0 else 0.0
         self.desired_production: float = self.output
         self.bankrupt: bool = False
+
+        # Bounded rationality: satisficing markup heuristic
+        self._profit_rate_history: list[float] = []
 
         self._behavior = behavior
 
@@ -162,17 +167,58 @@ class Firm(BaseAgent):
     # Markup adaptation
     # ------------------------------------------------------------------
 
-    def adapt_markup(self, excess_demand: float) -> None:
+    def adapt_markup(
+        self,
+        excess_demand: float,
+        rng: np.random.Generator | None = None,
+    ) -> None:
         """Adjust markup in response to market conditions.
+
+        Implements a satisficing heuristic (Simon 1955): the firm only responds
+        fully to market signals when its recent profit rate is below its
+        aspiration level.  When satisficed (profit above aspiration), the firm
+        makes a much smaller adjustment, conserving behavioural inertia.
 
         Args:
             excess_demand: Positive means demand exceeds supply.
+            rng: Optional random number generator.  When provided and
+                ``markup_noise_std > 0``, Gaussian noise is added to the
+                markup adjustment.
         """
-        speed = self._behavior.markup_adjustment_speed if self._behavior else 0.1
-        if excess_demand > 0:
-            self.markup += speed * excess_demand
+        if self._behavior:
+            speed = self._behavior.markup_adjustment_speed
+            aspiration = self._behavior.satisficing_aspiration_rate
+            window = self._behavior.satisficing_window
+            noise_std = self._behavior.markup_noise_std
         else:
-            self.markup = max(0.01, self.markup + speed * excess_demand)
+            speed = 0.1
+            aspiration = 0.5
+            window = 4
+            noise_std = 0.0
+
+        # Track rolling profit rate (profit / turnover)
+        profit_rate = self.profit / max(abs(self.turnover), 1e-9)
+        self._profit_rate_history.append(profit_rate)
+        if len(self._profit_rate_history) > window:
+            self._profit_rate_history.pop(0)
+
+        avg_profit_rate = sum(self._profit_rate_history) / len(
+            self._profit_rate_history
+        )
+
+        # Satisficing: firms that are "satisficed" (above aspiration) respond
+        # much less aggressively to market signals (Simon 1955)
+        if len(self._profit_rate_history) >= 2 and avg_profit_rate >= aspiration:
+            adjustment = speed * excess_demand * 0.1
+        else:
+            adjustment = speed * excess_demand
+
+        # Optional stochastic noise
+        if rng is not None and noise_std > 0:
+            adjustment += float(rng.normal(0, noise_std))
+
+        if adjustment > 0 or self.markup > 0.01:
+            self.markup = max(0.01, self.markup + adjustment)
 
     # ------------------------------------------------------------------
     # Hire / fire interface used by the labor market
@@ -203,6 +249,13 @@ class Firm(BaseAgent):
     # State reporting
     # ------------------------------------------------------------------
 
+    @property
+    def aspiration_rate(self) -> float:
+        """Rolling average profit rate used as the satisficing aspiration."""
+        if not self._profit_rate_history:
+            return self._behavior.satisficing_aspiration_rate if self._behavior else 0.5
+        return sum(self._profit_rate_history) / len(self._profit_rate_history)
+
     def get_state(self) -> dict[str, Any]:
         """Return a snapshot of the firm's state."""
         return {
@@ -221,5 +274,6 @@ class Firm(BaseAgent):
             "equity": self.equity,
             "profit": self.profit,
             "markup": self.markup,
+            "aspiration_rate": self.aspiration_rate,
             "bankrupt": self.bankrupt,
         }

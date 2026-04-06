@@ -14,6 +14,7 @@ The ABM is inspired by complexity economics and incorporates:
 
 from __future__ import annotations
 
+from companies_house_abm.abm.calibration import SweepSummary, parameter_sweep
 from companies_house_abm.abm.config import ModelConfig, load_config
 from companies_house_abm.abm.evaluation import EvaluationReport, evaluate_simulation
 from companies_house_abm.abm.model import Simulation, SimulationResult
@@ -30,9 +31,11 @@ __all__ = [
     "SectorProfile",
     "Simulation",
     "SimulationResult",
+    "SweepSummary",
     "agents",
     "create_sector_representative_simulation",
     "evaluate_simulation",
     "load_config",
     "markets",
+    "parameter_sweep",
 ]

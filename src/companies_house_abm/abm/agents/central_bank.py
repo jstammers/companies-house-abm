@@ -82,8 +82,8 @@ class CentralBank(BaseAgent):
         # Interest-rate smoothing
         smoothed = smoothing * self._previous_rate + (1 - smoothing) * target_rate
 
-        self._previous_rate = self.policy_rate
         self.policy_rate = max(smoothed, lower)
+        self._previous_rate = self.policy_rate
 
     # ------------------------------------------------------------------
     # Reserve operations

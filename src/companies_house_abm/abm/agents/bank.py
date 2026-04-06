@@ -55,6 +55,7 @@ class Bank(BaseAgent):
         self.deposits = deposits
         self.non_performing_loans: float = 0.0
         self.interest_rate: float = 0.05
+        self._policy_rate: float = 0.05
         self.profit: float = 0.0
         self._interest_income: float = 0.0
         self._interest_expense: float = 0.0
@@ -112,7 +113,7 @@ class Bank(BaseAgent):
         2. Calculate interest income/expense.
         3. Update profit and capital.
         """
-        self._set_lending_rate(policy_rate=0.05)
+        self._set_lending_rate(policy_rate=self._policy_rate)
         self._calculate_income()
         self._update_capital()
 
@@ -122,6 +123,7 @@ class Bank(BaseAgent):
         Args:
             rate: The central bank policy rate.
         """
+        self._policy_rate = rate
         self._set_lending_rate(rate)
 
     def _set_lending_rate(self, policy_rate: float) -> None:

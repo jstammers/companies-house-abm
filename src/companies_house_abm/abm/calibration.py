@@ -86,10 +86,17 @@ class SweepSummary:
     """Summary of a full parameter sweep.
 
     Attributes:
-        results: One :class:`SweepResult` per parameter combination tested.
+        results: One :class:`SweepResult` per parameter combination that ran
+            successfully.
+        n_failed: Number of combinations that raised an exception and were
+            excluded from ``results``.
+        failed_combinations: Parameter dicts for each failed combination,
+            in the order they were attempted.
     """
 
     results: list[SweepResult] = field(default_factory=list)
+    n_failed: int = 0
+    failed_combinations: list[dict[str, Any]] = field(default_factory=list)
 
     @property
     def best(self) -> SweepResult | None:
@@ -193,6 +200,8 @@ def parameter_sweep(
         n_total *= len(lst)
 
     summary = SweepSummary()
+    n_failed = 0
+    failed_combinations: list[dict[str, Any]] = []
 
     for i, combo in enumerate(itertools.product(*value_lists), 1):
         params: dict[str, Any] = dict(zip(keys, combo, strict=True))
@@ -212,8 +221,21 @@ def parameter_sweep(
                     report.n_total,
                 )
         except Exception as exc:
+            n_failed += 1
+            failed_combinations.append(params)
             logger.warning("Sweep combination %s failed: %s", params, exc)
 
+    if n_failed > 0:
+        logger.warning(
+            "%d/%d sweep combinations failed and were excluded from results. "
+            "Failed combinations: %s",
+            n_failed,
+            n_total,
+            failed_combinations,
+        )
+
+    summary.n_failed = n_failed
+    summary.failed_combinations = failed_combinations
     return summary
 
 

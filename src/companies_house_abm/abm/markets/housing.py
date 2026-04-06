@@ -19,6 +19,8 @@ from companies_house_abm.abm.markets.base import BaseMarket
 if TYPE_CHECKING:
     from typing import Any
 
+    from numpy.random import Generator
+
     from companies_house_abm.abm.agents.bank import Bank
     from companies_house_abm.abm.agents.household import Household
     from companies_house_abm.abm.assets.mortgage import Mortgage
@@ -90,7 +92,7 @@ class HousingMarket(BaseMarket):
     # Market clearing
     # ------------------------------------------------------------------
 
-    def clear(self) -> dict[str, Any]:
+    def clear(self, rng: Generator | None = None) -> dict[str, Any]:  # noqa: ARG002
         """Execute one period of the housing market.
 
         Returns:

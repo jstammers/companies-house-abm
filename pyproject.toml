@@ -148,8 +148,6 @@ invalid-return-type = "warn"
 invalid-argument-type = "warn"
 unresolved-attribute = "warn"
 not-subscriptable = "ignore"
-# Polars .collect() returns InProcessQuery | DataFrame in stubs; actual type is DataFrame
-invalid-return-type = "warn"
 
 # kreuzberg and litellm are optional deps - not installed in dev by default
 [[tool.ty.overrides]]

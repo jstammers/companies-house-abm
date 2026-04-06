@@ -35,7 +35,7 @@ dependencies = [
 [project.optional-dependencies]
 xbrl = ["stream-read-xbrl>=0.1.1"]
 pdf = ["kreuzberg>=0.5.0"]
-llm = ["litellm>=1.0.0"]
+llm = ["litellm>= 1.83.0"]
 analysis = ["numpy>=1.26.0", "scipy>=1.11.0"]
 all = ["companies-house[xbrl,pdf,llm,analysis]"]
 

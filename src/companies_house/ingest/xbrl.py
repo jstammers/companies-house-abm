@@ -297,9 +297,7 @@ class _TailBuffer(io.RawIOBase):
         self._pos = self._tail_start + buf_end
         return result
 
-    def readinto(  # type: ignore[override]
-        self, b: bytearray | memoryview
-    ) -> int:
+    def readinto(self, b: bytearray | memoryview) -> int:  # type: ignore[invalid-method-override]
         data = self.read(len(b))
         n = len(data)
         b[:n] = data

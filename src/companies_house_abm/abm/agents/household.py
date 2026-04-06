@@ -1,6 +1,7 @@
 """Household agent for the ABM.
 
-Households supply labour, consume goods, and accumulate savings.
+Households supply labour, consume goods, accumulate savings, and make
+housing decisions (rent vs. buy).
 """
 
 from __future__ import annotations
@@ -12,6 +13,7 @@ from companies_house_abm.abm.agents.base import BaseAgent
 if TYPE_CHECKING:
     from typing import Any
 
+    from companies_house_abm.abm.assets.mortgage import Mortgage
     from companies_house_abm.abm.config import HouseholdBehaviorConfig
 
 
@@ -54,6 +56,16 @@ class Household(BaseAgent):
         # Bounded rationality: adaptive expectations (Dosi et al. 2010)
         # Initialised to the agent's starting income as the first expectation.
         self.expected_income: float = income
+        # Housing state
+        self.tenure: str = "renter"  # "owner_occupier", "renter", "homeless"
+        self.property_id: str | None = None
+        self.mortgage: Mortgage | None = None
+        self.rent: float = 0.0  # monthly rent payment
+        self.housing_wealth: float = 0.0  # property value - mortgage outstanding
+        self.price_expectation: float = 0.0
+        self.wants_to_buy: bool = False
+        self.wants_to_sell: bool = False
+        self.months_searching: int = 0
 
         self._behavior = behavior
 
@@ -65,10 +77,12 @@ class Household(BaseAgent):
         """Execute one period of household behaviour.
 
         1. Receive income (wage if employed, transfers if not).
-        2. Decide consumption.
-        3. Save the remainder.
+        2. Make housing payment (rent or mortgage).
+        3. Decide consumption from remaining disposable income.
+        4. Save the remainder.
         """
         self._receive_income()
+        self._make_housing_payment()
         self._consume()
         self._save()
 
@@ -86,10 +100,30 @@ class Household(BaseAgent):
         alpha = self._behavior.expectation_adaptation_speed if self._behavior else 0.3
         self.expected_income = alpha * realized + (1.0 - alpha) * self.expected_income
 
+    def _make_housing_payment(self) -> None:
+        """Deduct housing costs from income.
+
+        For owner-occupiers with a mortgage, amortize the mortgage and
+        deduct the payment.  For renters, deduct rent.  If the household
+        cannot afford the payment, the mortgage enters arrears.
+        """
+        if self.mortgage is not None:
+            payment = self.mortgage.monthly_payment
+            if self.income + self.wealth >= payment:
+                self.mortgage.amortize()
+                self.mortgage.record_payment_made()
+                self.income -= payment
+            else:
+                self.mortgage.record_missed_payment()
+        elif self.tenure == "renter" and self.rent > 0:
+            actual = min(self.rent, self.income + self.wealth)
+            self.income -= actual
+
     def _consume(self) -> None:
         """Determine consumption spending.
 
-        Uses a consumption function that depends on *expected* income
+        Uses a consumption function that depends on *expected* (post-housing)
+        income and wealth
         (adaptive expectations) and wealth, weighted by a smoothing parameter.
         Consuming from expected rather than realised income introduces
         consumption smoothing: a temporarily unemployed household does not
@@ -107,6 +141,68 @@ class Household(BaseAgent):
         """Save unspent income."""
         self.savings = self.income - self.consumption
         self.wealth += self.savings
+
+    # ------------------------------------------------------------------
+    # Housing decisions (used by the housing market)
+    # ------------------------------------------------------------------
+
+    def decide_buy_or_rent(
+        self,
+        average_price: float,
+        mortgage_rate: float,
+        rental_yield: float,
+        price_history: list[float] | None = None,
+        backward_weight: float = 0.65,
+        lookback: int = 12,
+    ) -> None:
+        """Decide whether to seek to buy a property.
+
+        Compares expected annual cost of owning (mortgage payment +
+        maintenance - expected appreciation) vs. renting.  Follows
+        Farmer (2025): backward-looking price expectations drive the
+        buy/rent decision.
+        """
+        # Only renters consider buying
+        if self.tenure != "renter":
+            self.wants_to_buy = False
+            return
+
+        # Price expectation from recent trend
+        if price_history and len(price_history) >= 2:
+            recent = price_history[-min(lookback, len(price_history)) :]
+            backward_trend = (recent[-1] - recent[0]) / max(recent[0], 1.0)
+            backward_trend /= max(len(recent) - 1, 1)
+        else:
+            backward_trend = 0.0
+        forward_trend = 0.02 / 12.0  # ~2% annual fundamental growth
+
+        expected_monthly_appreciation = (
+            backward_weight * backward_trend + (1.0 - backward_weight) * forward_trend
+        )
+        self.price_expectation = average_price * (1.0 + expected_monthly_appreciation)
+
+        # Cost comparison: monthly cost of owning vs renting
+        monthly_mortgage = average_price * 0.8 * mortgage_rate / 12.0
+        monthly_maintenance = average_price * 0.01 / 12.0
+        monthly_appreciation = average_price * expected_monthly_appreciation
+        cost_of_owning = monthly_mortgage + monthly_maintenance - monthly_appreciation
+
+        cost_of_renting = average_price * rental_yield / 12.0
+
+        # Can they afford a deposit? (20% of average price)
+        deposit_needed = average_price * 0.10
+        can_afford_deposit = self.wealth >= deposit_needed
+
+        self.wants_to_buy = can_afford_deposit and cost_of_owning < cost_of_renting
+
+    def update_housing_wealth(self, property_value: float) -> None:
+        """Recalculate housing wealth from current property value."""
+        if self.tenure == "owner_occupier" and self.mortgage is not None:
+            self.housing_wealth = property_value - self.mortgage.outstanding
+        elif self.tenure == "owner_occupier":
+            self.housing_wealth = property_value
+        else:
+            self.housing_wealth = 0.0
 
     # ------------------------------------------------------------------
     # Employment interface used by the labor market
@@ -163,4 +259,9 @@ class Household(BaseAgent):
             "employer_id": self.employer_id,
             "wage": self.wage,
             "mpc": self.mpc,
+            "tenure": self.tenure,
+            "property_id": self.property_id,
+            "rent": self.rent,
+            "housing_wealth": self.housing_wealth,
+            "has_mortgage": self.mortgage is not None,
         }

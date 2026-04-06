@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from fastapi import FastAPI
+
+if TYPE_CHECKING:
+    from companies_house_abm.abm.config import ModelConfig
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -114,10 +118,14 @@ def _config_to_params(cfg: object) -> SimulationParams:
         # Credit market
         collateral_requirement=cfg.credit_market.collateral_requirement,
         default_rate_base=cfg.credit_market.default_rate_base,
+        # Housing
+        max_ltv=cfg.mortgage.max_ltv,
+        max_dti=cfg.mortgage.max_dti,
+        search_intensity=cfg.housing_market.search_intensity,
     )
 
 
-def _params_to_config(params: SimulationParams) -> object:
+def _params_to_config(params: SimulationParams) -> ModelConfig:
     """Convert a flat :class:`SimulationParams` to a :class:`ModelConfig`."""
     from companies_house_abm.abm.config import (
         BankBehaviorConfig,
@@ -129,8 +137,10 @@ def _params_to_config(params: SimulationParams) -> object:
         GoodsMarketConfig,
         HouseholdBehaviorConfig,
         HouseholdConfig,
+        HousingMarketConfig,
         LaborMarketConfig,
         ModelConfig,
+        MortgageConfig,
         SimulationConfig,
         TaylorRuleConfig,
         TransfersConfig,
@@ -212,6 +222,13 @@ def _params_to_config(params: SimulationParams) -> object:
             collateral_requirement=params.collateral_requirement,
             default_rate_base=params.default_rate_base,
         ),
+        housing_market=HousingMarketConfig(
+            search_intensity=params.search_intensity,
+        ),
+        mortgage=MortgageConfig(
+            max_ltv=params.max_ltv,
+            max_dti=params.max_dti,
+        ),
     )
 
 
@@ -239,7 +256,7 @@ def run_simulation(params: SimulationParams) -> SimulationResponse:
     from companies_house_abm.abm.model import Simulation
 
     config = _params_to_config(params)
-    sim = Simulation(config)  # type: ignore[arg-type]
+    sim = Simulation(config)
     sim.initialize_agents()
     result = sim.run(periods=params.periods)
 
@@ -256,6 +273,13 @@ def run_simulation(params: SimulationParams) -> SimulationResponse:
             total_lending=r.total_lending,
             firm_bankruptcies=r.firm_bankruptcies,
             total_employment=r.total_employment,
+            average_house_price=r.average_house_price,
+            housing_transactions=r.housing_transactions,
+            housing_listings=r.housing_listings,
+            homeownership_rate=r.homeownership_rate,
+            house_price_inflation=r.house_price_inflation,
+            total_mortgage_lending=r.total_mortgage_lending,
+            foreclosures=r.foreclosures,
         )
         for r in result.records
     ]

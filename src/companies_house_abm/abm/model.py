@@ -16,9 +16,11 @@ from companies_house_abm.abm.agents.central_bank import CentralBank
 from companies_house_abm.abm.agents.firm import Firm
 from companies_house_abm.abm.agents.government import Government
 from companies_house_abm.abm.agents.household import Household
+from companies_house_abm.abm.assets.property import Property
 from companies_house_abm.abm.config import ModelConfig, load_config
 from companies_house_abm.abm.markets.credit import CreditMarket
 from companies_house_abm.abm.markets.goods import GoodsMarket
+from companies_house_abm.abm.markets.housing import HousingMarket
 from companies_house_abm.abm.markets.labor import LaborMarket
 
 if TYPE_CHECKING:
@@ -41,6 +43,14 @@ class PeriodRecord:
     total_lending: float = 0.0
     firm_bankruptcies: int = 0
     total_employment: int = 0
+    # Housing
+    average_house_price: float = 0.0
+    housing_transactions: int = 0
+    housing_listings: int = 0
+    homeownership_rate: float = 0.0
+    house_price_inflation: float = 0.0
+    total_mortgage_lending: float = 0.0
+    foreclosures: int = 0
 
 
 @dataclass
@@ -65,6 +75,16 @@ class SimulationResult:
     def unemployment_series(self) -> list[float]:
         """Unemployment rate values across all recorded periods."""
         return [r.unemployment_rate for r in self.records]
+
+    @property
+    def house_price_series(self) -> list[float]:
+        """Average house price across all recorded periods."""
+        return [r.average_house_price for r in self.records]
+
+    @property
+    def homeownership_series(self) -> list[float]:
+        """Homeownership rate across all recorded periods."""
+        return [r.homeownership_rate for r in self.records]
 
 
 class Simulation:
@@ -102,10 +122,15 @@ class Simulation:
             transfers=self.config.transfers,
         )
 
+        # Housing assets
+        self.properties: list[Property] = []
+        self.mortgages: list = []  # list[Mortgage]
+
         # Markets
         self.goods_market = GoodsMarket(config=self.config.goods_market)
         self.labor_market = LaborMarket(config=self.config.labor_market)
         self.credit_market = CreditMarket(config=self.config.credit_market)
+        self.housing_market = HousingMarket(config=self.config.housing_market)
 
         self.current_period: int = 0
 
@@ -199,16 +224,23 @@ class Simulation:
                     reserves=capital * 0.1,
                     config=cfg.banks,
                     behavior=cfg.bank_behavior,
+                    mortgage_config=cfg.mortgage,
                 )
             )
 
         # --- Initial employment: assign some households to firms ---
         self._initial_employment()
 
+        # --- Initial housing: create properties and assign tenure ---
+        self._initial_housing()
+
         # --- Wire markets ---
         self.goods_market.set_agents(self.firms, self.households, self.government)
         self.labor_market.set_agents(self.firms, self.households, self._rng)
         self.credit_market.set_agents(self.firms, self.banks, self._rng)
+        self.housing_market.set_agents(
+            self.properties, self.households, self.banks, self.mortgages, rng=self._rng
+        )
 
     def _initial_employment(self) -> None:
         """Assign households to firms for initial employment."""
@@ -222,6 +254,140 @@ class Simulation:
                 hh_idx += 1
             if hh_idx >= len(self.households):
                 break
+
+    def _initial_housing(self) -> None:
+        """Create the initial housing stock and assign tenure.
+
+        Roughly 64% of households become owner-occupiers (matching the
+        English Housing Survey).  The remaining households are renters.
+        """
+        cfg = self.config.properties
+        n_props = min(cfg.count, len(self.households) * 2)
+
+        # Regional price multipliers (London ~1.8x, North East ~0.5x)
+        region_price = {
+            "london": 1.80,
+            "south_east": 1.30,
+            "east": 1.10,
+            "south_west": 1.00,
+            "west_midlands": 0.80,
+            "east_midlands": 0.78,
+            "north_west": 0.70,
+            "north_east": 0.50,
+            "yorkshire": 0.65,
+            "scotland": 0.60,
+            "wales": 0.60,
+        }
+
+        for i in range(n_props):
+            region = cfg.regions[i % len(cfg.regions)]
+            ptype_idx = self._rng.choice(len(cfg.types), p=cfg.type_shares)
+            ptype = cfg.types[int(ptype_idx)]
+            quality = float(np.clip(self._rng.normal(0.5, 0.15), 0.05, 0.95))
+            multiplier = region_price.get(region, 1.0)
+            base_price = cfg.average_price * multiplier
+            price = float(self._rng.lognormal(np.log(base_price), 0.3))
+            rental_yield = self.config.housing_market.rental_yield
+            monthly_rent = price * rental_yield / 12.0
+
+            self.properties.append(
+                Property(
+                    property_id=f"prop_{i:05d}",
+                    region=region,
+                    property_type=ptype,
+                    quality=quality,
+                    market_value=price,
+                    last_transaction_price=price,
+                    rental_value=monthly_rent,
+                )
+            )
+
+        # Assign ~64% of households as owner-occupiers
+        target_ownership = 0.64
+        n_owners = int(len(self.households) * target_ownership)
+        n_owners = min(n_owners, n_props)
+
+        # Shuffle property indices for random assignment
+        prop_indices = list(range(n_props))
+        self._rng.shuffle(prop_indices)
+
+        for i in range(n_owners):
+            hh = self.households[i]
+            prop = self.properties[prop_indices[i]]
+            prop.owner_id = hh.agent_id
+            hh.tenure = "owner_occupier"
+            hh.property_id = prop.property_id
+            hh.housing_wealth = prop.market_value
+            hh.rent = 0.0
+
+        # Remaining households are renters
+        for i in range(n_owners, len(self.households)):
+            hh = self.households[i]
+            hh.tenure = "renter"
+            # Assign to a random property as tenant
+            if n_props > n_owners:
+                rental_idx = prop_indices[
+                    n_owners + (i - n_owners) % (n_props - n_owners)
+                ]
+                rental_prop = self.properties[rental_idx]
+                rental_prop.is_rented = True
+                rental_prop.tenant_id = hh.agent_id
+                hh.rent = rental_prop.rental_value
+
+        # List vacant (unowned, unrented) properties for sale
+        markup = self.config.housing_market.initial_markup
+        for prop in self.properties:
+            if prop.owner_id is None and not prop.is_rented:
+                prop.list_for_sale(initial_markup=markup)
+
+    def _process_foreclosures(self) -> int:
+        """Banks assess mortgages in arrears and foreclose if needed.
+
+        Returns:
+            Number of foreclosures this period.
+        """
+        count = 0
+        for mortgage in list(self.mortgages):
+            if not mortgage.in_arrears:
+                continue
+            # Find the lending bank
+            bank = None
+            for b in self.banks:
+                if b.agent_id == mortgage.lender_id:
+                    bank = b
+                    break
+            if bank is None:
+                continue
+            if not bank.assess_foreclosure(mortgage):
+                continue
+
+            # Foreclose: bank takes possession, household loses home
+            borrower = None
+            for hh in self.households:
+                if hh.agent_id == mortgage.borrower_id:
+                    borrower = hh
+                    break
+
+            bank.record_mortgage_default(mortgage.outstanding)
+
+            if borrower:
+                borrower.tenure = "renter"
+                borrower.property_id = None
+                borrower.mortgage = None
+                borrower.housing_wealth = 0.0
+
+            # Mark property as available
+            for prop in self.properties:
+                if prop.property_id == mortgage.property_id:
+                    prop.owner_id = None
+                    prop.on_market = False
+                    break
+
+            self.mortgages = [
+                m for m in self.mortgages if m.mortgage_id != mortgage.mortgage_id
+            ]
+            count += 1
+        return count
 
     # ------------------------------------------------------------------
     # Execution
@@ -263,16 +429,20 @@ class Simulation:
 
         1. Government begins period (reset flows).
         2. Central bank sets policy rate.
-        3. Banks update lending rates.
+        3. Banks update lending rates and mortgage rates.
         4. Credit market clears.
         5. Firms step (plan, price, hire/fire, produce, financials).
         6. Labour market clears.
-        7. Households step (income, consume, save).
-        8. Goods market clears.
-        9. Government collects taxes and pays transfers.
-        10. Government ends period (compute deficit/debt).
-        11. Central bank observes inflation and output gap.
-        12. Record aggregate statistics.
+        7. Banks assess foreclosures.
+        8. Households step (income, housing payment, consume, save).
+        9. Households make buy/sell decisions.
+        10. Housing market clears (bilateral matching).
+        11. Government spending.
+        12. Goods market clears.
+        13. Tax collection.
+        14. Government ends period (compute deficit/debt).
+        15. Central bank observes inflation, output gap, house prices.
+        16. Banks step (accounting).
 
         Returns:
             A :class:`PeriodRecord` for this period.
@@ -285,9 +455,10 @@ class Simulation:
         # 2. Central bank sets policy rate
         self.central_bank.step()
 
-        # 3. Banks update lending rates
+        # 3. Banks update lending rates and mortgage rates
         for bank in self.banks:
             bank.set_policy_rate(self.central_bank.policy_rate)
+            bank.set_mortgage_rate(self.central_bank.policy_rate)
 
         # 4. Credit market clears
         self.credit_market.clear()
@@ -299,7 +470,10 @@ class Simulation:
         # 6. Labour market clears
         labor_state = self.labor_market.clear()
 
-        # 7. Households step
+        # 7. Banks assess foreclosures
+        foreclosures = self._process_foreclosures()
+
+        # 8. Households step
         # First set transfer income for unemployed
         avg_wage = labor_state["average_wage"]
         unemployed = [h for h in self.households if not h.employed]
@@ -318,15 +492,42 @@ class Simulation:
         for hh in self.households:
             hh.transfer_income = 0.0
 
-        # 8. Government spending
+        # 9. Households make buy/sell decisions
+        mortgage_rate = self.banks[0].mortgage_rate if self.banks else 0.04
+        rental_yield = self.config.housing_market.rental_yield
+        markup = self.config.housing_market.initial_markup
+        for hh in self.households:
+            hh.decide_buy_or_rent(
+                average_price=self.housing_market.average_price,
+                mortgage_rate=mortgage_rate,
+                rental_yield=rental_yield,
+                price_history=self.housing_market.price_history,
+            )
+            # Owners may decide to sell (~2% per period, or if unemployed)
+            if hh.tenure == "owner_occupier" and hh.property_id:
+                sell_prob = 0.02
+                if not hh.employed:
+                    sell_prob = 0.10  # financial stress
+                if float(self._rng.random()) < sell_prob:
+                    hh.wants_to_sell = True
+                    for prop in self.properties:
+                        if prop.property_id == hh.property_id and not prop.on_market:
+                            prop.list_for_sale(initial_markup=markup)
+                            break
+
+        # 10. Housing market clears
+        self.housing_market.set_period(self.current_period)
+        housing_state = self.housing_market.clear()
+
+        # 11. Government spending
         gdp = sum(f.turnover for f in self.firms if not f.bankrupt)
         self.government.gdp_estimate = gdp
         self.government.calculate_spending()
 
-        # 9. Goods market clears
+        # 12. Goods market clears
         goods_state = self.goods_market.clear()
 
-        # 10. Tax collection
+        # 13. Tax collection
         for firm in self.firms:
             if firm.profit > 0 and not firm.bankrupt:
                 tax = self.government.collect_corporate_tax(firm.profit)
@@ -337,17 +538,17 @@ class Simulation:
                 tax = self.government.collect_income_tax(hh.income)
                 hh.wealth -= tax
 
-        # 11. Government ends period
+        # 14. Government ends period
         self.government.step()
         self.government.end_period()
 
-        # 12. Central bank observes
+        # 15. Central bank observes
         self.central_bank.update_observations(
             inflation=goods_state["inflation"],
             output_gap=0.0,  # simplified: no potential GDP estimation yet
         )
 
-        # 13. Bank step
+        # 16. Bank step
         for bank in self.banks:
             bank.step()
 
@@ -366,4 +567,11 @@ class Simulation:
             total_lending=self.credit_market.total_lending,
             firm_bankruptcies=bankruptcies,
             total_employment=labor_state["total_employed"],
+            average_house_price=housing_state["average_price"],
+            housing_transactions=housing_state["transactions"],
+            housing_listings=housing_state["listings"],
+            homeownership_rate=housing_state["homeownership_rate"],
+            house_price_inflation=housing_state["house_price_inflation"],
+            total_mortgage_lending=housing_state["total_mortgage_lending"],
+            foreclosures=foreclosures,
         )

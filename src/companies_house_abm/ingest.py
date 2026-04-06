@@ -80,7 +80,9 @@ def infer_start_date(parquet_path: Path) -> date | None:
     if not parquet_path.exists():
         return None
     try:
-        result = pl.scan_parquet(parquet_path).select(pl.col("date").max()).collect()
+        result: pl.DataFrame = (
+            pl.scan_parquet(parquet_path).select(pl.col("date").max()).collect()
+        )
         if result.is_empty() or result[0, 0] is None:
             return None
         return result[0, 0]

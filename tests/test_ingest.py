@@ -15,10 +15,7 @@ from typer.testing import CliRunner
 if TYPE_CHECKING:
     from pathlib import Path
 
-from companies_house_abm.cli import app
-from companies_house_abm.ingest import (
-    COMPANIES_HOUSE_SCHEMA,
-    DEDUP_COLUMNS,
+from companies_house.ingest.xbrl import (
     _zip_bytes_iter,
     deduplicate,
     infer_start_date,
@@ -26,6 +23,8 @@ from companies_house_abm.ingest import (
     ingest_from_zips,
     merge_and_write,
 )
+from companies_house.schema import COMPANIES_HOUSE_SCHEMA, DEDUP_COLUMNS
+from companies_house_abm.cli import app
 
 # NO_COLOR=1 prevents ANSI colour codes. FORCE_COLOR=None *deletes* the key
 # from os.environ during each test invocation (Click CliRunner treats a None
@@ -439,7 +438,7 @@ class TestCLIIngest:
 
 class TestGetIngestedZipBasenames:
     def test_returns_basenames(self, tmp_path: Path):
-        from companies_house_abm.ingest import get_ingested_zip_basenames
+        from companies_house.ingest.xbrl import get_ingested_zip_basenames
 
         rows = [
             _make_row(zip_url="http://example.com/January2024.zip"),
@@ -453,13 +452,13 @@ class TestGetIngestedZipBasenames:
         assert "February2024.zip" in basenames
 
     def test_missing_file_returns_empty(self, tmp_path: Path):
-        from companies_house_abm.ingest import get_ingested_zip_basenames
+        from companies_house.ingest.xbrl import get_ingested_zip_basenames
 
         result = get_ingested_zip_basenames(tmp_path / "nonexistent.parquet")
         assert result == frozenset()
 
     def test_null_zip_urls_ignored(self, tmp_path: Path):
-        from companies_house_abm.ingest import get_ingested_zip_basenames
+        from companies_house.ingest.xbrl import get_ingested_zip_basenames
 
         rows = [_make_row(zip_url=None)]
         df = _make_df(rows)
@@ -476,7 +475,7 @@ class TestGetIngestedZipBasenames:
 
 class TestIngestFromArchiveDir:
     def test_ingests_all_zips_without_parquet(self, tmp_path: Path):
-        from companies_house_abm.ingest import ingest_from_archive_dir
+        from companies_house.ingest.xbrl import ingest_from_archive_dir
 
         zip_path = tmp_path / "data.zip"
         with ZipFile(zip_path, "w") as zf:
@@ -488,7 +487,7 @@ class TestIngestFromArchiveDir:
         assert len(result) == 2
 
     def test_skips_already_ingested_zips(self, tmp_path: Path):
-        from companies_house_abm.ingest import ingest_from_archive_dir
+        from companies_house.ingest.xbrl import ingest_from_archive_dir
 
         zip_path = tmp_path / "data.zip"
         with ZipFile(zip_path, "w") as zf:
@@ -504,7 +503,7 @@ class TestIngestFromArchiveDir:
         assert result.is_empty()
 
     def test_empty_directory_returns_empty(self, tmp_path: Path):
-        from companies_house_abm.ingest import ingest_from_archive_dir
+        from companies_house.ingest.xbrl import ingest_from_archive_dir
 
         result = ingest_from_archive_dir(tmp_path)
         assert result.is_empty()
@@ -518,7 +517,7 @@ class TestIngestFromArchiveDir:
 
 class TestCheckCompanyInZip:
     def test_found_in_zip(self, tmp_path: Path):
-        from companies_house_abm.ingest import check_company_in_zip
+        from companies_house.ingest.xbrl import check_company_in_zip
 
         zip_path = tmp_path / "test.zip"
         with ZipFile(zip_path, "w") as zf:
@@ -526,7 +525,7 @@ class TestCheckCompanyInZip:
         assert check_company_in_zip(zip_path, "01873499") is True
 
     def test_not_found_in_zip(self, tmp_path: Path):
-        from companies_house_abm.ingest import check_company_in_zip
+        from companies_house.ingest.xbrl import check_company_in_zip
 
         zip_path = tmp_path / "test.zip"
         with ZipFile(zip_path, "w") as zf:
@@ -534,14 +533,14 @@ class TestCheckCompanyInZip:
         assert check_company_in_zip(zip_path, "01873499") is False
 
     def test_corrupt_zip_returns_false(self, tmp_path: Path):
-        from companies_house_abm.ingest import check_company_in_zip
+        from companies_house.ingest.xbrl import check_company_in_zip
 
         zip_path = tmp_path / "bad.zip"
         zip_path.write_bytes(b"not a zip")
         assert check_company_in_zip(zip_path, "01873499") is False
 
     def test_missing_file_returns_false(self, tmp_path: Path):
-        from companies_house_abm.ingest import check_company_in_zip
+        from companies_house.ingest.xbrl import check_company_in_zip
 
         assert check_company_in_zip(tmp_path / "nonexistent.zip", "01873499") is False
 
@@ -553,7 +552,7 @@ class TestCheckCompanyInZip:
 
 class TestTailBuffer:
     def test_seek_and_read_within_buffer(self):
-        from companies_house_abm.ingest import _TailBuffer
+        from companies_house.ingest.xbrl import _TailBuffer
 
         data = b"ABCDEFGH"
         total = 20
@@ -563,18 +562,22 @@ class TestTailBuffer:
         assert buf.read(4) == b"ABCD"
         assert buf.tell() == 16
 
-    def test_read_before_buffer_returns_zeros(self):
-        from companies_house_abm.ingest import _TailBuffer
+    def test_read_before_buffer_raises(self):
+        import io
+
+        import pytest
+
+        from companies_house.ingest.xbrl import _TailBuffer
 
         data = b"TAIL"
         total = 10
         buf = _TailBuffer(data, total)
         buf.seek(0)
-        result = buf.read(6)  # reads bytes 0-5 (before tail_start=6)
-        assert result == b"\x00\x00\x00\x00\x00\x00"
+        with pytest.raises(io.UnsupportedOperation):
+            buf.read(6)  # starts at offset 0, before tail_start=6
 
     def test_seek_from_end(self):
-        from companies_house_abm.ingest import _TailBuffer
+        from companies_house.ingest.xbrl import _TailBuffer
 
         data = b"ABCD"
         buf = _TailBuffer(data, 10)
@@ -582,7 +585,7 @@ class TestTailBuffer:
         assert pos == 6  # 10 - 4 = 6 (= tail_start)
 
     def test_tell_updates_after_read(self):
-        from companies_house_abm.ingest import _TailBuffer
+        from companies_house.ingest.xbrl import _TailBuffer
 
         data = b"X" * 16
         buf = _TailBuffer(data, 16)
@@ -591,7 +594,7 @@ class TestTailBuffer:
         assert buf.tell() == 8
 
     def test_read_past_end_returns_empty(self):
-        from companies_house_abm.ingest import _TailBuffer
+        from companies_house.ingest.xbrl import _TailBuffer
 
         buf = _TailBuffer(b"data", 4)
         buf.seek(4)
@@ -609,7 +612,7 @@ class TestFetchZipIndex:
         import io as _io
         from unittest.mock import MagicMock, patch
 
-        from companies_house_abm.ingest import fetch_zip_index
+        from companies_house.ingest.xbrl import fetch_zip_index
 
         # Build a small real ZIP in memory
         buf = _io.BytesIO()
@@ -645,7 +648,7 @@ class TestFetchZipIndex:
 
         import pytest
 
-        from companies_house_abm.ingest import fetch_zip_index
+        from companies_house.ingest.xbrl import fetch_zip_index
 
         def fake_urlopen(req, timeout=30):
             resp = MagicMock()

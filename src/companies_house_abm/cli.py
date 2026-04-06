@@ -112,7 +112,7 @@ def ingest(
         # Stream new data from Companies House API
         companies_house_abm ingest -o data/ch.parquet
     """
-    from companies_house_abm.ingest import (
+    from companies_house.ingest.xbrl import (
         get_ingested_zip_basenames,
         infer_start_date,
         ingest_from_stream,
@@ -214,7 +214,7 @@ def check_company(
 
     Exit codes: 0 = found, 1 = not found, 2 = error.
     """
-    from companies_house_abm.ingest import check_company_in_zip, fetch_zip_index
+    from companies_house.ingest.xbrl import check_company_in_zip, fetch_zip_index
 
     if zip_source is None:
         typer.echo(
@@ -223,6 +223,11 @@ def check_company(
         )
         raise typer.Exit(code=2)
 
+    def _segment_match(name: str, cid: str) -> bool:
+        """Match company ID against the 3rd underscore-separated segment."""
+        parts = name.rsplit("/", 1)[-1].split("_")
+        return len(parts) >= 3 and parts[2] == cid
+
     try:
         if zip_source.startswith("http://") or zip_source.startswith("https://"):
             typer.echo(
@@ -230,7 +235,7 @@ def check_company(
                 "(downloading central directory only)..."
             )
             names = fetch_zip_index(zip_source)
-            found = any(company_id in name for name in names)
+            found = any(_segment_match(n, company_id) for n in names)
         else:
             found = check_company_in_zip(Path(zip_source), company_id)
 

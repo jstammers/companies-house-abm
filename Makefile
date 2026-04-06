@@ -53,7 +53,7 @@ build-rust:
 
 # Run ABM performance benchmark (Python vs Rust)
 benchmark:
-	uv run --group abm python scripts/run_benchmark.py
+	uv run python scripts/run_benchmark.py
 
 # Documentation
 docs:

@@ -3,9 +3,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "companies-house"
-version = "0.2.1"
-description = "Companies House data ingestion, analysis, and API client"
+name = "companies_house_abm"
+version = "0.4.1"
+description = "Agent-Based Modelling using Companies House Account Data"
 readme = "../../README.md"
 license = "MIT"
 requires-python = ">=3.10"
@@ -25,21 +25,27 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
+    "companies-house[xbrl,analysis]",
+    "fastapi>=0.115.0",
+    "marimo>=0.10.0",
+    "matplotlib>=3.8.0",
+    "mesa>=3.0.0",
+    "networkx>=3.2",
+    "numpy>=1.26.0",
     "polars>=1.38.1",
-    "pyarrow>=14.0.0",
-    "duckdb>=1.0.0",
-    "typer>=0.12.0",
     "pydantic>=2.0.0",
+    "pyyaml>=6.0.0",
+    "pyzmq>=27.1.0",
+    "scipy>=1.11.0",
+    "typer>=0.12.0",
+    "uvicorn[standard]>=0.30.0",
 ]
 
-[project.optional-dependencies]
-xbrl = ["stream-read-xbrl>=0.1.1"]
-pdf = ["kreuzberg>=0.5.0"]
-analysis = ["numpy>=1.26.0", "scipy>=1.11.0"]
-all = ["companies-house[xbrl,pdf,analysis]"]
-
 [project.scripts]
-companies-house = "companies_house.cli:app"
+companies_house_abm = "companies_house_abm.cli:app"
 
 [tool.hatch.build.targets.wheel]
 packages = ["."]
+
+[tool.uv.sources]
+companies-house = { workspace = true }

@@ -1,8 +1,7 @@
 """XBRL ingestion pipeline for Companies House bulk data.
 
-Extracted from ``companies_house_abm.ingest`` — handles both old-style XML
-(UK GAAP, pre-2014) and new inline iXBRL HTML archives transparently via
-``stream-read-xbrl``.
+Handles both old-style XML (UK GAAP, pre-2014) and modern inline iXBRL HTML
+archives transparently via ``stream-read-xbrl``.
 """
 
 from __future__ import annotations

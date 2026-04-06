@@ -31,7 +31,8 @@ from pathlib import Path
 import polars as pl
 import pytest
 
-from companies_house_abm.ingest import COMPANIES_HOUSE_SCHEMA, ingest_from_zips
+from companies_house.ingest.xbrl import ingest_from_zips
+from companies_house.schema import COMPANIES_HOUSE_SCHEMA
 
 # ---------------------------------------------------------------------------
 # Fixture paths

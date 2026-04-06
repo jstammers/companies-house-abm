@@ -7,18 +7,19 @@ from decimal import Decimal
 
 import polars as pl
 
-from companies_house_abm.company_analysis import (
-    ForecastResult,
+from companies_house.analysis.benchmarks import (
     SectorBenchmark,
     _load_sic_sector_ids,
-    _ordinal,
+    build_peer_group,
+    compute_sector_benchmark,
+)
+from companies_house.analysis.forecasting import forecast_metric
+from companies_house.analysis.formatting import _ordinal
+from companies_house.analysis.reports import (
     analyse_company,
     build_bs_history,
-    build_peer_group,
     build_pl_history,
     compute_derived_metrics,
-    compute_sector_benchmark,
-    forecast_metric,
     generate_report,
     split_statements,
 )
@@ -252,52 +253,71 @@ class TestForecastMetric:
         result = forecast_metric([2023], [1_000_000.0], "revenue", "Revenue")
         assert result is None
 
-    def test_returns_forecast_result_with_two_points(self):
+    def test_returns_none_with_fewer_than_min_obs(self):
+        # Fewer than 4 clean data points → None (linear regression not informative)
         result = forecast_metric(
             [2022, 2023], [1_000_000.0, 1_100_000.0], "revenue", "Revenue"
         )
-        assert isinstance(result, ForecastResult)
-        assert len(result.forecast_years) == 3
-        assert len(result.forecast_values) == 3
+        assert result is None
 
     def test_slope_sign(self):
-        # Increasing revenue
-        result = forecast_metric([2020, 2021, 2022], [100.0, 200.0, 300.0], "m", "M")
+        # Increasing revenue — 4 data points required
+        result = forecast_metric(
+            [2020, 2021, 2022, 2023], [100.0, 200.0, 300.0, 400.0], "m", "M"
+        )
         assert result is not None
         assert result.slope > 0
         assert result.trend_direction == "improving"
 
     def test_declining_trend(self):
-        result = forecast_metric([2020, 2021, 2022], [300.0, 200.0, 100.0], "m", "M")
+        result = forecast_metric(
+            [2020, 2021, 2022, 2023], [400.0, 300.0, 200.0, 100.0], "m", "M"
+        )
         assert result is not None
         assert result.slope < 0
         assert result.trend_direction == "declining"
 
     def test_flat_trend(self):
-        result = forecast_metric([2020, 2021, 2022], [500.0, 500.0, 500.0], "m", "M")
+        result = forecast_metric(
+            [2020, 2021, 2022, 2023], [500.0, 500.0, 500.0, 500.0], "m", "M"
+        )
         assert result is not None
         assert result.trend_direction == "flat"
 
     def test_nan_values_ignored(self):
+        # 5 points, 1 NaN → 4 valid points (meets minimum)
         result = forecast_metric(
-            [2020, 2021, 2022],
-            [100.0, float("nan"), 300.0],
+            [2019, 2020, 2021, 2022, 2023],
+            [100.0, float("nan"), 200.0, 300.0, 400.0],
             "m",
             "M",
         )
         assert result is not None
-        assert len(result.historical_years) == 2  # NaN row excluded
+        assert len(result.historical_years) == 4  # NaN row excluded
 
     def test_custom_horizon(self):
-        result = forecast_metric([2021, 2022], [100.0, 200.0], "m", "M", horizon=5)
+        result = forecast_metric(
+            [2019, 2020, 2021, 2022], [100.0, 150.0, 200.0, 250.0], "m", "M", horizon=5
+        )
         assert result is not None
         assert len(result.forecast_years) == 5
         assert result.forecast_years[0] == 2023
 
     def test_r_squared_perfect_linear(self):
-        result = forecast_metric([2020, 2021, 2022], [100.0, 200.0, 300.0], "m", "M")
+        result = forecast_metric(
+            [2020, 2021, 2022, 2023], [100.0, 200.0, 300.0, 400.0], "m", "M"
+        )
         assert result is not None
         assert abs(result.r_squared - 1.0) < 1e-9
+
+    def test_r_squared_and_stats_exposed(self):
+        result = forecast_metric(
+            [2020, 2021, 2022, 2023], [100.0, 200.0, 300.0, 400.0], "m", "M"
+        )
+        assert result is not None
+        assert 0.0 <= result.r_squared <= 1.0
+        assert 0.0 <= result.p_value <= 1.0
+        assert result.std_err >= 0.0
 
 
 # ---------------------------------------------------------------------------
@@ -306,8 +326,32 @@ class TestForecastMetric:
 
 
 def _make_mock_parquet(tmp_path):
-    """Write a minimal parquet with 2 years of data for a test company."""
+    """Write a minimal parquet with 4 years of data for a test company.
+
+    Four P&L periods are required so that forecast_metric (min 4 obs) can
+    produce forecasts for the TestAnalyseCompany suite.
+    """
     rows = [
+        _make_row(
+            company_id="99999999",
+            entity_name="MOCK COMPANY LTD",
+            period_start="2019-02-01",
+            period_end="2020-01-31",
+            turnover=4_000_000.0,
+            gross_profit=1_600_000.0,
+            operating_profit=480_000.0,
+            net_profit=384_000.0,
+        ),
+        _make_row(
+            company_id="99999999",
+            entity_name="MOCK COMPANY LTD",
+            period_start="2020-02-01",
+            period_end="2021-01-31",
+            turnover=4_500_000.0,
+            gross_profit=1_800_000.0,
+            operating_profit=540_000.0,
+            net_profit=432_000.0,
+        ),
         _make_row(
             company_id="99999999",
             entity_name="MOCK COMPANY LTD",
@@ -356,7 +400,7 @@ class TestAnalyseCompany:
     def test_pl_history_has_correct_periods(self, tmp_path):
         path = _make_mock_parquet(tmp_path)
         report = analyse_company("99999999", parquet_path=path)
-        assert report.num_periods == 2
+        assert report.num_periods == 4
         assert report.pl_history["period_end"][-1].year == 2023
 
     def test_forecasts_generated(self, tmp_path):
@@ -702,7 +746,8 @@ class TestComputeSectorBenchmark:
         )
         assert result is not None
         # Weighted avg of [10, 20, 30] with equal weights = 20
-        assert abs(result.wt_gross_margin_pct - 20.0) < 0.01  # type: ignore[arg-type]
+        assert result.wt_gross_margin_pct is not None
+        assert abs(result.wt_gross_margin_pct - 20.0) < 0.01
 
     def test_quartiles_computed(self):
         """Four peers → quartiles should be defined."""

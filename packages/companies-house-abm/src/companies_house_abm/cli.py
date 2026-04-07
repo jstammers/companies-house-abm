@@ -62,6 +62,17 @@ def ingest(
             help="Directory of local ZIPs (omit for streaming mode).",
         ),
     ] = None,
+    archive_dir: Annotated[
+        Path | None,
+        typer.Option(
+            "--archive-dir",
+            "-a",
+            help=(
+                "Directory of local ZIPs — like --zip-dir but defaults to "
+                "incremental mode (skip ZIPs already in the output parquet)."
+            ),
+        ),
+    ] = None,
     start_date: Annotated[
         str | None,
         typer.Option(
@@ -70,9 +81,39 @@ def ingest(
             help="Start date (YYYY-MM-DD). Omit to infer from existing parquet.",
         ),
     ] = None,
+    incremental: Annotated[
+        bool,
+        typer.Option(
+            "--incremental/--no-incremental",
+            help=(
+                "Skip ZIPs whose basenames are already recorded in the output "
+                "parquet. Applies when --archive-dir or --zip-dir is used. "
+                "Default: True for --archive-dir, False for --zip-dir."
+            ),
+        ),
+    ] = True,
 ) -> None:
-    """Ingest Companies House XBRL data into a parquet file."""
-    from companies_house_abm.ingest import (
+    """Ingest Companies House XBRL data into a parquet file.
+
+    Both old-style XML XBRL archives (pre-2014) and modern iXBRL HTML archives
+    are handled automatically by the underlying parser.
+
+    Examples:
+
+    \\b
+        # Incremental ingest from local archive (skips already-processed ZIPs)
+        companies_house_abm ingest --archive-dir data/archive -o data/ch.parquet
+
+    \\b
+        # Force re-process every ZIP in a directory
+        companies_house_abm ingest --archive-dir data/archive --no-incremental
+
+    \\b
+        # Stream new data from Companies House API
+        companies_house_abm ingest -o data/ch.parquet
+    """
+    from companies_house.ingest.xbrl import (
+        get_ingested_zip_basenames,
         infer_start_date,
         ingest_from_stream,
         ingest_from_zips,
@@ -83,16 +124,37 @@ def ingest(
     if start_date is not None:
         parsed_start_date = datetime.date.fromisoformat(start_date)
 
-    if zip_dir is not None:
-        if not zip_dir.is_dir():
-            typer.echo(f"Error: {zip_dir} is not a directory.", err=True)
+    effective_dir = archive_dir or zip_dir
+
+    if effective_dir is not None:
+        if not effective_dir.is_dir():
+            typer.echo(f"Error: {effective_dir} is not a directory.", err=True)
             raise typer.Exit(code=1)
-        zip_paths = sorted(zip_dir.glob("*.zip"))
-        if not zip_paths:
-            typer.echo(f"No ZIP files found in {zip_dir}.", err=True)
-            raise typer.Exit(code=1)
-        typer.echo(f"Ingesting from {len(zip_paths)} local ZIP file(s)...")
-        new_data = ingest_from_zips(zip_paths)
+
+        # --archive-dir defaults to incremental; --zip-dir defaults to non-incremental
+        use_incremental = incremental if archive_dir is not None else False
+
+        if use_incremental and output.exists():
+            already = get_ingested_zip_basenames(output)
+            all_zips = sorted(effective_dir.glob("*.zip"))
+            pending = [z for z in all_zips if z.name not in already]
+            skipped = len(all_zips) - len(pending)
+            typer.echo(
+                f"Incremental mode: {skipped} ZIPs already in parquet, "
+                f"{len(pending)} to process."
+            )
+            if not pending:
+                typer.echo("Nothing new to ingest.")
+                raise typer.Exit()
+            new_data = ingest_from_zips(pending)
+        else:
+            all_zips = sorted(effective_dir.glob("*.zip"))
+            if not all_zips:
+                typer.echo(f"No ZIP files found in {effective_dir}.", err=True)
+                raise typer.Exit(code=1)
+            typer.echo(f"Ingesting from {len(all_zips)} local ZIP file(s)...")
+            new_data = ingest_from_zips(all_zips)
+
     else:
         effective_date = parsed_start_date or infer_start_date(output)
         if effective_date is not None:
@@ -108,6 +170,84 @@ def ingest(
     existing_path = output if output.exists() else None
     result = merge_and_write(new_data, output, existing_path=existing_path)
     typer.echo(f"Done. {len(result)} total rows in {output}.")
+
+
+@app.command(name="check-company")
+def check_company(
+    company_id: str = typer.Argument(
+        ...,
+        help=(
+            "Companies House company number to search for "
+            "(e.g. 01873499 for Exel Computer Systems PLC)."
+        ),
+    ),
+    zip_source: Annotated[
+        str | None,
+        typer.Option(
+            "--zip-source",
+            "-z",
+            help=(
+                "Local path or HTTP/HTTPS URL to a Companies House bulk data ZIP. "
+                "For remote URLs only the central directory is downloaded "
+                "(at most 64 MB), not the full archive."
+            ),
+        ),
+    ] = None,
+) -> None:
+    """Check whether a company appears in a Companies House bulk data ZIP.
+
+    Works with both local archive files and remote URLs.  For remote ZIPs the
+    full archive is NOT downloaded — only the central directory (the file index
+    at the end of the ZIP) is fetched via an HTTP Range request.
+
+    Examples:
+
+    \\b
+        # Check a local archive file
+        companies_house_abm check-company 01873499 \\
+            --zip-source data/archive/Accounts_Monthly_Data-April2025.zip
+
+    \\b
+        # Check a remote file without downloading it
+        companies_house_abm check-company 01873499 \\
+            --zip-source https://download.companieshouse.gov.uk/Accounts_Monthly_Data-April2025.zip
+
+    Exit codes: 0 = found, 1 = not found, 2 = error.
+    """
+    from companies_house.ingest.xbrl import check_company_in_zip, fetch_zip_index
+
+    if zip_source is None:
+        typer.echo(
+            "Error: --zip-source / -z is required. Provide a local path or URL.",
+            err=True,
+        )
+        raise typer.Exit(code=2)
+
+    def _segment_match(name: str, cid: str) -> bool:
+        """Match company ID against the 3rd underscore-separated segment."""
+        parts = name.rsplit("/", 1)[-1].split("_")
+        return len(parts) >= 3 and parts[2] == cid
+
+    try:
+        if zip_source.startswith("http://") or zip_source.startswith("https://"):
+            typer.echo(
+                f"Fetching ZIP index from {zip_source} "
+                "(downloading central directory only)..."
+            )
+            names = fetch_zip_index(zip_source)
+            found = any(_segment_match(n, company_id) for n in names)
+        else:
+            found = check_company_in_zip(Path(zip_source), company_id)
+
+        status = "FOUND" if found else "NOT FOUND"
+        typer.echo(f"Company {company_id}: {status} in {zip_source}")
+        raise typer.Exit(code=0 if found else 1)
+
+    except typer.Exit:
+        raise
+    except Exception as exc:
+        typer.echo(f"Error: {exc}", err=True)
+        raise typer.Exit(code=2) from exc
 
 
 @app.command(name="fetch-data")

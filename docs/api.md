@@ -1,21 +1,98 @@
 # API Reference
 
+## Companies House Package
+
+::: companies_house
+    options:
+      show_root_heading: true
+      show_source: true
+      members_order: source
+
+### Schema
+
+::: companies_house.schema
+    options:
+      show_root_heading: true
+      show_source: true
+
+### CLI
+
+::: companies_house.cli
+    options:
+      show_root_heading: true
+      show_source: true
+
+### API Client
+
+::: companies_house.api.client
+    options:
+      show_root_heading: true
+      show_source: true
+
+::: companies_house.api.models
+    options:
+      show_root_heading: true
+      show_source: true
+
+::: companies_house.api.search
+    options:
+      show_root_heading: true
+      show_source: true
+
+::: companies_house.api.filings
+    options:
+      show_root_heading: true
+      show_source: true
+
+### Ingestion
+
+::: companies_house.ingest.xbrl
+    options:
+      show_root_heading: true
+      show_source: true
+
+::: companies_house.ingest.pdf
+    options:
+      show_root_heading: true
+      show_source: true
+
+### Storage
+
+::: companies_house.storage.db
+    options:
+      show_root_heading: true
+      show_source: true
+
+### Analysis
+
+::: companies_house.analysis.reports
+    options:
+      show_root_heading: true
+      show_source: true
+
+::: companies_house.analysis.benchmarks
+    options:
+      show_root_heading: true
+      show_source: true
+
+::: companies_house.analysis.forecasting
+    options:
+      show_root_heading: true
+      show_source: true
+
+---
+
+## Companies House ABM Package
+
 ::: companies_house_abm
     options:
       show_root_heading: true
       show_source: true
       members_order: source
 
-## CLI Module
+### CLI Module
 
 ::: companies_house_abm.cli
-    options:
-      show_root_heading: true
-      show_source: true
-
-## Ingest Module
-
-::: companies_house_abm.ingest
     options:
       show_root_heading: true
       show_source: true

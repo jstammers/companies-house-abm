@@ -1,36 +1,19 @@
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+# =============================================================================
+# Workspace root — virtual root (no publishable package).
+# Packages live under packages/*/  following the uv recommended workspace layout:
+# https://docs.astral.sh/uv/concepts/projects/workspaces/
+# =============================================================================
 
-[project]
-name = "companies_house_abm"
-version = "0.4.0"
-description = "Agent-Based Modelling using Companies House Account Data"
-readme = "README.md"
-license = "MIT"
-requires-python = ">=3.10"
-authors = [
-    { name = "jstammers", email = "jimmy.stammers@gmail.com" },
-]
-classifiers = [
-    "Development Status :: 3 - Alpha",
-    "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
-    "Typing :: Typed",
-]
-keywords = []
-dependencies = [
-    "polars>=1.38.1",
-    "pyzmq>=27.1.0",
-    "stream-read-xbrl>=0.1.1",
-    "typer>=0.12.0",
-]
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["packages/*"]
+exclude = ["packages/rust-abm"]
+
+# =============================================================================
+# Dependency groups (dev / docs tooling — installed workspace-wide)
+# =============================================================================
 
 [dependency-groups]
 dev = [
@@ -50,55 +33,23 @@ docs = [
     "mkdocs-material>=9.7.0",
     "mkdocstrings-python>=2.0.1",
 ]
-abm = [
-    "mesa>=3.0.0",
-    "networkx>=3.2",
-    "numpy>=1.26.0",
-    "scipy>=1.11.0",
-    "matplotlib>=3.8.0",
-    "pyyaml>=6.0.0",
-    "marimo>=0.10.0",
-    "fastapi>=0.115.0",
-    "uvicorn[standard]>=0.30.0",
-    "pydantic>=2.0.0",
-]
-
-[project.urls]
-Homepage = "https://github.com/jstammers/companies-house-abm"
-Documentation = "https://jstammers.github.io/companies-house-abm"
-Repository = "https://github.com/jstammers/companies-house-abm"
-Issues = "https://github.com/jstammers/companies-house-abm/issues"
-Changelog = "https://github.com/jstammers/companies-house-abm/blob/main/CHANGELOG.md"
-
-[project.scripts]
-companies_house_abm = "companies_house_abm.cli:app"
 
 # =============================================================================
-# Hatch
+# Hatch (cross-Python matrix testing via `make test-matrix`)
 # =============================================================================
 
-[tool.hatch.build.targets.sdist]
-include = [
-    "/src",
-]
-
-[tool.hatch.build.targets.wheel]
-packages = ["src/companies_house_abm"]
-
-# Matrix testing across Python versions
 [tool.hatch.envs.test]
-
 [[tool.hatch.envs.test.matrix]]
-python = ["3.10", "3.11", "3.12", "3.13"]
+python = ["3.11", "3.12", "3.13", "3.14"]
 
 # =============================================================================
-# Ruff
+# Ruff (lint + format)
 # =============================================================================
 
 [tool.ruff]
-target-version = "py310"
+target-version = "py311"
 line-length = 88
-src = ["src", "tests"]
+src = ["packages/companies-house/src", "packages/companies-house-abm/src", "tests"]
 
 [tool.ruff.lint]
 select = [
@@ -118,15 +69,16 @@ select = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["companies_house_abm"]
+known-first-party = ["companies_house_abm", "companies_house"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["ARG001"]
-# Marimo notebooks use bare expressions to display output
+"packages/companies-house/src/companies_house/schema.py" = ["TCH003"]
+"packages/companies-house/src/companies_house/api/models.py" = ["TCH003"]
 "notebooks/**/*.py" = ["B018", "E501"]
 
 # =============================================================================
-# ty (Astral type checker)
+# ty (type checker)
 # =============================================================================
 
 [tool.ty.rules]
@@ -138,6 +90,19 @@ invalid-return-type = "warn"
 invalid-argument-type = "warn"
 unresolved-attribute = "warn"
 not-subscriptable = "ignore"
+# io.RawIOBase stub signatures don't match our TailBuffer.readinto signature
+invalid-method-override = "warn"
+# Optional Rust ABM extension is not built in the default dev environment
+unresolved-import = "warn"
+
+[tool.ty.src]
+exclude = ["tests"]
+
+# kreuzberg is an optional dep — not installed in dev by default
+[[tool.ty.overrides]]
+include = ["packages/companies-house/src/companies_house/ingest/pdf.py"]
+[tool.ty.overrides.rules]
+unresolved-import = "ignore"
 
 # =============================================================================
 # Pytest
@@ -145,7 +110,10 @@ not-subscriptable = "ignore"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src"]
+pythonpath = [
+    "packages/companies-house/src",
+    "packages/companies-house-abm/src",
+]
 addopts = [
     "-ra",
     "-q",
@@ -161,7 +129,7 @@ markers = [
 # =============================================================================
 
 [tool.coverage.run]
-source = ["src/companies_house_abm"]
+source = ["companies_house", "companies_house_abm"]
 branch = true
 parallel = true
 
@@ -178,7 +146,7 @@ exclude_lines = [
 show_missing = true
 
 # =============================================================================
-# git-cliff (Changelog generation)
+# Changelog
 # =============================================================================
 
 [tool.git-cliff]

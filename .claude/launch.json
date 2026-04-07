@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Economy Simulator (FastAPI)",
+      "runtimeExecutable": "uv",
+      "runtimeArgs": ["run", "uvicorn", "companies_house_abm.webapp.app:app", "--reload", "--host", "127.0.0.1", "--port", "8000"],
+      "port": 8000
+    },
+    {
+      "name": "MkDocs Documentation",
+      "runtimeExecutable": "uv",
+      "runtimeArgs": ["run", "mkdocs", "serve", "--dev-addr", "127.0.0.1:8001"],
+      "port": 8001
+    },
+    {
+      "name": "Marimo Notebooks",
+      "runtimeExecutable": "uv",
+      "runtimeArgs": ["run", "marimo", "edit", "notebooks/", "--host", "127.0.0.1", "--port", "8002"],
+      "port": 8002
+    }
+  ]
+}

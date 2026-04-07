@@ -15,10 +15,7 @@ from typer.testing import CliRunner
 if TYPE_CHECKING:
     from pathlib import Path
 
-from companies_house_abm.cli import app
-from companies_house_abm.ingest import (
-    COMPANIES_HOUSE_SCHEMA,
-    DEDUP_COLUMNS,
+from companies_house.ingest.xbrl import (
     _zip_bytes_iter,
     deduplicate,
     infer_start_date,
@@ -26,6 +23,8 @@ from companies_house_abm.ingest import (
     ingest_from_zips,
     merge_and_write,
 )
+from companies_house.schema import COMPANIES_HOUSE_SCHEMA, DEDUP_COLUMNS
+from companies_house_abm.cli import app
 
 # NO_COLOR=1 prevents ANSI colour codes. FORCE_COLOR=None *deletes* the key
 # from os.environ during each test invocation (Click CliRunner treats a None
@@ -106,7 +105,7 @@ def _mock_stream_read_xbrl_zip(rows: list[tuple]):
     def fake_zip(zip_bytes_iter, zip_url=None):
         yield (_COLUMNS, iter(rows))
 
-    with patch("companies_house_abm.ingest.stream_read_xbrl_zip", fake_zip):
+    with patch("companies_house.ingest.xbrl.stream_read_xbrl_zip", fake_zip):
         yield
 
 
@@ -119,7 +118,7 @@ def _mock_stream_read_xbrl_zip_error():
         raise RuntimeError("Corrupt ZIP")
         yield  # pragma: no cover
 
-    with patch("companies_house_abm.ingest.stream_read_xbrl_zip", fake_zip):
+    with patch("companies_house.ingest.xbrl.stream_read_xbrl_zip", fake_zip):
         yield
 
 
@@ -139,7 +138,7 @@ def _mock_stream_read_xbrl_sync(
 
         yield (_COLUMNS, batches())
 
-    with patch("companies_house_abm.ingest.stream_read_xbrl_sync", fake_sync):
+    with patch("companies_house.ingest.xbrl.stream_read_xbrl_sync", fake_sync):
         yield
 
 
@@ -389,3 +388,321 @@ class TestCLIIngest:
         assert "output" in result.stdout
         assert "zip-dir" in result.stdout
         assert "start-date" in result.stdout
+
+    def test_archive_dir_incremental(self, tmp_path: Path):
+        """--archive-dir skips ZIPs already in parquet by default."""
+        zip_path = tmp_path / "data.zip"
+        with ZipFile(zip_path, "w") as zf:
+            zf.writestr("dummy.txt", "dummy")
+        output = tmp_path / "out.parquet"
+
+        # First ingest to populate parquet with zip_url referencing data.zip
+        rows = [_make_row(zip_url=str(zip_path))]
+        with _mock_stream_read_xbrl_zip(rows):
+            result = runner.invoke(
+                app,
+                ["ingest", "-a", str(tmp_path), "-o", str(output)],
+            )
+        assert result.exit_code == 0, result.stdout
+
+        # Second run: data.zip already in parquet → nothing new
+        with _mock_stream_read_xbrl_zip(rows):
+            result2 = runner.invoke(
+                app,
+                ["ingest", "-a", str(tmp_path), "-o", str(output)],
+            )
+        assert result2.exit_code == 0, result2.stdout
+        assert "Nothing new" in result2.stdout
+
+    def test_archive_dir_no_incremental(self, tmp_path: Path):
+        """--no-incremental re-processes all ZIPs even if already in parquet."""
+        zip_path = tmp_path / "data.zip"
+        with ZipFile(zip_path, "w") as zf:
+            zf.writestr("dummy.txt", "dummy")
+        output = tmp_path / "out.parquet"
+
+        rows = [_make_row()]
+        with _mock_stream_read_xbrl_zip(rows):
+            result = runner.invoke(
+                app,
+                ["ingest", "-a", str(tmp_path), "-o", str(output), "--no-incremental"],
+            )
+        assert result.exit_code == 0, result.stdout
+        assert "Done" in result.stdout
+
+
+# ---------------------------------------------------------------------------
+# TestGetIngestedZipBasenames
+# ---------------------------------------------------------------------------
+
+
+class TestGetIngestedZipBasenames:
+    def test_returns_basenames(self, tmp_path: Path):
+        from companies_house.ingest.xbrl import get_ingested_zip_basenames
+
+        rows = [
+            _make_row(zip_url="http://example.com/January2024.zip"),
+            _make_row(company_id="B", zip_url="/data/archive/February2024.zip"),
+        ]
+        df = _make_df(rows)
+        path = tmp_path / "data.parquet"
+        df.write_parquet(path)
+        basenames = get_ingested_zip_basenames(path)
+        assert "January2024.zip" in basenames
+        assert "February2024.zip" in basenames
+
+    def test_missing_file_returns_empty(self, tmp_path: Path):
+        from companies_house.ingest.xbrl import get_ingested_zip_basenames
+
+        result = get_ingested_zip_basenames(tmp_path / "nonexistent.parquet")
+        assert result == frozenset()
+
+    def test_null_zip_urls_ignored(self, tmp_path: Path):
+        from companies_house.ingest.xbrl import get_ingested_zip_basenames
+
+        rows = [_make_row(zip_url=None)]
+        df = _make_df(rows)
+        path = tmp_path / "data.parquet"
+        df.write_parquet(path)
+        result = get_ingested_zip_basenames(path)
+        assert result == frozenset()
+
+
+# ---------------------------------------------------------------------------
+# TestIngestFromArchiveDir
+# ---------------------------------------------------------------------------
+
+
+class TestIngestFromArchiveDir:
+    def test_ingests_all_zips_without_parquet(self, tmp_path: Path):
+        from companies_house.ingest.xbrl import ingest_from_archive_dir
+
+        zip_path = tmp_path / "data.zip"
+        with ZipFile(zip_path, "w") as zf:
+            zf.writestr("dummy.txt", "dummy")
+
+        rows = [_make_row(company_id="A"), _make_row(company_id="B")]
+        with _mock_stream_read_xbrl_zip(rows):
+            result = ingest_from_archive_dir(tmp_path)
+        assert len(result) == 2
+
+    def test_skips_already_ingested_zips(self, tmp_path: Path):
+        from companies_house.ingest.xbrl import ingest_from_archive_dir
+
+        zip_path = tmp_path / "data.zip"
+        with ZipFile(zip_path, "w") as zf:
+            zf.writestr("dummy.txt", "dummy")
+
+        # Write parquet that already references data.zip
+        rows = [_make_row(zip_url=str(zip_path))]
+        parquet_path = tmp_path / "out.parquet"
+        _make_df(rows).write_parquet(parquet_path)
+
+        with _mock_stream_read_xbrl_zip(rows):
+            result = ingest_from_archive_dir(tmp_path, parquet_path=parquet_path)
+        assert result.is_empty()
+
+    def test_empty_directory_returns_empty(self, tmp_path: Path):
+        from companies_house.ingest.xbrl import ingest_from_archive_dir
+
+        result = ingest_from_archive_dir(tmp_path)
+        assert result.is_empty()
+        assert result.schema == COMPANIES_HOUSE_SCHEMA
+
+
+# ---------------------------------------------------------------------------
+# TestCheckCompanyInZip
+# ---------------------------------------------------------------------------
+
+
+class TestCheckCompanyInZip:
+    def test_found_in_zip(self, tmp_path: Path):
+        from companies_house.ingest.xbrl import check_company_in_zip
+
+        zip_path = tmp_path / "test.zip"
+        with ZipFile(zip_path, "w") as zf:
+            zf.writestr("Prod224_0012_01873499_20230131.html", "data")
+        assert check_company_in_zip(zip_path, "01873499") is True
+
+    def test_not_found_in_zip(self, tmp_path: Path):
+        from companies_house.ingest.xbrl import check_company_in_zip
+
+        zip_path = tmp_path / "test.zip"
+        with ZipFile(zip_path, "w") as zf:
+            zf.writestr("Prod224_0012_99999999_20230131.html", "data")
+        assert check_company_in_zip(zip_path, "01873499") is False
+
+    def test_corrupt_zip_returns_false(self, tmp_path: Path):
+        from companies_house.ingest.xbrl import check_company_in_zip
+
+        zip_path = tmp_path / "bad.zip"
+        zip_path.write_bytes(b"not a zip")
+        assert check_company_in_zip(zip_path, "01873499") is False
+
+    def test_missing_file_returns_false(self, tmp_path: Path):
+        from companies_house.ingest.xbrl import check_company_in_zip
+
+        assert check_company_in_zip(tmp_path / "nonexistent.zip", "01873499") is False
+
+
+# ---------------------------------------------------------------------------
+# TestTailBuffer
+# ---------------------------------------------------------------------------
+
+
+class TestTailBuffer:
+    def test_seek_and_read_within_buffer(self):
+        from companies_house.ingest.xbrl import _TailBuffer
+
+        data = b"ABCDEFGH"
+        total = 20
+        buf = _TailBuffer(data, total)
+        # tail_start = 20 - 8 = 12
+        buf.seek(12)
+        assert buf.read(4) == b"ABCD"
+        assert buf.tell() == 16
+
+    def test_read_before_buffer_raises(self):
+        import io
+
+        import pytest
+
+        from companies_house.ingest.xbrl import _TailBuffer
+
+        data = b"TAIL"
+        total = 10
+        buf = _TailBuffer(data, total)
+        buf.seek(0)
+        with pytest.raises(io.UnsupportedOperation):
+            buf.read(6)  # starts at offset 0, before tail_start=6
+
+    def test_seek_from_end(self):
+        from companies_house.ingest.xbrl import _TailBuffer
+
+        data = b"ABCD"
+        buf = _TailBuffer(data, 10)
+        pos = buf.seek(-4, 2)
+        assert pos == 6  # 10 - 4 = 6 (= tail_start)
+
+    def test_tell_updates_after_read(self):
+        from companies_house.ingest.xbrl import _TailBuffer
+
+        data = b"X" * 16
+        buf = _TailBuffer(data, 16)
+        buf.seek(0)
+        buf.read(8)
+        assert buf.tell() == 8
+
+    def test_read_past_end_returns_empty(self):
+        from companies_house.ingest.xbrl import _TailBuffer
+
+        buf = _TailBuffer(b"data", 4)
+        buf.seek(4)
+        assert buf.read(10) == b""
+
+
+# ---------------------------------------------------------------------------
+# TestFetchZipIndex (unit — mocks HTTP)
+# ---------------------------------------------------------------------------
+
+
+class TestFetchZipIndex:
+    def test_returns_filenames_from_zip(self):
+        """Build a real in-memory ZIP, mock HTTP to return its tail, check namelist."""
+        import io as _io
+        from unittest.mock import MagicMock, patch
+
+        from companies_house.ingest.xbrl import fetch_zip_index
+
+        # Build a small real ZIP in memory
+        buf = _io.BytesIO()
+        with ZipFile(buf, "w") as zf:
+            zf.writestr("file_01873499_test.html", "data")
+            zf.writestr("other_file.html", "data")
+        zip_bytes = buf.getvalue()
+        total_size = len(zip_bytes)
+        content_range = f"bytes 0-{total_size - 1}/{total_size}"
+
+        def fake_urlopen(req, timeout=30):
+            resp = MagicMock()
+            resp.__enter__ = lambda s: s
+            resp.__exit__ = MagicMock(return_value=False)
+            resp.status = 206
+            resp.read.return_value = zip_bytes  # return full zip as "tail"
+            resp.headers = MagicMock()
+            resp.headers.get = lambda k, d="": (
+                content_range if k == "Content-Range" else d
+            )
+            return resp
+
+        with patch("urllib.request.urlopen", fake_urlopen):
+            names = fetch_zip_index("https://example.com/test.zip")
+
+        assert "file_01873499_test.html" in names
+        assert "other_file.html" in names
+
+    def test_bad_zip_raises(self):
+        """Server returns garbage → BadZipFile after both range attempts."""
+        import zipfile
+        from unittest.mock import MagicMock, patch
+
+        import pytest
+
+        from companies_house.ingest.xbrl import fetch_zip_index
+
+        def fake_urlopen(req, timeout=30):
+            resp = MagicMock()
+            resp.__enter__ = lambda s: s
+            resp.__exit__ = MagicMock(return_value=False)
+            resp.status = 206
+            resp.read.return_value = b"not a zip at all"
+            resp.headers = MagicMock()
+            resp.headers.get = lambda k, d="": (
+                "bytes 0-15/16" if k == "Content-Range" else d
+            )
+            return resp
+
+        with (
+            patch("urllib.request.urlopen", fake_urlopen),
+            pytest.raises(zipfile.BadZipFile),
+        ):
+            fetch_zip_index("https://example.com/bad.zip")
+
+
+# ---------------------------------------------------------------------------
+# TestCLICheckCompany
+# ---------------------------------------------------------------------------
+
+
+class TestCLICheckCompany:
+    def test_no_zip_source_exits_error(self):
+        result = runner.invoke(app, ["check-company", "01873499"])
+        assert result.exit_code == 2
+
+    def test_found_in_local_zip(self, tmp_path: Path):
+        zip_path = tmp_path / "test.zip"
+        with ZipFile(zip_path, "w") as zf:
+            zf.writestr("Prod224_0012_01873499_20230131.html", "data")
+        result = runner.invoke(app, ["check-company", "01873499", "-z", str(zip_path)])
+        assert result.exit_code == 0
+        assert "FOUND" in result.stdout
+
+    def test_not_found_in_local_zip(self, tmp_path: Path):
+        zip_path = tmp_path / "test.zip"
+        with ZipFile(zip_path, "w") as zf:
+            zf.writestr("other_company.html", "data")
+        result = runner.invoke(app, ["check-company", "01873499", "-z", str(zip_path)])
+        assert result.exit_code == 1
+        assert "NOT FOUND" in result.stdout
+
+    def test_corrupt_zip_exits_error(self, tmp_path: Path):
+        zip_path = tmp_path / "bad.zip"
+        zip_path.write_bytes(b"not a zip")
+        result = runner.invoke(app, ["check-company", "01873499", "-z", str(zip_path)])
+        # check_company_in_zip returns False (doesn't raise), so exit=1 (not found)
+        assert result.exit_code == 1
+
+    def test_check_company_help(self):
+        result = runner.invoke(app, ["check-company", "--help"])
+        assert result.exit_code == 0
+        assert "zip-source" in result.stdout

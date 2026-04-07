@@ -1,0 +1,45 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "companies-house"
+version = "0.2.1"
+description = "Companies House data ingestion, analysis, and API client"
+readme = "../../README.md"
+license = "MIT"
+requires-python = ">=3.10"
+authors = [
+    { name = "jstammers", email = "jimmy.stammers@gmail.com" },
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Typing :: Typed",
+]
+dependencies = [
+    "polars>=1.38.1",
+    "pyarrow>=14.0.0",
+    "duckdb>=1.0.0",
+    "typer>=0.12.0",
+    "pydantic>=2.0.0",
+]
+
+[project.optional-dependencies]
+xbrl = ["stream-read-xbrl>=0.1.1"]
+pdf = ["kreuzberg>=0.5.0"]
+analysis = ["numpy>=1.26.0", "scipy>=1.11.0"]
+all = ["companies-house[xbrl,pdf,analysis]"]
+
+[project.scripts]
+companies-house = "companies_house.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/companies_house"]

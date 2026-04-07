@@ -695,7 +695,7 @@ def build_summary(
     years = sorted({p.financial_year for p in parameters})
 
     return FirmDistributionSummary(
-        generated_at=datetime.datetime.now(tz=datetime.timezone.utc).isoformat(),
+        generated_at=datetime.datetime.now(tz=datetime.UTC).isoformat(),
         total_companies=total_companies,
         sectors=sectors,
         financial_years=years,

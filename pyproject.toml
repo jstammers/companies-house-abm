@@ -95,6 +95,9 @@ invalid-method-override = "warn"
 # Optional Rust ABM extension is not built in the default dev environment
 unresolved-import = "warn"
 
+[tool.ty.src]
+exclude = ["tests"]
+
 # kreuzberg is an optional dep — not installed in dev by default
 [[tool.ty.overrides]]
 include = ["packages/companies-house/src/companies_house/ingest/pdf.py"]

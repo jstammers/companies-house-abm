@@ -4,75 +4,86 @@ This file provides guidance for AI assistants working on the Companies House ABM
 
 ## Project Overview
 
-This is a **uv workspace monorepo** containing two Python packages:
+This is a **uv workspace monorepo** following the [uv recommended workspace layout](https://docs.astral.sh/uv/concepts/projects/workspaces/).  Packages live under `packages/`, each with its own `pyproject.toml` and `src/<name>/` source tree.
 
-1. **`companies-house`** — Standalone package for ingesting, storing, and analysing Companies House financial data. Supports XBRL (bulk ZIPs and streaming), PDF extraction (via kreuzberg + litellm), a Companies House REST API client, DuckDB storage with upsert semantics, and company financial analysis with sector benchmarking.
+1. **`companies-house`** (`packages/companies-house/`) — Standalone package for ingesting, storing, and analysing Companies House financial data. Supports XBRL (bulk ZIPs and streaming), PDF extraction (via kreuzberg), a Companies House REST API client, DuckDB storage with upsert semantics, and company financial analysis with sector benchmarking.
 
-2. **`companies_house_abm`** — Agent-Based Model of the UK economy calibrated from Companies House data. Depends on `companies-house[xbrl,analysis]`. Contains ABM agents/markets/simulation, public data fetchers (ONS/BoE/HMRC), and a FastAPI economy simulator webapp.
+2. **`companies_house_abm`** (`packages/companies-house-abm/`) — Agent-Based Model of the UK economy calibrated from Companies House data. Depends on `companies-house[xbrl,analysis]`. Contains ABM agents/markets/simulation, public data fetchers (ONS/BoE/HMRC), and a FastAPI economy simulator webapp.
 
-**Status**: Alpha (v0.4.0 ABM / v0.2.0 companies-house)
+3. **`companies-house-abm-rust`** (`packages/rust-abm/`) — Optional Rust extension built with maturin. Outputs `companies_house_abm._rust_abm`. Not a uv workspace member; built separately via `make build-rust`.
+
+**Status**: Alpha (v0.4.1 ABM / v0.2.1 companies-house)
 **License**: MIT
 **Python**: >=3.10 (CI tests 3.10-3.13)
 
 ## Repository Structure
 
 ```
-src/
-├── companies_house/              # Standalone data package (can be split to own repo)
-│   ├── pyproject.toml            # Independent package config
-│   ├── __init__.py               # Exports: CompanyFiling, COMPANIES_HOUSE_SCHEMA, etc.
-│   ├── py.typed                  # PEP 561 marker
-│   ├── schema.py                 # 39-column Polars schema + Pydantic CompanyFiling model
-│   ├── cli.py                    # Typer CLI: ingest, search, filings, fetch, report, migrate, db-query
-│   ├── ingest/                   # Ingestion pipelines
-│   │   ├── base.py               # IngestSource protocol
-│   │   ├── xbrl.py               # XBRL from ZIPs/streaming (stream-read-xbrl)
-│   │   └── pdf.py                # PDF via kreuzberg text extraction + litellm structured output
-│   ├── storage/                  # DuckDB storage layer
-│   │   ├── db.py                 # CompaniesHouseDB: upsert, query, export/import
-│   │   └── migrations.py         # Parquet-to-DuckDB migration
-│   ├── api/                      # Companies House REST API client
-│   │   ├── client.py             # APIConfig, CompaniesHouseClient (auth, rate limiting)
-│   │   ├── search.py             # Company search endpoint
-│   │   ├── filings.py            # Filing history + document download
-│   │   └── models.py             # Pydantic response models
-│   └── analysis/                 # Company financial analysis
-│       ├── reports.py            # CompanyReport, analyse_company, generate_report
-│       ├── forecasting.py        # ForecastResult, linear trend extrapolation
-│       ├── benchmarks.py         # SectorBenchmark, revenue-weighted peer comparison
-│       └── formatting.py         # Report text generation, tables, ordinal helpers
-├── companies_house_abm/          # ABM package
-│   ├── __init__.py               # Package version
-│   ├── cli.py                    # ABM CLI: ingest, fetch-data, profile-firms, serve, check-company
-│   ├── ingest.py                 # Backward-compat wrapper → companies_house.ingest.xbrl
-│   ├── company_analysis.py       # Backward-compat wrapper → companies_house.analysis
-│   ├── data_sources/             # Public data fetchers for ABM calibration
-│   │   ├── _http.py              # Shared HTTP utilities (urllib-based, in-memory cache)
-│   │   ├── boe.py                # Bank of England: Bank Rate, lending rates, CET1
-│   │   ├── calibration.py        # Translate fetched data into ModelConfig parameters
-│   │   ├── firm_distributions.py # Firm data profiling and distribution fitting
-│   │   ├── hmrc.py               # HMRC: income tax bands, NI, corporation tax, VAT
-│   │   └── ons.py                # ONS: GDP, household income, labour market, IO tables
-│   ├── webapp/                   # FastAPI economy simulator
-│   │   ├── app.py                # REST API + static file serving
-│   │   ├── models.py             # Pydantic request/response models
-│   │   └── static/               # Frontend assets (index.html, app.js, styles.css)
-│   └── abm/                      # Agent-based model
-│       ├── config.py             # Frozen dataclass configuration + YAML loader
-│       ├── model.py              # Simulation orchestrator
-│       ├── agents/               # Firm, Household, Bank, CentralBank, Government
-│       └── markets/              # Goods, Labour, Credit
-tests/                            # Pytest test suite
-├── test_companies_house_*.py     # Tests for companies_house package (schema, storage, API, PDF)
-├── test_ingest.py                # XBRL ingest tests (backward-compat imports)
-├── test_company_analysis.py      # Analysis tests (backward-compat imports)
-├── test_xbrl_schema_integration.py # Real XBRL fixture validation
-├── test_abm_*.py                 # ABM agent/market/model/config tests
-├── test_data_sources.py          # Data source and calibration tests
-└── fixtures/                     # Real XBRL test files (HTML + XML)
-config/model_parameters.yml       # ABM model parameters (200+)
-docs/                             # MkDocs documentation
-notebooks/                        # Marimo interactive notebooks
+packages/
+├── companies-house/                  # Standalone data package
+│   ├── pyproject.toml                # Package config (hatchling)
+│   └── src/companies_house/
+│       ├── __init__.py               # Exports: CompanyFiling, COMPANIES_HOUSE_SCHEMA, etc.
+│       ├── py.typed                  # PEP 561 marker
+│       ├── schema.py                 # 39-column Polars schema + Pydantic CompanyFiling model
+│       ├── cli.py                    # Typer CLI: ingest, search, filings, fetch, report, migrate, db-query
+│       ├── ingest/                   # Ingestion pipelines
+│       │   ├── base.py               # IngestSource protocol
+│       │   ├── xbrl.py               # XBRL from ZIPs/streaming (stream-read-xbrl)
+│       │   └── pdf.py                # PDF via kreuzberg text extraction (optional dep)
+│       ├── storage/                  # DuckDB storage layer
+│       │   ├── db.py                 # CompaniesHouseDB: upsert, query, export/import
+│       │   └── migrations.py         # Parquet-to-DuckDB migration
+│       ├── api/                      # Companies House REST API client
+│       │   ├── client.py             # APIConfig, CompaniesHouseClient (auth, rate limiting)
+│       │   ├── search.py             # Company search endpoint
+│       │   ├── filings.py            # Filing history + document download
+│       │   └── models.py             # Pydantic response models
+│       └── analysis/                 # Company financial analysis
+│           ├── reports.py            # CompanyReport, analyse_company, generate_report
+│           ├── forecasting.py        # ForecastResult, linear trend extrapolation
+│           ├── benchmarks.py         # SectorBenchmark, revenue-weighted peer comparison
+│           └── formatting.py         # Report text generation, tables, ordinal helpers
+├── companies-house-abm/              # ABM package
+│   ├── pyproject.toml                # Package config (hatchling)
+│   └── src/companies_house_abm/
+│       ├── __init__.py               # Package version
+│       ├── cli.py                    # ABM CLI: ingest, fetch-data, profile-firms, serve, check-company
+│       ├── data_sources/             # Public data fetchers for ABM calibration
+│       │   ├── _http.py              # Shared HTTP utilities (urllib-based, in-memory cache)
+│       │   ├── boe.py                # Bank of England: Bank Rate, lending rates, CET1
+│       │   ├── calibration.py        # Translate fetched data into ModelConfig parameters
+│       │   ├── firm_distributions.py # Firm data profiling and distribution fitting
+│       │   ├── hmrc.py               # HMRC: income tax bands, NI, corporation tax, VAT
+│       │   └── ons.py                # ONS: GDP, household income, labour market, IO tables
+│       ├── webapp/                   # FastAPI economy simulator
+│       │   ├── app.py                # REST API + static file serving
+│       │   ├── models.py             # Pydantic request/response models
+│       │   └── static/               # Frontend assets (index.html, app.js, styles.css)
+│       └── abm/                      # Agent-based model
+│           ├── config.py             # Frozen dataclass configuration + YAML loader
+│           ├── model.py              # Simulation orchestrator
+│           ├── agents/               # Firm, Household, Bank, CentralBank, Government
+│           └── markets/              # Goods, Labour, Credit, Housing
+└── rust-abm/                         # Rust ABM extension (maturin, not a uv member)
+    ├── Cargo.toml
+    ├── pyproject.toml                # maturin build config
+    ├── python/                       # Python stubs / init for the extension
+    └── src/                          # Rust source
+tests/                                # Pytest test suite (all packages tested together)
+├── test_companies_house_*.py         # Tests for companies_house package
+├── test_ingest.py                    # XBRL ingest tests
+├── test_company_analysis.py          # Analysis tests
+├── test_xbrl_schema_integration.py   # Real XBRL fixture validation
+├── test_abm_*.py                     # ABM agent/market/model/config tests
+├── test_data_sources.py              # Data source and calibration tests
+└── fixtures/                         # Real XBRL test files (HTML + XML)
+config/model_parameters.yml           # ABM model parameters (200+)
+docs/                                 # MkDocs documentation
+notebooks/                            # Marimo interactive notebooks
+scripts/
+├── build_rust_abm.sh                 # Build & install Rust extension
+└── run_benchmark.py                  # Python vs Rust benchmark
 ```
 
 ## Quick Reference Commands
@@ -97,7 +108,18 @@ make benchmark      # Run Python vs Rust ABM performance benchmark
 
 ## Workspace Architecture
 
-The monorepo uses **uv workspace** (`[tool.uv.workspace]` in root `pyproject.toml`) with `src/companies_house` as a workspace member. The ABM package depends on `companies-house[xbrl,analysis]` via a workspace source reference.
+The monorepo uses **uv workspace** with `members = ["packages/*"]` in the root `pyproject.toml`.  The root is a virtual workspace root (`package = false`) that holds only dev/docs dependency groups and project-wide tool configuration.
+
+Each package uses `hatchling` as its build backend and declares `packages = ["src/<name>"]` in `[tool.hatch.build.targets.wheel]`.
+
+### Workspace Sources
+
+`companies_house_abm` declares:
+```toml
+[tool.uv.sources]
+companies-house = { workspace = true }
+```
+so `companies-house[xbrl,analysis]` resolves to the local workspace member rather than PyPI.
 
 ### Dual Schema (`schema.py`)
 
@@ -112,18 +134,16 @@ The 39-column Companies House schema has two representations in `companies_house
 
 ### Storage
 
-- **Parquet** (legacy): Read/write via `ingest.xbrl.merge_and_write()`. Dedup is read-all-rewrite.
-- **DuckDB** (preferred): `CompaniesHouseDB` in `storage/db.py`. Uses composite PK for upsert. Default path: `~/.companies_house/data.duckdb`.
+- **Parquet** (legacy): Read/write via `companies_house.ingest.xbrl.merge_and_write()`. Dedup is read-all-rewrite.
+- **DuckDB** (preferred): `CompaniesHouseDB` in `companies_house.storage.db`. Uses composite PK for upsert. Default path: `~/.companies_house/data.duckdb`.
 
 ### PDF Extraction Pipeline
 
 ```
-PDF bytes → kreuzberg (text extraction) → litellm (structured output) → CompanyFiling → DuckDB
+PDF bytes → kreuzberg (text extraction) → structured output → CompanyFiling → DuckDB
 ```
 
-- **kreuzberg**: Async PDF/image text extraction with OCR support
-- **litellm**: Unified LLM provider (Anthropic, OpenAI, Ollama, etc.)
-- Both are optional dependencies: `companies-house[pdf]` and `companies-house[llm]`
+- **kreuzberg**: Async PDF/image text extraction with OCR support (optional dep `companies-house[pdf]`)
 
 ### Companies House API Client
 
@@ -132,11 +152,16 @@ PDF bytes → kreuzberg (text extraction) → litellm (structured output) → Co
 - Auth via `COMPANIES_HOUSE_API_KEY` env var or `APIConfig(api_key=...)`
 - Endpoints: search, filing history, document download (handles S3 redirect)
 
-### Backward Compatibility
+### Rust Extension (`packages/rust-abm/`)
 
-`companies_house_abm.ingest` and `companies_house_abm.company_analysis` are thin re-export wrappers. All existing imports continue to work. New code should import from `companies_house` directly.
+The Rust extension is **not** a uv workspace member — it is built with maturin separately:
 
-When patching in tests, target the actual module: `companies_house.ingest.xbrl.stream_read_xbrl_zip` (not the wrapper).
+```bash
+make build-rust          # builds release .so and copies to packages/companies-house-abm/src/companies_house_abm/
+make build-rust -- --dev # debug build
+```
+
+The output `.so` (`_rust_abm.cpython-*.so`) is placed alongside the Python ABM package and is `import`-able as `companies_house_abm._rust_abm`.  Tests that require it are skipped automatically when the extension is not built.
 
 ### pyproject.toml TOML Structure Gotcha
 
@@ -181,9 +206,9 @@ Do not bypass hooks with `--no-verify`.
 
 | Tool | Purpose | Config |
 |------|---------|--------|
-| **Ruff** | Linting + formatting (line-length 88) | `[tool.ruff]` in `pyproject.toml` |
-| **ty** | Type checking (Astral) | `[tool.ty]` in `pyproject.toml` |
-| **pytest** | Testing | `[tool.pytest.ini_options]` in `pyproject.toml` |
+| **Ruff** | Linting + formatting (line-length 88) | `[tool.ruff]` in root `pyproject.toml` |
+| **ty** | Type checking (Astral) | `[tool.ty]` in root `pyproject.toml` |
+| **pytest** | Testing | `[tool.pytest.ini_options]` in root `pyproject.toml` |
 | **prek** | Pre-commit hooks | `.pre-commit-config.yaml` |
 
 ### Type Checking Notes
@@ -194,17 +219,20 @@ ty rule overrides for Polars stubs, optional deps, and dynamic patterns:
 - `not-subscriptable`: ignored
 - `unresolved-attribute`: warn
 - `invalid-return-type`: warn
-- `unresolved-import` ignored for `src/companies_house/ingest/pdf.py` (optional deps)
+- `invalid-method-override`: warn (io.RawIOBase stub mismatch for `_TailBuffer`)
+- `unresolved-import`: warn (Rust extension not built in dev by default)
+- `unresolved-import` fully ignored for `packages/companies-house/src/companies_house/ingest/pdf.py` (optional deps)
 
 ## Testing Conventions
 
 - Tests in `tests/` using pytest with class-based organisation
-- `test_companies_house_*.py` — tests for the standalone package (schema, storage, API, PDF)
-- `test_ingest.py`, `test_company_analysis.py` — test via backward-compat wrappers
+- `test_companies_house_*.py` — tests for the `companies_house` package (schema, storage, API, PDF)
+- `test_ingest.py` — XBRL ingest tests; imports from `companies_house.ingest.xbrl` directly
+- `test_company_analysis.py` — analysis tests; imports from `companies_house.analysis.*` directly
 - `test_xbrl_schema_integration.py` — validates real XBRL fixtures against schema
 - Mock `stream_read_xbrl_zip`/`stream_read_xbrl_sync` via `unittest.mock.patch` at `companies_house.ingest.xbrl.*`
 - DuckDB tests use `:memory:` databases
-- Coverage source: `src/companies_house_abm` and `src/companies_house`
+- Coverage sources: `companies_house` and `companies_house_abm`
 
 ## Dependencies
 
@@ -217,7 +245,7 @@ ty rule overrides for Polars stubs, optional deps, and dynamic patterns:
 | typer | CLI framework |
 | pydantic | Schema validation |
 
-Optional: `stream-read-xbrl` (xbrl), `kreuzberg` (pdf), `litellm` (llm), `numpy`+`scipy` (analysis)
+Optional: `stream-read-xbrl` (xbrl), `kreuzberg` (pdf), `numpy`+`scipy` (analysis)
 
 ### companies_house_abm (ABM package)
 

@@ -18,6 +18,7 @@ resolution-markers = [
 members = [
     "companies-house",
     "companies-house-abm",
+    "companies-house-abm-rust",
 ]
 
 [manifest.dependency-groups]
@@ -453,7 +454,7 @@ wheels = [
 [[package]]
 name = "companies-house"
 version = "0.2.1"
-source = { editable = "src/companies_house" }
+source = { editable = "packages/companies-house" }
 dependencies = [
     { name = "duckdb" },
     { name = "polars" },
@@ -502,7 +503,7 @@ provides-extras = ["xbrl", "pdf", "analysis", "all"]
 [[package]]
 name = "companies-house-abm"
 version = "0.4.1"
-source = { editable = "src/companies_house_abm" }
+source = { editable = "packages/companies-house-abm" }
 dependencies = [
     { name = "companies-house", extra = ["analysis", "xbrl"] },
     { name = "fastapi" },
@@ -527,7 +528,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "companies-house", extras = ["xbrl", "analysis"], editable = "src/companies_house" },
+    { name = "companies-house", extras = ["xbrl", "analysis"], editable = "packages/companies-house" },
     { name = "fastapi", specifier = ">=0.115.0" },
     { name = "marimo", specifier = ">=0.10.0" },
     { name = "matplotlib", specifier = ">=3.8.0" },
@@ -542,6 +543,11 @@ requires-dist = [
     { name = "typer", specifier = ">=0.12.0" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.30.0" },
 ]
+
+[[package]]
+name = "companies-house-abm-rust"
+version = "0.1.0"
+source = { editable = "packages/rust-abm" }
 
 [[package]]
 name = "contourpy"

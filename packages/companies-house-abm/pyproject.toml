@@ -45,7 +45,7 @@ dependencies = [
 companies_house_abm = "companies_house_abm.cli:app"
 
 [tool.hatch.build.targets.wheel]
-packages = ["."]
+packages = ["src/companies_house_abm"]
 
 [tool.uv.sources]
 companies-house = { workspace = true }

@@ -1,14 +1,14 @@
 # =============================================================================
-# Workspace root — configures the uv workspace and project-wide tooling.
-# This is a virtual root (no publishable package).  Each package lives in
-# src/companies_house/ or src/companies_house_abm/ with its own pyproject.toml.
+# Workspace root — virtual root (no publishable package).
+# Packages live under packages/*/  following the uv recommended workspace layout:
+# https://docs.astral.sh/uv/concepts/projects/workspaces/
 # =============================================================================
 
 [tool.uv]
 package = false
 
 [tool.uv.workspace]
-members = ["src/companies_house", "src/companies_house_abm"]
+members = ["packages/*"]
 
 # =============================================================================
 # Dependency groups (dev / docs tooling — installed workspace-wide)
@@ -48,7 +48,7 @@ python = ["3.10", "3.11", "3.12", "3.13"]
 [tool.ruff]
 target-version = "py310"
 line-length = 88
-src = ["src", "tests"]
+src = ["packages/companies-house/src", "packages/companies-house-abm/src", "tests"]
 
 [tool.ruff.lint]
 select = [
@@ -72,8 +72,8 @@ known-first-party = ["companies_house_abm", "companies_house"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["ARG001"]
-"src/companies_house/schema.py" = ["TCH003"]
-"src/companies_house/api/models.py" = ["TCH003"]
+"packages/companies-house/src/companies_house/schema.py" = ["TCH003"]
+"packages/companies-house/src/companies_house/api/models.py" = ["TCH003"]
 "notebooks/**/*.py" = ["B018", "E501"]
 
 # =============================================================================
@@ -96,7 +96,7 @@ unresolved-import = "warn"
 
 # kreuzberg is an optional dep — not installed in dev by default
 [[tool.ty.overrides]]
-include = ["src/companies_house/ingest/pdf.py"]
+include = ["packages/companies-house/src/companies_house/ingest/pdf.py"]
 [tool.ty.overrides.rules]
 unresolved-import = "ignore"
 
@@ -106,7 +106,10 @@ unresolved-import = "ignore"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src"]
+pythonpath = [
+    "packages/companies-house/src",
+    "packages/companies-house-abm/src",
+]
 addopts = [
     "-ra",
     "-q",
@@ -122,7 +125,7 @@ markers = [
 # =============================================================================
 
 [tool.coverage.run]
-source = ["src/companies_house_abm", "src/companies_house"]
+source = ["companies_house", "companies_house_abm"]
 branch = true
 parallel = true
 

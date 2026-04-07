@@ -42,4 +42,4 @@ all = ["companies-house[xbrl,pdf,analysis]"]
 companies-house = "companies_house.cli:app"
 
 [tool.hatch.build.targets.wheel]
-packages = ["."]
+packages = ["src/companies_house"]

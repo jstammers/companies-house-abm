@@ -12,8 +12,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-RUST_DIR="$PROJECT_ROOT/rust_abm"
-TARGET_DIR="$PROJECT_ROOT/src/companies_house_abm"
+RUST_DIR="$PROJECT_ROOT/packages/rust-abm"
+TARGET_DIR="$PROJECT_ROOT/packages/companies-house-abm/src/companies_house_abm"
 WHEEL_OUT="/tmp/rust_abm_build_$$"
 
 PROFILE="release"

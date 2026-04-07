@@ -9,6 +9,7 @@ package = false
 
 [tool.uv.workspace]
 members = ["packages/*"]
+exclude = ["packages/rust-abm"]
 
 # =============================================================================
 # Dependency groups (dev / docs tooling — installed workspace-wide)

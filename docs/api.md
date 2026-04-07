@@ -97,13 +97,6 @@
       show_root_heading: true
       show_source: true
 
-### Ingest Module (re-exports)
-
-::: companies_house_abm.ingest
-    options:
-      show_root_heading: true
-      show_source: true
-
 ## Data Sources Module
 
 ::: companies_house_abm.data_sources

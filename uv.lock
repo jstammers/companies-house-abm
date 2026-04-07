@@ -18,7 +18,6 @@ resolution-markers = [
 members = [
     "companies-house",
     "companies-house-abm",
-    "companies-house-abm-rust",
 ]
 
 [manifest.dependency-groups]
@@ -543,11 +542,6 @@ requires-dist = [
     { name = "typer", specifier = ">=0.12.0" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.30.0" },
 ]
-
-[[package]]
-name = "companies-house-abm-rust"
-version = "0.1.0"
-source = { editable = "packages/rust-abm" }
 
 [[package]]
 name = "contourpy"

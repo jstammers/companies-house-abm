@@ -59,11 +59,21 @@ class Property:
         self.months_listed = 0
 
     def sell(self, new_owner_id: str, sale_price: float, period: int) -> None:
-        """Record a sale transaction."""
+        """Record a sale transaction.
+
+        ``market_value`` is intentionally **not** updated to ``sale_price``.
+        Updating it would lock in composition-driven transaction prices
+        (buyers systematically prefer the cheapest properties, so early sales
+        cluster in low-price regions), causing a feedback loop where cheap
+        sales produce cheap re-listings which produce even cheaper sales.
+        Instead ``market_value`` retains the property's fundamental value
+        (set at initialisation from region multiplier x average price), and
+        sellers always re-list relative to that anchor.
+        """
         self.owner_id = new_owner_id
         self.last_transaction_price = sale_price
         self.last_transaction_period = period
-        self.market_value = sale_price
+        # market_value intentionally unchanged — see docstring
         self.on_market = False
         self.asking_price = 0.0
         self.months_listed = 0

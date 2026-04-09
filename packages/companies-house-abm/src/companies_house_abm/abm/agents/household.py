@@ -157,17 +157,27 @@ class Household(BaseAgent):
     ) -> None:
         """Decide whether to seek to buy a property.
 
-        Compares expected annual cost of owning (mortgage payment +
-        maintenance - expected appreciation) vs. renting.  Follows
-        Farmer (2025): backward-looking price expectations drive the
-        buy/rent decision.
+        Compares the *affordability* cost of owning (mortgage payment +
+        maintenance) against the cost of renting.  Price expectations are
+        still computed and stored on ``self.price_expectation`` for
+        informational use, but are **not** included in the buy/rent
+        cost comparison.
+
+        Rationale: incorporating expected appreciation leads to a pathological
+        feedback loop.  A single-period price drop (e.g. due to composition
+        changes in early-period transactions) extrapolates to a large negative
+        monthly "capital cost" that shuts off all buying for 10+ periods, then
+        triggers a burst of transactions at heavily discounted prices, which
+        creates another drop, and so on.  In practice, households compare
+        mortgage affordability vs. rent, not speculative capital gains.
         """
-        # Only renters consider buying
-        if self.tenure != "renter":
+        # Only employed renters consider buying — mortgage lenders require proof
+        # of income, so unemployed households cannot obtain financing.
+        if self.tenure != "renter" or not self.employed:
             self.wants_to_buy = False
             return
 
-        # Price expectation from recent trend
+        # Price expectation from recent trend (stored but not used in cost gate)
         if price_history and len(price_history) >= 2:
             recent = price_history[-min(lookback, len(price_history)) :]
             backward_trend = (recent[-1] - recent[0]) / max(recent[0], 1.0)
@@ -181,15 +191,16 @@ class Household(BaseAgent):
         )
         self.price_expectation = average_price * (1.0 + expected_monthly_appreciation)
 
-        # Cost comparison: monthly cost of owning vs renting
+        # Cost comparison: monthly mortgage + maintenance vs. rent.
+        # Expected capital appreciation is deliberately excluded — it amplifies
+        # early-period price noise into buying freezes.
         monthly_mortgage = average_price * 0.8 * mortgage_rate / 12.0
         monthly_maintenance = average_price * 0.01 / 12.0
-        monthly_appreciation = average_price * expected_monthly_appreciation
-        cost_of_owning = monthly_mortgage + monthly_maintenance - monthly_appreciation
+        cost_of_owning = monthly_mortgage + monthly_maintenance
 
         cost_of_renting = average_price * rental_yield / 12.0
 
-        # Can they afford a deposit? (20% of average price)
+        # Can they afford a deposit? (10% of average price)
         deposit_needed = average_price * 0.10
         can_afford_deposit = self.wealth >= deposit_needed
 

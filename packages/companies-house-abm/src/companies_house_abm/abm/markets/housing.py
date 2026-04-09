@@ -58,7 +58,13 @@ class HousingMarket(BaseMarket):
         self.homeownership_rate: float = 0.0
 
         self._previous_average_price: float = 285_000.0
-        self._price_history: list[float] = []
+        # Pre-seed with `expectation_lookback` copies of the initial price so
+        # that the backward-trend calculation in `Household.decide_buy_or_rent`
+        # has a stable baseline from period 1.  Without this, the first 1-2
+        # transaction prices (which may differ due to property mix) would
+        # dominate the trend estimate and produce large spurious signals.
+        lookback = self._config.expectation_lookback if self._config else 12
+        self._price_history: list[float] = [self.average_price] * lookback
 
         # References (set via set_agents)
         self._properties: list[Property] = []
@@ -103,8 +109,17 @@ class HousingMarket(BaseMarket):
         # Phase 1: Sellers update asking prices
         self._update_asking_prices()
 
-        # Phase 2: Collect buyers
-        buyers = [hh for hh in self._households if hh.wants_to_buy and hh.wealth > 0]
+        # Phase 2: Collect buyers — apply search-friction cap.
+        # Not all willing buyers actively search in every period (moving costs,
+        # information acquisition, life-event timing).  The cap is calibrated
+        # to produce a months-of-supply of 3-4 in steady state.
+        eligible = [hh for hh in self._households if hh.wants_to_buy and hh.wealth > 0]
+        max_buyers = self._config.max_active_buyers if self._config else 80
+        if len(eligible) > max_buyers:
+            chosen = self._rng.choice(len(eligible), size=max_buyers, replace=False)
+            buyers = [eligible[int(i)] for i in chosen]
+        else:
+            buyers = eligible
 
         # Phase 3: Collect listings
         listed = [p for p in self._properties if p.on_market]
@@ -124,7 +139,13 @@ class HousingMarket(BaseMarket):
         return self.get_state()
 
     def _update_asking_prices(self) -> None:
-        """Aspiration-level adaptation: reduce prices of unsold listings."""
+        """Aspiration-level adaptation: reduce prices of unsold listings.
+
+        Properties that were just listed this period (``months_listed == 0``)
+        are **not** discounted — buyers should see the initial asking price
+        for at least one full period before the seller concedes.  Discounting
+        immediately would mean no property ever trades at its listed price.
+        """
         reduction = self._config.price_reduction_rate if self._config else 0.10
         max_months = self._config.max_months_listed if self._config else 6
 
@@ -137,6 +158,9 @@ class HousingMarket(BaseMarket):
                 owner = self._find_household(prop.owner_id)
                 if owner:
                     owner.wants_to_sell = False
+            elif prop.months_listed == 0:
+                # First period on market: advance the counter without cutting price
+                prop.months_listed += 1
             else:
                 prop.reduce_price(reduction)
 
@@ -190,8 +214,14 @@ class HousingMarket(BaseMarket):
             )
             visited = [affordable[i] for i in visited_indices]
 
-            # Pick best value (lowest asking price relative to quality)
-            best = min(visited, key=lambda p: p.asking_price / max(p.quality, 0.01))
+            # Pick highest quality from visited properties.
+            # "Best value for money" (min price/quality) causes buyers to
+            # always prefer cheap properties regardless of budget, pulling
+            # average transaction prices well below the market average.
+            # "Best quality affordable" is more realistic: households buy the
+            # nicest home they can afford (which distributes transactions
+            # proportionally across the price range).
+            best = max(visited, key=lambda p: p.quality)
 
             # Attempt to transact
             result = self._attempt_transaction(buyer, best, annual_income)
@@ -212,7 +242,12 @@ class HousingMarket(BaseMarket):
     ) -> float | None:
         """Try to complete a purchase.  Returns mortgage amount or None."""
         sale_price = prop.asking_price
-        deposit = min(buyer.wealth, sale_price)
+        # Cap deposit at max_deposit_fraction of the sale price.  Without
+        # this cap, buyers who hold the full sale proceeds from a previous
+        # property (e.g. £280k) would cash-purchase every subsequent home,
+        # driving the average LTV toward 0 % and below the 60-80 % target.
+        max_dep_frac = self._config.max_deposit_fraction if self._config else 0.30
+        deposit = min(buyer.wealth, sale_price * max_dep_frac)
         loan_needed = sale_price - deposit
 
         if loan_needed > 0:

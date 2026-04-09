@@ -61,7 +61,7 @@ class TestDefaults:
 
     def test_household_behavior_defaults(self):
         cfg = HouseholdBehaviorConfig()
-        assert cfg.job_search_intensity == 0.3
+        assert cfg.job_search_intensity == 0.7
 
     def test_bank_defaults(self):
         cfg = BankConfig()
@@ -92,7 +92,7 @@ class TestDefaults:
 
     def test_labor_market_defaults(self):
         cfg = LaborMarketConfig()
-        assert cfg.matching_efficiency == 0.3
+        assert cfg.matching_efficiency == 0.6
 
     def test_credit_market_defaults(self):
         cfg = CreditMarketConfig()

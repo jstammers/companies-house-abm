@@ -97,7 +97,7 @@ behavior:
     markup_noise_std: 0.0  # Std dev of markup adjustment noise (0 = off)
 
   households:
-    job_search_intensity: 0.3  # Fraction of unemployed searching per period
+    job_search_intensity: 0.7  # Fraction of unemployed searching per period
     reservation_wage_ratio: 0.9  # Reservation wage as fraction of market wage
     consumption_smoothing: 0.7  # Weight on permanent vs current income
     # Bounded rationality: adaptive expectations (Dosi et al. 2010)
@@ -131,8 +131,8 @@ markets:
 
   labor:
     wage_stickiness: 0.8  # Persistence of nominal wages (0=flexible, 1=rigid)
-    matching_efficiency: 0.3  # Efficiency of job matching process
-    separation_rate: 0.05  # Exogenous job separation rate
+    matching_efficiency: 0.6  # Efficiency of job matching process
+    separation_rate: 0.025  # Exogenous job separation rate (≈ 10 % annual at quarterly freq)
     phillips_curve_slope: -0.5  # Wage response to unemployment gap
 
   credit:
@@ -150,6 +150,14 @@ markets:
     transaction_cost: 0.05  # Stamp duty + fees as fraction of price
     maintenance_cost: 0.01  # Annual maintenance as fraction of value
     rental_yield: 0.045  # Average gross rental yield
+    # Calibrated to produce months-of-supply ≈ 3–4.  At sell_prob = 1.5 %
+    # and 3 200 owners, ≈ 48 new listings/period.  Steady-state MoS = 3.5
+    # requires transactions ≈ 30/period: T = N / (1 + MoS/max_months) = 48 / 1.58.
+    max_active_buyers: 33
+    # Cap deposit at 30 % of purchase price so recently-sold households
+    # (who may hold full sale proceeds as liquid wealth) do not cash-purchase
+    # and drive average LTV toward 0 %.
+    max_deposit_fraction: 0.30
 
   interbank:
     active: true  # Whether interbank market operates

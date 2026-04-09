@@ -110,9 +110,17 @@ class Firm(BaseAgent):
         self.desired_production = max(desired, 0.0)
 
     def _set_price(self) -> None:
-        """Set the output price as a markup over unit cost."""
-        if self.output > 0:
-            unit_cost = (self.wage_bill) / max(self.output, 1e-9)
+        """Set the output price as a markup over unit cost.
+
+        The guard uses ``wage_bill`` as a meaningful scale: output must cover
+        at least 1 % of the wage bill before we recompute the price.  This
+        prevents near-zero floating-point output (which can arise when
+        ``desired_production`` rounds to ~0) from driving unit costs to
+        astronomical values via the 1e-9 numerical floor.
+        """
+        min_output = max(self.wage_bill * 0.01, 1e-6)
+        if self.output >= min_output:
+            unit_cost = self.wage_bill / self.output
             self.price = unit_cost * (1 + self.markup)
 
     def _determine_labour_demand(self) -> None:
@@ -142,11 +150,20 @@ class Firm(BaseAgent):
         self.inventory += self.output
 
     def _update_financials(self) -> None:
-        """Update financial state after production and sales."""
-        sales_quantity = min(self.inventory, self.turnover / max(self.price, 1e-9))
-        revenue = sales_quantity * self.price
-        self.inventory -= sales_quantity
-        self.turnover = revenue
+        """Update financial state using last-period goods-market revenue.
+
+        ``self.turnover`` is set by the goods market after clearing and
+        represents monetary revenue from actual sales.  Inventory is
+        managed by the goods market; this method handles only the
+        profit-and-loss accounting.
+
+        The previous implementation also reduced inventory here, which
+        left zero stock for the goods market.  The goods market would
+        then record zero sales, the firm would plan for zero production,
+        and the resulting zero output would spiral into bankruptcy even
+        for otherwise-viable firms.
+        """
+        revenue = self.turnover  # monetary; set by goods market each period
         self.wage_bill = self.employees * self.wage_rate
         self.profit = revenue - self.wage_bill
         self.cash += self.profit

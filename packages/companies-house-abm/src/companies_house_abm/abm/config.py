@@ -80,7 +80,7 @@ class HouseholdConfig:
 class HouseholdBehaviorConfig:
     """Behavioral parameters for households."""
 
-    job_search_intensity: float = 0.3
+    job_search_intensity: float = 0.7
     reservation_wage_ratio: float = 0.9
     consumption_smoothing: float = 0.7
     # Bounded rationality: adaptive expectations (Dosi et al. 2010)
@@ -118,7 +118,8 @@ class TaylorRuleConfig:
     inflation_coefficient: float = 1.5
     output_gap_coefficient: float = 0.5
     interest_rate_smoothing: float = 0.8
-    lower_bound: float = 0.001
+    lower_bound: float = 0.02
+    upper_bound: float = 0.15
 
 
 @dataclass(frozen=True)
@@ -157,8 +158,8 @@ class LaborMarketConfig:
     """Configuration for the labor market."""
 
     wage_stickiness: float = 0.8
-    matching_efficiency: float = 0.3
-    separation_rate: float = 0.05
+    matching_efficiency: float = 0.6
+    separation_rate: float = 0.025  # ≈ 10 % annual at quarterly frequency
     phillips_curve_slope: float = -0.5
 
 
@@ -211,6 +212,18 @@ class HousingMarketConfig:
     transaction_cost: float = 0.05
     maintenance_cost: float = 0.01
     rental_yield: float = 0.045
+    # Search friction: maximum number of households that actively search for a
+    # property in a single period.  Calibrated so that the steady-state
+    # listings / transactions ratio (months of supply) equals the UK target of
+    # 3-4 months.  With sell_prob = 1.5 % (≈ 48 new listings per period for
+    # 3 200 owner-occupiers), enough buyer capacity is needed to process those
+    # listings in ≈ 1 period each (MoS ≈ 3).
+    max_active_buyers: int = 33
+    # Maximum fraction of property value the buyer puts down as a deposit.
+    # Caps deposit at 30 % so that recently-sold households (who may hold the
+    # full sale proceeds as liquid wealth) do not cash-purchase and thereby
+    # skew the LTV distribution toward 0 %.
+    max_deposit_fraction: float = 0.30
 
 
 @dataclass(frozen=True)

@@ -183,9 +183,12 @@ class TestStatistics:
     def test_price_history_grows(self):
         hm = HousingMarket()
         hm.set_agents([], [], [], [])
+        # price_history is pre-seeded with expectation_lookback entries so
+        # that the backward-trend expectation has a stable baseline from period 1.
+        initial_len = len(hm.price_history)
         hm.clear()
         hm.clear()
-        assert len(hm.price_history) == 2
+        assert len(hm.price_history) == initial_len + 2
 
     def test_get_state_keys(self):
         hm = HousingMarket()

@@ -50,7 +50,10 @@ class TestProperty:
         assert p.owner_id == "buyer_1"
         assert p.last_transaction_price == 195_000.0
         assert p.last_transaction_period == 10
-        assert p.market_value == 195_000.0
+        # market_value is intentionally not updated to the sale price to
+        # avoid a feedback loop where cheap transaction prices anchor
+        # future listings at low levels.
+        assert p.market_value == 200_000.0
         assert p.on_market is False
 
     def test_sell_clears_rental(self):

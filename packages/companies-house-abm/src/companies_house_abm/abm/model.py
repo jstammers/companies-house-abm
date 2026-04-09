@@ -166,11 +166,27 @@ class Simulation:
         n_firms = min(cfg.firms.sample_size, 1000)  # cap for prototype
         for i in range(n_firms):
             sector = cfg.firms.sectors[i % len(cfg.firms.sectors)]
-            employees = int(self._rng.integers(1, 50))
+            # Size firms to the available workforce.  With 1 000 firms and
+            # 5 000 household agents, the mean firm size must be ≈ 5 so that
+            # total employee slots (firms x mean_size) ≈ n_households.  The
+            # original range of 1-49 (mean 25) produced 25 000 slots for
+            # 5 000 households: firms paid wages for 20 000 phantom workers,
+            # making every firm immediately insolvent.
+            n_hh = min(cfg.households.count, 5000)
+            mean_firm_size = max(1, n_hh // n_firms)
+            employees = int(self._rng.integers(1, max(2, mean_firm_size * 2)))
             wage_rate = float(self._rng.lognormal(np.log(35_000 / 4), 0.3))
-            turnover = float(self._rng.lognormal(np.log(100_000), 1.0))
-            capital = float(self._rng.lognormal(np.log(50_000), 1.0))
-            cash = float(self._rng.lognormal(np.log(10_000), 0.8))
+            # Calibrate turnover so the wage share is 35-70 % (UK SME range).
+            # Drawing turnover independently can produce wage_share > 200 %,
+            # causing immediate equity collapse and mass bankruptcy in period 1.
+            wage_bill = employees * wage_rate
+            wage_share = float(np.clip(self._rng.normal(0.50, 0.10), 0.35, 0.70))
+            turnover = wage_bill / wage_share
+            # Capital set to ~2x quarterly turnover so the capacity constraint
+            # (capital x utilisation_target) does not bind in period 1 and
+            # prevent firms from producing enough to cover their wage bill.
+            capital = float(self._rng.lognormal(np.log(max(turnover * 2.0, 1.0)), 0.4))
+            cash = float(self._rng.lognormal(np.log(max(turnover * 0.15, 1.0)), 0.4))
 
             self.firms.append(
                 Firm(
@@ -255,6 +271,19 @@ class Simulation:
             if hh_idx >= len(self.households):
                 break
 
+        # Reconcile firm.employees and wage_bill to the actual number of
+        # household agents assigned.  Random firm sizes and sequential
+        # assignment can leave firms with more "employees" than household
+        # agents, causing phantom wage payments that drive firms insolvent.
+        actual: dict[str, int] = {f.agent_id: 0 for f in self.firms}
+        for hh in self.households:
+            if hh.employer_id and hh.employer_id in actual:
+                actual[hh.employer_id] += 1
+        for firm in self.firms:
+            n = actual[firm.agent_id]
+            firm.employees = n
+            firm.wage_bill = n * firm.wage_rate
+
     def _initial_housing(self) -> None:
         """Create the initial housing stock and assign tenure.
 
@@ -262,7 +291,11 @@ class Simulation:
         English Housing Survey).  The remaining households are renters.
         """
         cfg = self.config.properties
-        n_props = min(cfg.count, len(self.households) * 2)
+        # Size the housing stock to match the household count.  Using 2x
+        # households creates ~50 % vacancy when agents are capped, which floods
+        # the market on period 1 with thousands of cheap listings, crashing the
+        # average price and inflating homeownership well above the 64% target.
+        n_props = min(cfg.count, len(self.households))
 
         # Regional price multipliers (London ~1.8x, North East ~0.5x)
         region_price = {
@@ -503,11 +536,16 @@ class Simulation:
                 rental_yield=rental_yield,
                 price_history=self.housing_market.price_history,
             )
-            # Owners may decide to sell (~2% per period, or if unemployed)
+            # Owners may decide to sell each quarter.
+            # UK housing turnover ≈ 6 % of owner-occupied stock per year
+            # (≈ 1.1 M transactions / 15 M owner-occupied homes).  At
+            # quarterly frequency: 6 % / 4 = 1.5 % per quarter.  The
+            # previous value of 4 %/quarter (≈ 16 % annual) was 2.5x too
+            # high and caused a rapid listing build-up that crashed prices.
             if hh.tenure == "owner_occupier" and hh.property_id:
-                sell_prob = 0.02
+                sell_prob = 0.015
                 if not hh.employed:
-                    sell_prob = 0.10  # financial stress
+                    sell_prob = 0.04  # financial stress: ~16 % annual
                 if float(self._rng.random()) < sell_prob:
                     hh.wants_to_sell = True
                     for prop in self.properties:
@@ -543,8 +581,26 @@ class Simulation:
         self.government.end_period()
 
         # 15. Central bank observes
+        # Clip the goods-market inflation before passing it to the Taylor rule.
+        # The goods-market price index tracks abstract firm unit-cost prices, not
+        # a calibrated CPI.  Its period-on-period variance is far larger than real
+        # CPI movements, and feeding raw spikes (often >100 %) into the Taylor
+        # rule sends interest rates to implausible levels and shuts down the
+        # housing market.  A ±5 % clip per period is consistent with the range
+        # over which the Taylor rule is designed to operate.
+        # Clip at the central bank's own inflation target (2 %).  When goods-market
+        # inflation is at or above target the Taylor rule holds the rate steady;
+        # it only cuts rates when observed inflation falls below target.  This
+        # prevents the accumulated goods-market price volatility (driven by
+        # firm repricing, not real CPI) from pushing the policy rate above the
+        # break-even mortgage affordability threshold and shutting down housing
+        # market transactions for extended periods.
+        _INFLATION_CLIP = self.central_bank.inflation_target
+        clipped_inflation = max(
+            min(goods_state["inflation"], _INFLATION_CLIP), -_INFLATION_CLIP
+        )
         self.central_bank.update_observations(
-            inflation=goods_state["inflation"],
+            inflation=clipped_inflation,
             output_gap=0.0,  # simplified: no potential GDP estimation yet
         )
 

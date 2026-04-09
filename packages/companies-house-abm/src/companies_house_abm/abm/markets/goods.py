@@ -39,7 +39,10 @@ class GoodsMarket(BaseMarket):
         self.average_price: float = 1.0
         self.excess_demand: float = 0.0
         self.inflation: float = 0.0
-        self._previous_price: float = 1.0
+        # None until the first clear() so that the period-1 transition from the
+        # initialised price index (1.0) to cost-based firm prices does not
+        # register as hyperinflation and destabilise the Taylor rule.
+        self._previous_price: float | None = None
 
         self._firms: list[Firm] = []
         self._households: list[Household] = []
@@ -115,13 +118,30 @@ class GoodsMarket(BaseMarket):
             firm.adapt_markup(firm_excess, rng=rng)
 
         # ---- average price and inflation ----
+        # Use a sales-weighted (Paasche) price index so that firms with zero
+        # sales get zero weight.  An arithmetic mean of all posted prices is
+        # dominated by outliers (firms with near-zero output and therefore
+        # extremely high unit costs) and is economically misleading.
         if active_firms:
-            self._previous_price = self.average_price
-            self.average_price = sum(f.price for f in active_firms) / len(active_firms)
-            if self._previous_price > 0:
+            total_value = sum(f.turnover for f in active_firms if f.turnover > 0)
+            total_qty = sum(
+                f.turnover / f.price
+                for f in active_firms
+                if f.turnover > 0 and f.price > 0
+            )
+            new_price = (
+                total_value / total_qty
+                if total_qty > 0
+                else self.average_price  # no sales this period — keep prior
+            )
+
+            if self._previous_price is not None and self._previous_price > 0:
                 self.inflation = (
-                    self.average_price - self._previous_price
+                    new_price - self._previous_price
                 ) / self._previous_price
+            # else: first call — no prior baseline, leave inflation = 0.0
+            self._previous_price = new_price
+            self.average_price = new_price
 
         return self.get_state()
 

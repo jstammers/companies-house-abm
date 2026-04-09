@@ -82,7 +82,8 @@ class CentralBank(BaseAgent):
         # Interest-rate smoothing
         smoothed = smoothing * self._previous_rate + (1 - smoothing) * target_rate
 
-        self.policy_rate = max(smoothed, lower)
+        upper = self._taylor.upper_bound if self._taylor else 0.15
+        self.policy_rate = max(min(smoothed, upper), lower)
         self._previous_rate = self.policy_rate
 
     # ------------------------------------------------------------------

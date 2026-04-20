@@ -275,16 +275,23 @@ class TestHistoricalSimulationRegEvents:
 
 
 class TestPearsonEdgeCases:
-    def test_pearson_constant_series(self):
-        from companies_house_abm.abm.historical import _pearson
+    """Test edge cases of the Pearson correlation via the public price_correlation API."""
 
-        # Constant series has zero variance → NaN
-        assert math.isnan(_pearson([5.0, 5.0, 5.0], [1.0, 2.0, 3.0]))
+    def _make_result(self, sim: list[float], actual: list[float]) -> HistoricalResult:
+        from companies_house_abm.abm.model import PeriodRecord
 
-    def test_pearson_fewer_than_two_points(self):
-        from companies_house_abm.abm.historical import _pearson
+        records = [PeriodRecord(period=i, average_house_price=p) for i, p in enumerate(sim)]
+        return HistoricalResult(records=records, actual_hpi=actual)
 
-        assert math.isnan(_pearson([1.0], [1.0]))
+    def test_constant_simulated_series_gives_nan(self):
+        # Constant series has zero variance → correlation is undefined
+        result = self._make_result([200_000.0, 200_000.0, 200_000.0], [100.0, 200.0, 300.0])
+        assert math.isnan(result.price_correlation())
+
+    def test_single_period_gives_nan(self):
+        # Fewer than 2 data points → correlation is undefined
+        result = self._make_result([200_000.0], [200_000.0])
+        assert math.isnan(result.price_correlation())
 
 
 class TestHistoricalEvaluation:

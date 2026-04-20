@@ -350,7 +350,11 @@ class TestRunSimulationCli:
 
 class TestEvaluationReportEdgeCases:
     def test_overall_score_zero_weight(self) -> None:
-        """All-zero weights → overall_score returns inf."""
+        """All-zero weights → overall_score returns inf.
+
+        When total_weight is 0, the score is undefined (we can't compute a
+        weighted average), so the method signals this with positive infinity.
+        """
         result = StatResult(
             name="x",
             description="",

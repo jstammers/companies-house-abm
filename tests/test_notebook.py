@@ -54,7 +54,6 @@ class TestHistoricalSimulationNotebook:
 
     def test_notebook_core_logic_runs(self):
         """Run the core simulation steps that the notebook performs."""
-        from dataclasses import replace
         from unittest.mock import patch
 
         from companies_house_abm.abm.config import (

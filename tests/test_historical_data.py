@@ -202,6 +202,29 @@ class TestHelpers:
         assert len(result) == 1
         assert result[0]["value"] == pytest.approx(3.0)
 
+    def test_quarterly_last_skips_invalid_values(self):
+        from companies_house_abm.data_sources.historical import (
+            _quarterly_last,
+        )
+
+        rows = [
+            {"date": "01 Jan 2020", "value": "n/a"},  # invalid – skipped
+            {"date": "01 Feb 2020", "value": "1.5"},
+        ]
+        result = _quarterly_last(rows, start="2020Q1", end="2020Q1")
+        assert len(result) == 1
+        assert result[0]["value"] == pytest.approx(1.5)
+
+    def test_quarterly_last_skips_unknown_quarter(self):
+        from companies_house_abm.data_sources.historical import (
+            _quarterly_last,
+        )
+
+        # Date with only 1 token → _parse_boe_date returns (0, 0)
+        rows = [{"date": "baddate", "value": "1.0"}]
+        result = _quarterly_last(rows, start="2013Q1", end="2024Q4")
+        assert result == []
+
     def test_to_quarter_label(self):
         from companies_house_abm.data_sources.historical import (
             _to_quarter_label,
@@ -211,3 +234,326 @@ class TestHelpers:
         assert _to_quarter_label(2024, 4) == "2024Q2"
         assert _to_quarter_label(2024, 7) == "2024Q3"
         assert _to_quarter_label(2024, 12) == "2024Q4"
+
+    def test_to_quarter_label_invalid_month(self):
+        from companies_house_abm.data_sources.historical import (
+            _to_quarter_label,
+        )
+
+        # Month 0 is unknown → empty string
+        assert _to_quarter_label(2024, 0) == ""
+
+    def test_parse_boe_date_valid(self):
+        from companies_house_abm.data_sources.historical import (
+            _parse_boe_date,
+        )
+
+        year, month = _parse_boe_date("01 Mar 2024")
+        assert year == 2024
+        assert month == 3
+
+    def test_parse_boe_date_invalid_format(self):
+        from companies_house_abm.data_sources.historical import (
+            _parse_boe_date,
+        )
+
+        # Fewer than 3 parts → (0, 0)
+        year, month = _parse_boe_date("2024-03")
+        assert year == 0
+        assert month == 0
+
+    def test_parse_iadb_csv_basic(self):
+        from companies_house_abm.data_sources.historical import (
+            _parse_iadb_csv,
+        )
+
+        csv_text = (
+            "Date,Bank Rate\n"
+            "01 Jan 2024,5.25\n"
+            "01 Feb 2024,5.25\n"
+            "01 Mar 2024,5.25\n"
+        )
+        rows = _parse_iadb_csv(csv_text)
+        assert len(rows) == 3
+        assert rows[0]["date"] == "01 Jan 2024"
+        assert rows[0]["value"] == "5.25"
+
+    def test_parse_iadb_csv_stops_after_data(self):
+        from companies_house_abm.data_sources.historical import (
+            _parse_iadb_csv,
+        )
+
+        # Non-numeric line after data starts → parser stops
+        csv_text = (
+            "Date,Series\n"
+            "01 Jan 2024,1.0\n"
+            "Legal Notice,blah\n"
+            "01 Feb 2024,2.0\n"
+        )
+        rows = _parse_iadb_csv(csv_text)
+        assert len(rows) == 1  # stops at the non-numeric line
+
+    def test_parse_iadb_csv_empty(self):
+        from companies_house_abm.data_sources.historical import (
+            _parse_iadb_csv,
+        )
+
+        rows = _parse_iadb_csv("")
+        assert rows == []
+
+    def test_build_iadb_url(self):
+        from companies_house_abm.data_sources.historical import (
+            _build_iadb_url,
+        )
+
+        url = _build_iadb_url("IUMABEDR", from_year=2013)
+        assert "IUMABEDR" in url
+        assert "01/Jan/2013" in url
+        assert "csv.x=yes" in url
+
+
+# ---------------------------------------------------------------------------
+# Mock successful API responses
+# ---------------------------------------------------------------------------
+
+
+class TestFetchWithMockedSuccess:
+    """Test the live-fetch success paths by mocking HTTP responses."""
+
+    def test_fetch_hpi_quarterly_sparql_success(self):
+        from unittest.mock import patch
+
+        from companies_house_abm.data_sources.historical import (
+            fetch_hpi_quarterly,
+        )
+
+        mock_response = {
+            "results": {
+                "bindings": [
+                    {
+                        "period": {"value": "2020-03"},
+                        "price": {"value": "240000"},
+                    },
+                    {
+                        "period": {"value": "2020-06"},
+                        "price": {"value": "245000"},
+                    },
+                ]
+            }
+        }
+
+        with patch(
+            "companies_house_abm.data_sources.historical.retry",
+            return_value=mock_response,
+        ):
+            data = fetch_hpi_quarterly(start="2020Q1", end="2020Q2")
+
+        assert len(data) == 2
+        assert data[0]["quarter"] == "2020Q1"
+        assert data[0]["value"] == pytest.approx(240_000)
+        assert data[1]["quarter"] == "2020Q2"
+
+    def test_fetch_hpi_quarterly_sparql_empty_bindings_falls_back(self):
+        from unittest.mock import patch
+
+        from companies_house_abm.data_sources.historical import (
+            fetch_hpi_quarterly,
+        )
+
+        # If SPARQL returns empty bindings, should fall back to hardcoded data
+        mock_response = {"results": {"bindings": []}}
+
+        with patch(
+            "companies_house_abm.data_sources.historical.retry",
+            return_value=mock_response,
+        ):
+            data = fetch_hpi_quarterly(start="2020Q1", end="2020Q1")
+
+        assert len(data) == 1
+        assert data[0]["quarter"] == "2020Q1"
+
+    def test_fetch_bank_rate_quarterly_success(self):
+        from unittest.mock import patch
+
+        from companies_house_abm.data_sources.historical import (
+            fetch_bank_rate_quarterly,
+        )
+
+        csv_text = (
+            "Date,Bank Rate\n"
+            "01 Jan 2020,0.75\n"
+            "01 Feb 2020,0.25\n"
+            "01 Mar 2020,0.10\n"
+        )
+
+        with patch(
+            "companies_house_abm.data_sources.historical.retry",
+            return_value=csv_text,
+        ):
+            data = fetch_bank_rate_quarterly(start="2020Q1", end="2020Q1")
+
+        assert len(data) == 1
+        assert data[0]["quarter"] == "2020Q1"
+        assert data[0]["value"] == pytest.approx(0.10)
+
+    def test_fetch_bank_rate_empty_result_falls_back(self):
+        from unittest.mock import patch
+
+        from companies_house_abm.data_sources.historical import (
+            fetch_bank_rate_quarterly,
+        )
+
+        # CSV with no parseable data → falls back to hardcoded
+        with patch(
+            "companies_house_abm.data_sources.historical.retry",
+            return_value="Date,Rate\nno data here\n",
+        ):
+            data = fetch_bank_rate_quarterly(start="2020Q1", end="2020Q1")
+
+        assert len(data) == 1
+        assert data[0]["quarter"] == "2020Q1"
+
+    def test_fetch_mortgage_rate_quarterly_success(self):
+        from unittest.mock import patch
+
+        from companies_house_abm.data_sources.historical import (
+            fetch_mortgage_rate_quarterly,
+        )
+
+        csv_text = (
+            "Date,Mortgage Rate\n"
+            "01 Jan 2020,2.5\n"
+            "01 Feb 2020,2.4\n"
+            "01 Mar 2020,2.3\n"
+        )
+
+        with patch(
+            "companies_house_abm.data_sources.historical.retry",
+            return_value=csv_text,
+        ):
+            data = fetch_mortgage_rate_quarterly(start="2020Q1", end="2020Q1")
+
+        assert len(data) == 1
+        assert data[0]["quarter"] == "2020Q1"
+        assert data[0]["value"] == pytest.approx(2.3)
+
+    def test_fetch_mortgage_rate_empty_falls_back(self):
+        from unittest.mock import patch
+
+        from companies_house_abm.data_sources.historical import (
+            fetch_mortgage_rate_quarterly,
+        )
+
+        with patch(
+            "companies_house_abm.data_sources.historical.retry",
+            return_value="no valid csv",
+        ):
+            data = fetch_mortgage_rate_quarterly(start="2020Q1", end="2020Q1")
+
+        assert len(data) == 1
+
+    def test_fetch_earnings_quarterly_success(self):
+        from unittest.mock import patch
+
+        from companies_house_abm.data_sources.historical import (
+            fetch_earnings_index_quarterly,
+        )
+
+        mock_response = {
+            "months": [
+                {"date": "2020 JAN", "value": "102.5"},
+                {"date": "2020 FEB", "value": "103.0"},
+                {"date": "2020 MAR", "value": "103.5"},
+            ]
+        }
+
+        with patch(
+            "companies_house_abm.data_sources.historical.retry",
+            return_value=mock_response,
+        ):
+            data = fetch_earnings_index_quarterly(start="2020Q1", end="2020Q1")
+
+        assert len(data) == 1
+        assert data[0]["quarter"] == "2020Q1"
+        assert data[0]["value"] == pytest.approx(103.5)
+
+    def test_fetch_earnings_empty_falls_back(self):
+        from unittest.mock import patch
+
+        from companies_house_abm.data_sources.historical import (
+            fetch_earnings_index_quarterly,
+        )
+
+        mock_response = {"months": []}
+
+        with patch(
+            "companies_house_abm.data_sources.historical.retry",
+            return_value=mock_response,
+        ):
+            data = fetch_earnings_index_quarterly(start="2020Q1", end="2020Q1")
+
+        assert len(data) == 1  # falls back to hardcoded
+
+    def test_fetch_earnings_invalid_value_skipped(self):
+        from unittest.mock import patch
+
+        from companies_house_abm.data_sources.historical import (
+            fetch_earnings_index_quarterly,
+        )
+
+        mock_response = {
+            "months": [
+                {"date": "2020 JAN", "value": "n/a"},
+                {"date": "2020 MAR", "value": "103.0"},
+            ]
+        }
+
+        with patch(
+            "companies_house_abm.data_sources.historical.retry",
+            return_value=mock_response,
+        ):
+            data = fetch_earnings_index_quarterly(start="2020Q1", end="2020Q1")
+
+        # Only the March value counts (last month of Q1)
+        assert len(data) == 1
+        assert data[0]["value"] == pytest.approx(103.0)
+
+    def test_fetch_mortgage_approvals_success(self):
+        from unittest.mock import patch
+
+        from companies_house_abm.data_sources.historical import (
+            fetch_mortgage_approvals_quarterly,
+        )
+
+        csv_text = (
+            "Date,Approvals\n"
+            "01 Jan 2020,60000\n"
+            "01 Feb 2020,65000\n"
+            "01 Mar 2020,70000\n"
+        )
+
+        with patch(
+            "companies_house_abm.data_sources.historical.retry",
+            return_value=csv_text,
+        ):
+            data = fetch_mortgage_approvals_quarterly(start="2020Q1", end="2020Q1")
+
+        assert len(data) == 1
+        assert data[0]["quarter"] == "2020Q1"
+        # 60000 + 65000 + 70000 = 195000
+        assert data[0]["value"] == 195_000
+
+    def test_fetch_mortgage_approvals_empty_falls_back(self):
+        from unittest.mock import patch
+
+        from companies_house_abm.data_sources.historical import (
+            fetch_mortgage_approvals_quarterly,
+        )
+
+        with patch(
+            "companies_house_abm.data_sources.historical.retry",
+            return_value="no valid data",
+        ):
+            data = fetch_mortgage_approvals_quarterly(start="2020Q1", end="2020Q1")
+
+        assert len(data) == 1

@@ -143,10 +143,10 @@ def _(mo, plt, result, scenario):
     )
 
     # Shade regulatory events
-    for event in scenario.regulatory_events:
-        if event.period < len(quarters):
+    for _event in scenario.regulatory_events:
+        if _event.period < len(quarters):
             ax1.axvline(
-                event.period,
+                _event.period,
                 color="grey",
                 linestyle=":",
                 alpha=0.4,
@@ -205,10 +205,10 @@ def _(mo, plt, result, scenario):
     ax2a.grid(True, alpha=0.3)
 
     # Regulatory events
-    for event in scenario.regulatory_events:
-        if event.period < n:
-            ax2a.axvline(event.period, color="grey", linestyle=":", alpha=0.4)
-            ax2b.axvline(event.period, color="grey", linestyle=":", alpha=0.4)
+    for _event in scenario.regulatory_events:
+        if _event.period < n:
+            ax2a.axvline(_event.period, color="grey", linestyle=":", alpha=0.4)
+            ax2b.axvline(_event.period, color="grey", linestyle=":", alpha=0.4)
 
     # Transactions
     sim_txns = [r.housing_transactions for r in result.records]
@@ -280,8 +280,8 @@ def _(fig3, mo):
 def _(mo, result, scenario):
     # Regulatory event timeline
     events_md = "## Regulatory Event Timeline\n\n| Period | Quarter | Description |\n|--------|---------|-------------|\n"
-    for event in scenario.regulatory_events:
-        events_md += f"| {event.period} | {event.quarter} | {event.description} |\n"
+    for _event in scenario.regulatory_events:
+        events_md += f"| {_event.period} | {_event.quarter} | {_event.description} |\n"
 
     events_md += f"\n**Price correlation**: {result.price_correlation():.3f}  \n"
     events_md += f"**Price RMSE**: £{result.price_rmse():,.0f}  \n"

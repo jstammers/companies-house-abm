@@ -341,3 +341,140 @@ class TestRunSimulationCli:
             ],
         )
         assert result.exit_code != 0
+
+
+# ---------------------------------------------------------------------------
+# EvaluationReport edge cases
+# ---------------------------------------------------------------------------
+
+
+class TestEvaluationReportEdgeCases:
+    def test_overall_score_zero_weight(self) -> None:
+        """All-zero weights → overall_score returns inf."""
+        result = StatResult(
+            name="x",
+            description="",
+            simulated=0.0,
+            target=1.0,
+            deviation=0.0,
+            tolerance=0.1,
+            passed=True,
+            weight=0.0,
+        )
+        report = EvaluationReport(results=[result])
+        assert math.isinf(report.overall_score)
+
+    def test_summary_nan_deviation_shows_na(self) -> None:
+        """A stat with NaN deviation should render as N/A in summary."""
+        result = StatResult(
+            name="bad_stat",
+            description="",
+            simulated=float("nan"),
+            target=1.0,
+            deviation=float("nan"),
+            tolerance=0.1,
+            passed=False,
+            weight=1.0,
+        )
+        report = EvaluationReport(results=[result])
+        summary = report.summary()
+        assert "N/A" in summary
+
+    def test_as_dict_includes_all_fields(self) -> None:
+        result = StatResult(
+            name="x",
+            description="desc",
+            simulated=0.5,
+            target=1.0,
+            deviation=-0.5,
+            tolerance=0.1,
+            passed=False,
+            weight=2.0,
+        )
+        report = EvaluationReport(results=[result])
+        d = report.as_dict()
+        target = d["targets"][0]  # type: ignore[index]
+        assert target["name"] == "x"
+        assert target["description"] == "desc"
+        assert target["simulated"] == pytest.approx(0.5)
+        assert target["deviation"] == pytest.approx(-0.5)
+        assert target["passed"] is False
+
+
+class TestComputeSimulationStatsEdgeCases:
+    def test_two_gdp_records_gives_zero_std(self) -> None:
+        """Two-period GDP growth → std deviation branch with n=1 growth."""
+        records = [
+            PeriodRecord(period=0, gdp=1_000_000.0),
+            PeriodRecord(period=1, gdp=1_005_000.0),
+        ]
+        result = SimulationResult(records=records)
+        stats = compute_simulation_stats(result)
+        # Only one growth rate → std = 0
+        assert stats["gdp_growth_std"] == pytest.approx(0.0)
+
+
+class TestEvaluateSimulationEdgeCases:
+    def test_target_with_zero_target_value_marked_failed(self) -> None:
+        """A target with target_value=0 should be marked failed (division by zero)."""
+        target = TargetStat(
+            name="gdp_growth_mean",
+            description="Zero target",
+            target_value=0.0,
+            tolerance=0.001,
+            weight=1.0,
+        )
+        result = _make_result(n=5)
+        report = evaluate_simulation(result, targets=[target])
+        assert report.n_total == 1
+        assert report.results[0].passed is False
+        assert math.isnan(report.results[0].deviation)
+
+    def test_stat_not_in_result_gives_nan(self) -> None:
+        """If the stat key is not in computed stats, deviation should be NaN."""
+        target = TargetStat(
+            name="nonexistent_stat",
+            description="Not computed",
+            target_value=0.5,
+            tolerance=0.1,
+            weight=1.0,
+        )
+        result = _make_result(n=5)
+        report = evaluate_simulation(result, targets=[target])
+        assert math.isnan(report.results[0].deviation)
+        assert report.results[0].passed is False
+
+
+class TestHistoricalEvaluationReportEdgeCases:
+    def test_summary_without_cross_sectional(self) -> None:
+        """HistoricalEvaluationReport.summary should work when cross_sectional is None."""
+        from companies_house_abm.abm.evaluation import HistoricalEvaluationReport
+
+        report = HistoricalEvaluationReport(
+            scenario_name="no_cross",
+            n_periods=4,
+            price_correlation=0.95,
+            price_rmse=5000.0,
+            price_rmse_pct=0.02,
+            directional_accuracy=0.75,
+            mean_homeownership=0.64,
+            cross_sectional=None,
+        )
+        summary = report.summary()
+        assert "Historical Evaluation" in summary
+        # Cross-sectional section should NOT be present
+        assert "Evaluation Report" not in summary
+
+    def test_as_dict_without_cross_sectional(self) -> None:
+        """HistoricalEvaluationReport.as_dict should omit cross_sectional when None."""
+        from companies_house_abm.abm.evaluation import HistoricalEvaluationReport
+
+        report = HistoricalEvaluationReport(
+            scenario_name="no_cross",
+            n_periods=4,
+            price_correlation=0.95,
+            cross_sectional=None,
+        )
+        d = report.as_dict()
+        assert "cross_sectional" not in d
+        assert d["scenario_name"] == "no_cross"

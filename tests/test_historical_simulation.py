@@ -183,6 +183,109 @@ class TestHistoricalResult:
         assert math.isnan(result.price_rmse())
         assert math.isnan(result.directional_accuracy())
 
+    def test_simulated_transactions_property(self):
+        from companies_house_abm.abm.model import PeriodRecord
+
+        records = [
+            PeriodRecord(period=0, housing_transactions=10),
+            PeriodRecord(period=1, housing_transactions=15),
+        ]
+        result = HistoricalResult(records=records)
+        assert result.simulated_transactions == [10, 15]
+
+    def test_price_rmse_pct_empty(self):
+        result = HistoricalResult()
+        assert math.isnan(result.price_rmse_pct())
+
+    def test_price_rmse_pct_with_zero_mean(self):
+        from companies_house_abm.abm.model import PeriodRecord
+
+        records = [PeriodRecord(period=0, average_house_price=100.0)]
+        result = HistoricalResult(records=records, actual_hpi=[0.0])
+        assert math.isnan(result.price_rmse_pct())
+
+    def test_price_rmse_pct_normal(self):
+        result = self._make_result(
+            [100, 110, 120, 130],
+            [100, 110, 120, 130],
+        )
+        # Perfect match → RMSE = 0 → RMSE% = 0
+        assert result.price_rmse_pct() == pytest.approx(0.0)
+
+    def test_summary_with_records(self):
+        result = self._make_result(
+            [100, 110, 120, 130],
+            [100, 110, 120, 130],
+        )
+        summary = result.summary()
+        assert "Final simulated price" in summary
+        assert "Homeownership rate" in summary
+
+
+class TestHistoricalSimulationEmptyPaths:
+    def test_empty_bank_rate_path_uses_default(self):
+        """HistoricalSimulation should handle an empty bank_rate_path gracefully."""
+        scenario = HistoricalScenario(
+            name="empty_paths",
+            start_quarter="2020Q1",
+            n_periods=2,
+            initial_average_price=200_000.0,
+            bank_rate_path=[],
+            mortgage_rate_path=[],
+            income_growth_path=[0.0, 0.005],
+        )
+        hsim = HistoricalSimulation(scenario, base_config=_mini_config())
+        result = hsim.run()
+        assert len(result.records) == 2
+
+
+class TestHistoricalSimulationRegEvents:
+    def test_mortgage_override_applied(self):
+        event = RegulatoryEvent(
+            period=1,
+            quarter="2020Q2",
+            description="Tighten DTI",
+            mortgage_overrides={"max_dti": 3.5, "max_ltv": 0.80},
+        )
+        scenario = replace(
+            _mini_scenario(),
+            regulatory_events=[event],
+        )
+        hsim = HistoricalSimulation(scenario, base_config=_mini_config())
+        hsim.run()
+        assert hsim._sim.config.mortgage.max_dti == pytest.approx(3.5)
+        assert hsim._sim.config.mortgage.max_ltv == pytest.approx(0.80)
+
+    def test_housing_override_applied(self):
+        from companies_house_abm.abm.config import HousingMarketConfig
+
+        event = RegulatoryEvent(
+            period=1,
+            quarter="2020Q2",
+            description="Raise transaction cost",
+            housing_overrides={"transaction_cost": 0.08},
+        )
+        scenario = replace(
+            _mini_scenario(),
+            regulatory_events=[event],
+        )
+        hsim = HistoricalSimulation(scenario, base_config=_mini_config())
+        hsim.run()
+        assert hsim._sim.config.housing_market.transaction_cost == pytest.approx(0.08)
+
+
+class TestPearsonEdgeCases:
+    def test_pearson_constant_series(self):
+        from companies_house_abm.abm.historical import _pearson
+
+        # Constant series has zero variance → NaN
+        assert math.isnan(_pearson([5.0, 5.0, 5.0], [1.0, 2.0, 3.0]))
+
+    def test_pearson_fewer_than_two_points(self):
+        from companies_house_abm.abm.historical import _pearson
+
+        assert math.isnan(_pearson([1.0], [1.0]))
+
 
 class TestHistoricalEvaluation:
     def test_evaluate_historical(self):
@@ -215,3 +318,51 @@ class TestHistoricalEvaluation:
         assert report.mean_homeownership == pytest.approx(0.64)
         summary = report.summary()
         assert "Historical Evaluation" in summary
+
+    def test_evaluate_historical_report_as_dict(self):
+        from companies_house_abm.abm.evaluation import evaluate_historical
+        from companies_house_abm.abm.model import PeriodRecord
+
+        records = [
+            PeriodRecord(
+                period=i,
+                average_house_price=200_000 + i * 1000,
+                gdp=1e9,
+            )
+            for i in range(4)
+        ]
+        result = HistoricalResult(
+            scenario_name="dict_test",
+            records=records,
+            actual_hpi=[200_000 + i * 1000 for i in range(4)],
+        )
+        report = evaluate_historical(result)
+        d = report.as_dict()
+        assert d["scenario_name"] == "dict_test"
+        assert d["n_periods"] == 4
+        assert "price_correlation" in d
+        assert "cross_sectional" in d
+
+    def test_evaluate_historical_summary_includes_cross_sectional(self):
+        from companies_house_abm.abm.evaluation import evaluate_historical
+        from companies_house_abm.abm.model import PeriodRecord
+
+        records = [
+            PeriodRecord(
+                period=i,
+                average_house_price=200_000 + i * 500,
+                gdp=1e9,
+                inflation=0.005,
+                unemployment_rate=0.04,
+            )
+            for i in range(6)
+        ]
+        result = HistoricalResult(
+            scenario_name="cross_test",
+            records=records,
+            actual_hpi=[200_000 + i * 600 for i in range(6)],
+        )
+        report = evaluate_historical(result)
+        summary = report.summary()
+        assert "Evaluation Report" in summary
+

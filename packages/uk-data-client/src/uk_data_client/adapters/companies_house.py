@@ -250,7 +250,7 @@ def fetch_sic_codes(
     Example::
 
         >>> from pathlib import Path
-        >>> from companies_house_abm.data_sources.companies_house import fetch_sic_codes
+        >>> from uk_data_client.adapters.companies_house import fetch_sic_codes
         >>> df = fetch_sic_codes(output_path=Path("data/sic_codes.parquet"))
         >>> "sic_code" in df.columns
         True

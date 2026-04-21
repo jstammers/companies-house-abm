@@ -183,7 +183,7 @@ def get_income_tax_bands(tax_year: str = "2024/25") -> list[IncomeTaxBand]:
 
     Example::
 
-        >>> from companies_house_abm.data_sources.hmrc import get_income_tax_bands
+        >>> from uk_data_client.adapters.hmrc import get_income_tax_bands
         >>> bands = get_income_tax_bands()
         >>> len(bands)
         4
@@ -214,7 +214,7 @@ def get_corporation_tax_rate(profits: float | None = None) -> float:
 
     Example::
 
-        >>> from companies_house_abm.data_sources.hmrc import get_corporation_tax_rate
+        >>> from uk_data_client.adapters.hmrc import get_corporation_tax_rate
         >>> get_corporation_tax_rate(profits=30_000)
         0.19
         >>> get_corporation_tax_rate(profits=300_000)
@@ -251,7 +251,7 @@ def compute_income_tax(gross_income: float) -> float:
 
     Example::
 
-        >>> from companies_house_abm.data_sources.hmrc import compute_income_tax
+        >>> from uk_data_client.adapters.hmrc import compute_income_tax
         >>> compute_income_tax(0)
         0.0
         >>> compute_income_tax(12_570)
@@ -301,7 +301,7 @@ def get_national_insurance_rates(
 
     Example::
 
-        >>> from companies_house_abm.data_sources.hmrc import (
+        >>> from uk_data_client.adapters.hmrc import (
         ...     get_national_insurance_rates,
         ... )
         >>> ni = get_national_insurance_rates()
@@ -327,7 +327,7 @@ def compute_employer_ni(gross_salary: float) -> float:
 
     Example::
 
-        >>> from companies_house_abm.data_sources.hmrc import compute_employer_ni
+        >>> from uk_data_client.adapters.hmrc import compute_employer_ni
         >>> round(compute_employer_ni(30_000), 2)
         2882.7
     """
@@ -350,7 +350,7 @@ def get_vat_rate(category: str = "standard") -> float:
 
     Example::
 
-        >>> from companies_house_abm.data_sources.hmrc import get_vat_rate
+        >>> from uk_data_client.adapters.hmrc import get_vat_rate
         >>> get_vat_rate()
         0.2
         >>> get_vat_rate("reduced")
@@ -391,7 +391,7 @@ def effective_tax_wedge(gross_salary: float) -> dict[str, float]:
 
     Example::
 
-        >>> from companies_house_abm.data_sources.hmrc import effective_tax_wedge
+        >>> from uk_data_client.adapters.hmrc import effective_tax_wedge
         >>> wedge = effective_tax_wedge(35_000)
         >>> 0 < wedge["effective_rate"] < 1
         True

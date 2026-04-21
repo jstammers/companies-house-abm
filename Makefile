@@ -1,4 +1,4 @@
-.PHONY: verify fix lint format format-check type-check install test test-cov test-matrix test-matrix-cov pysentry docs docs-serve build-rust benchmark
+.PHONY: verify fix lint format format-check type-check install test test-cov test-integration test-matrix test-matrix-cov pysentry docs docs-serve build-rust benchmark
 
 # Verify - check everything without making changes
 verify: lint format-check type-check
@@ -27,11 +27,15 @@ install:
 
 # Run tests
 test:
-	uv run pytest tests/ -v
+	uv run pytest tests/ -m "not integration" -v
 
 # Run tests with coverage
 test-cov:
-	uv run pytest --cov --cov-report=xml --cov-report=term-missing
+	uv run pytest -m "not integration" --cov --cov-report=xml --cov-report=term-missing
+
+# Run live-source integration tests explicitly
+test-integration:
+	uv run pytest tests/ -m integration -v
 
 # Run tests across all Python versions
 test-matrix:

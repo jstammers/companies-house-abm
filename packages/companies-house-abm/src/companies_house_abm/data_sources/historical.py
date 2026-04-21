@@ -658,7 +658,7 @@ def fetch_earnings_index_quarterly(
         List of ``{"quarter": str, "value": float}`` dicts.
     """
     try:
-        url = "https://api.ons.gov.uk/timeseries/KAB9/dataset/lms/data"
+        url = "https://api.ons.gov.uk/v1/timeseries/KAB9/dataset/lms/data"
         data = retry(get_json, url)
         months = data.get("months", [])
         if months:

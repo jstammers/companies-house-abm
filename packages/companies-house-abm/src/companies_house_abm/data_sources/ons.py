@@ -1,17 +1,19 @@
 """ONS (Office for National Statistics) data fetcher.
 
-Wraps the ONS Beta API (https://api.beta.ons.gov.uk/v1/) and selected
-static datasets to provide UK macroeconomic data for ABM calibration.
+Wraps the ONS API (https://api.ons.gov.uk/v1/) and selected static datasets
+to provide UK macroeconomic and housing data for ABM calibration.
 
 Datasets used
 -------------
-- **IHXW** - UK households' disposable income (GBP million, seasonally
-  adjusted, quarterly).
 - **ABMI** - UK GDP at market prices (GBP million, seasonally adjusted,
   quarterly).
-- **DGRP** - Household saving ratio (%), seasonally adjusted, quarterly.
-- **LFS** - Labour Force Survey aggregate: unemployment rate and average
+- **RPHQ** - UK households' disposable income (GBP million, seasonally
+  adjusted, quarterly).
+- **NRJS** - Household saving ratio (%), seasonally adjusted, quarterly.
+- **MGSX** / **KAB9** - Labour Force Survey: unemployment rate and average
   weekly earnings.
+- **HP7A** - House price to workplace-based earnings affordability ratio.
+- **D7RA** - Index of Private Housing Rental Prices (monthly).
 - **Supply and Use Tables** - ONS Input-Output supply and use tables
   (parsed into a coefficient matrix).
 
@@ -34,7 +36,7 @@ logger = logging.getLogger(__name__)
 # ONS API root
 # ---------------------------------------------------------------------------
 
-_ONS_API = "https://api.ons.gov.uk"
+_ONS_API = "https://api.ons.gov.uk/v1"
 
 # ---------------------------------------------------------------------------
 # Dataset series IDs
@@ -55,6 +57,29 @@ _UNEMPLOYMENT_RATE_SERIES = "MGSX"
 # Average weekly earnings (GBP, SA, monthly)
 _AVERAGE_EARNINGS_SERIES = "KAB9"
 
+# House price to workplace-based earnings affordability ratio (annual)
+_AFFORDABILITY_SERIES = "HP7A"
+
+# Index of Private Housing Rental Prices (monthly)
+_RENTAL_INDEX_SERIES = "D7RA"
+
+# ---------------------------------------------------------------------------
+# Fallback values for housing statistics
+# ---------------------------------------------------------------------------
+
+# English Housing Survey 2023-24 tenure shares
+_FALLBACK_TENURE: dict[str, float] = {
+    "owner_occupier": 0.64,
+    "private_renter": 0.19,
+    "social_renter": 0.17,
+}
+
+# ONS affordability ratio (median house price / median workplace earnings)
+_FALLBACK_AFFORDABILITY = 8.3
+
+# Annual private rental price growth (ONS IPHRP, 2024)
+_FALLBACK_RENTAL_GROWTH = 0.065
+
 # ---------------------------------------------------------------------------
 # Series → ONS dataset mapping
 # Each ONS timeseries belongs to one or more named datasets; this mapping
@@ -69,6 +94,9 @@ _SERIES_DATASET: dict[str, str] = {
     # Labour market (Labour Market Statistics bulletin)
     "MGSX": "lms",
     "KAB9": "lms",
+    # Housing statistics
+    "HP7A": "housepricestatistics",
+    "D7RA": "mm23",
     # GVA by industry (UK Economic Accounts)
     "L2KL": "ukea",
     "L2KP": "ukea",
@@ -472,6 +500,76 @@ def fetch_input_output_table() -> dict[str, Any]:
         "use_coefficients": use_coefficients,
         "final_demand_shares": final_demand_shares,
     }
+
+
+# ---------------------------------------------------------------------------
+# Housing statistics
+# ---------------------------------------------------------------------------
+
+
+def fetch_tenure_distribution() -> dict[str, float]:
+    """Fetch the UK housing tenure distribution.
+
+    Returns shares for owner-occupiers, private renters, and social renters.
+    Falls back to English Housing Survey 2023-24 values when live data is
+    unavailable.
+
+    Returns:
+        Dict mapping tenure type to share (0–1).
+    """
+    # ONS does not expose tenure via a simple timeseries endpoint; we rely
+    # on the English Housing Survey headline figures as a stable fallback.
+    logger.info("Using EHS 2023-24 tenure distribution (fallback)")
+    return dict(_FALLBACK_TENURE)
+
+
+def fetch_affordability_ratio() -> float:
+    """Fetch the median house price to workplace earnings affordability ratio.
+
+    Uses ONS series ``HP7A`` (median workplace-based affordability ratio for
+    England and Wales) from the ``housepricestatistics`` dataset.
+
+    Returns:
+        Median price-to-income ratio, or the fallback value of 8.3 when the
+        API is unavailable.
+    """
+    try:
+        obs = _fetch_timeseries(_AFFORDABILITY_SERIES, limit=1)
+        if obs:
+            value = float(obs[-1]["value"])
+            if value > 0:
+                logger.info("Fetched affordability ratio: %.1f", value)
+                return value
+    except Exception:
+        logger.warning("ONS affordability series unavailable, using fallback")
+
+    return _FALLBACK_AFFORDABILITY
+
+
+def fetch_rental_growth() -> float:
+    """Fetch the annual private rental price growth rate.
+
+    Uses ONS series ``D7RA`` (Index of Private Housing Rental Prices,
+    monthly) from the ``mm23`` dataset.  Computes the year-on-year
+    growth from the most recent 13 months of observations.
+
+    Returns:
+        Annual rental price growth as a decimal (e.g. 0.065 for 6.5%),
+        or the fallback value of 0.065 when data is unavailable.
+    """
+    try:
+        obs = _fetch_timeseries(_RENTAL_INDEX_SERIES, limit=13)
+        if len(obs) >= 13:
+            latest = float(obs[-1]["value"])
+            year_ago = float(obs[0]["value"])
+            if year_ago > 0 and latest > 0:
+                growth = (latest / year_ago) - 1.0
+                logger.info("Fetched rental growth: %.1f%%", growth * 100)
+                return growth
+    except Exception:
+        logger.warning("ONS rental index unavailable, using fallback")
+
+    return _FALLBACK_RENTAL_GROWTH
 
 
 def parse_ons_csv(text: str) -> list[dict[str, str]]:

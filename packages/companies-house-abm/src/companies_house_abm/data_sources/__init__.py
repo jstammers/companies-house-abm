@@ -58,15 +58,13 @@ from companies_house_abm.data_sources.land_registry import (
     fetch_uk_average_price,
 )
 from companies_house_abm.data_sources.ons import (
+    fetch_affordability_ratio,
     fetch_gdp,
     fetch_household_income,
     fetch_input_output_table,
     fetch_labour_market,
-    fetch_savings_ratio,
-)
-from companies_house_abm.data_sources.ons_housing import (
-    fetch_affordability_ratio,
     fetch_rental_growth,
+    fetch_savings_ratio,
     fetch_tenure_distribution,
 )
 

@@ -714,10 +714,6 @@ class TestCalibrateModel:
                 "companies_house_abm.data_sources.land_registry.retry",
                 side_effect=Exception("api down"),
             ),
-            patch(
-                "companies_house_abm.data_sources.ons_housing.retry",
-                side_effect=Exception("api down"),
-            ),
         ):
             from companies_house_abm.data_sources.calibration import calibrate_model
 
@@ -745,10 +741,6 @@ class TestCalibrateModel:
             ),
             patch(
                 "companies_house_abm.data_sources.land_registry.retry",
-                side_effect=Exception("api down"),
-            ),
-            patch(
-                "companies_house_abm.data_sources.ons_housing.retry",
                 side_effect=Exception("api down"),
             ),
         ):

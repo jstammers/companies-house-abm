@@ -247,7 +247,7 @@ def fetch_household_income(limit: int = 20) -> list[dict[str, Any]]:
 def fetch_savings_ratio(limit: int = 20) -> list[dict[str, Any]]:
     """Fetch UK household saving ratio observations.
 
-    Data is sourced from ONS series ``DGRP`` (households and NPISH
+    Data is sourced from ONS series ``NRJS`` (households and NPISH
     saving ratio, SA, %).
 
     Args:

@@ -1,7 +1,7 @@
 """Integration tests for live historical data downloads.
 
 These tests make **real HTTP requests** to the BoE IADB, ONS API, and
-Land Registry SPARQL endpoint.  They are marked ``network`` and are
+Land Registry SPARQL endpoint. They are marked ``integration`` and are
 skipped automatically when network access is unavailable.
 
 Run selectively with::

@@ -128,7 +128,7 @@ def fetch_bank_rate(num_observations: int = 24) -> list[dict[str, str]]:
 
     Example::
 
-        >>> from companies_house_abm.data_sources.boe import fetch_bank_rate
+        >>> from uk_data_client.adapters.boe import fetch_bank_rate
         >>> obs = fetch_bank_rate()
         >>> isinstance(obs, list)
         True
@@ -155,7 +155,7 @@ def fetch_bank_rate_current() -> float:
 
     Example::
 
-        >>> from companies_house_abm.data_sources.boe import fetch_bank_rate_current
+        >>> from uk_data_client.adapters.boe import fetch_bank_rate_current
         >>> rate = fetch_bank_rate_current()
         >>> 0.0 <= rate <= 0.25
         True
@@ -191,7 +191,7 @@ def fetch_lending_rates() -> dict[str, float]:
 
     Example::
 
-        >>> from companies_house_abm.data_sources.boe import fetch_lending_rates
+        >>> from uk_data_client.adapters.boe import fetch_lending_rates
         >>> rates = fetch_lending_rates()
         >>> "household_rate" in rates and "business_rate" in rates
         True
@@ -237,7 +237,7 @@ def get_aggregate_capital_ratio() -> float:
 
     Example::
 
-        >>> from companies_house_abm.data_sources.boe import get_aggregate_capital_ratio
+        >>> from uk_data_client.adapters.boe import get_aggregate_capital_ratio
         >>> ratio = get_aggregate_capital_ratio()
         >>> 0.05 < ratio < 0.40
         True

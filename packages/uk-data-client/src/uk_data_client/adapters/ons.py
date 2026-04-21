@@ -212,7 +212,7 @@ def fetch_gdp(limit: int = 20) -> list[dict[str, Any]]:
 
     Example::
 
-        >>> from companies_house_abm.data_sources.ons import fetch_gdp
+        >>> from uk_data_client.adapters.ons import fetch_gdp
         >>> obs = fetch_gdp(limit=4)
         >>> len(obs) <= 4
         True
@@ -236,7 +236,7 @@ def fetch_household_income(limit: int = 20) -> list[dict[str, Any]]:
 
     Example::
 
-        >>> from companies_house_abm.data_sources.ons import fetch_household_income
+        >>> from uk_data_client.adapters.ons import fetch_household_income
         >>> obs = fetch_household_income(limit=4)
         >>> isinstance(obs, list)
         True
@@ -259,7 +259,7 @@ def fetch_savings_ratio(limit: int = 20) -> list[dict[str, Any]]:
 
     Example::
 
-        >>> from companies_house_abm.data_sources.ons import fetch_savings_ratio
+        >>> from uk_data_client.adapters.ons import fetch_savings_ratio
         >>> obs = fetch_savings_ratio(limit=4)
         >>> isinstance(obs, list)
         True
@@ -283,7 +283,7 @@ def fetch_labour_market() -> dict[str, float | None]:
 
     Example::
 
-        >>> from companies_house_abm.data_sources.ons import fetch_labour_market
+        >>> from uk_data_client.adapters.ons import fetch_labour_market
         >>> data = fetch_labour_market()
         >>> "unemployment_rate" in data
         True

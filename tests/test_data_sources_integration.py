@@ -534,9 +534,7 @@ class TestOnsFetchTimeseriesUrlConstruction:
             captured.append(url)
             return {"quarters": [{"date": "2024 Q4", "value": "100"}]}
 
-        with patch(
-            "uk_data_client.adapters.ons.retry", side_effect=_fake_retry
-        ):
+        with patch("uk_data_client.adapters.ons.retry", side_effect=_fake_retry):
             from uk_data_client.adapters.ons import _fetch_timeseries
 
             for sid in series_ids:

@@ -444,7 +444,9 @@ class HMRCAdapter(BaseAdapter):
             )
 
         if series_id == "income_tax_basic_2024":
-            basic_band = next(band for band in get_income_tax_bands() if band.name == "basic")
+            basic_band = next(
+                band for band in get_income_tax_bands() if band.name == "basic"
+            )
             return point_timeseries(
                 series_id=concept,
                 name="UK income tax basic rate",

@@ -38,6 +38,7 @@ from datetime import date
 from pathlib import Path
 
 import polars as pl
+
 from uk_data_client.adapters.base import BaseAdapter
 from uk_data_client.models import Entity, Event
 
@@ -285,17 +286,21 @@ def fetch_sic_codes(
 class CompaniesHouseAdapter(BaseAdapter):
     """Canonical adapter for Companies House company and filing data."""
 
-    def fetch_series(self, series_id: str, **kwargs: object):
+    def fetch_series(self, series_id: str, **_kwargs: object):
         """Companies House does not expose generic macro time-series here."""
         msg = f"Unsupported Companies House series: {series_id}"
         raise ValueError(msg)
 
-    def fetch_entity(self, entity_id: str, **kwargs: object) -> Entity:
+    def fetch_entity(self, entity_id: str, **_kwargs: object) -> Entity:
         """Search for and return a canonical company entity."""
         from companies_house.api.client import CompaniesHouseClient
         from companies_house.api.search import search_companies
 
-        results = search_companies(CompaniesHouseClient(), entity_id, items_per_page=1)
+        results = search_companies(
+            CompaniesHouseClient(),
+            entity_id,
+            items_per_page=1,
+        )
         if not results:
             msg = f"No Companies House entity found for {entity_id!r}"
             raise ValueError(msg)
@@ -338,7 +343,9 @@ class CompaniesHouseAdapter(BaseAdapter):
         )
         return [
             Event(
-                event_id=f"companies_house:{company_number}:{filing.transaction_id or index}",
+                event_id=(
+                    f"companies_house:{company_number}:{filing.transaction_id or index}"
+                ),
                 entity_id=f"companies_house:{company_number}",
                 event_type="filing",
                 timestamp=filing.date,

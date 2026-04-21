@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
-from uk_data_client.adapters.base import BaseAdapter
-from uk_data_client.models import TimeSeries
+if TYPE_CHECKING:
+    from uk_data_client.adapters.base import BaseAdapter
+    from uk_data_client.models import TimeSeries
 
 CONCEPT_REGISTRY: dict[str, dict[str, str | None]] = {
     "gdp": {"ons": "ABMI", "boe": None},
@@ -30,7 +32,9 @@ class ConceptResolver:
     """Resolve canonical concepts to source-specific series identifiers."""
 
     adapters: dict[str, BaseAdapter]
-    registry: dict[str, dict[str, str | None]] = CONCEPT_REGISTRY
+    registry: dict[str, dict[str, str | None]] = field(
+        default_factory=lambda: CONCEPT_REGISTRY.copy()
+    )
 
     def resolve_series(
         self,
@@ -50,7 +54,11 @@ class ConceptResolver:
             if series_id is None:
                 msg = f"Concept {concept!r} is not available from source {source!r}"
                 raise ValueError(msg)
-            return self.adapters[source].fetch_series(series_id, concept=concept, **kwargs)
+            return self.adapters[source].fetch_series(
+                series_id,
+                concept=concept,
+                **kwargs,
+            )
 
         for adapter_name, series_id in candidates.items():
             if series_id is None or adapter_name not in self.adapters:

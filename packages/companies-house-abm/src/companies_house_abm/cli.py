@@ -266,7 +266,8 @@ def fetch_data(
             "--source",
             "-s",
             help=(
-                "Data source to fetch: ons, boe, hmrc, io-tables, sic, all. "
+                "Data source to fetch: ons, boe, hmrc, io-tables, sic, "
+                "historical, land-registry, all. "
                 "May be repeated. Defaults to all."
             ),
         ),
@@ -281,9 +282,10 @@ def fetch_data(
 ) -> None:
     """Fetch publicly available UK economic data for ABM calibration.
 
-    Downloads data from ONS, Bank of England, and HMRC to calibrate
-    household income, government tax rates, bank interest rates, and
-    firm input-output production relations.
+    Downloads data from ONS, Bank of England, HMRC, HM Land Registry, and
+    Companies House to calibrate household income, government tax rates,
+    bank interest rates, firm input-output production relations, and
+    housing market parameters.
 
     Examples:
 
@@ -313,11 +315,14 @@ def fetch_data(
         get_vat_rate,
     )
     from companies_house_abm.data_sources.ons import (
+        fetch_affordability_ratio,
         fetch_gdp,
         fetch_household_income,
         fetch_input_output_table,
         fetch_labour_market,
+        fetch_rental_growth,
         fetch_savings_ratio,
+        fetch_tenure_distribution,
     )
 
     requested = set(sources) if sources else {"all"}
@@ -352,6 +357,20 @@ def fetch_data(
         typer.echo(
             f"  Labour market: unemployment={labour.get('unemployment_rate')}%"
             " -> ons_labour_market.json"
+        )
+
+        tenure = fetch_tenure_distribution()
+        affordability = fetch_affordability_ratio()
+        rental_growth = fetch_rental_growth()
+        ons_housing_data = {
+            "tenure_distribution": tenure,
+            "affordability_ratio": affordability,
+            "rental_growth": rental_growth,
+        }
+        _write_json(output / "ons_housing.json", ons_housing_data)
+        typer.echo(
+            f"  Housing: affordability={affordability:.1f}x,"
+            f" rental growth={rental_growth:.1%} -> ons_housing.json"
         )
 
     # ------------------------------------------------------------ IO tables
@@ -426,6 +445,41 @@ def fetch_data(
             typer.echo(f"  SIC codes: {len(df):,} companies -> {sic_output.name}")
         except RuntimeError as exc:
             typer.echo(f"  Warning: could not fetch SIC codes: {exc}", err=True)
+
+    # ----------------------------------------------- Historical time-series
+    if fetch_all or "historical" in requested:
+        typer.echo("Fetching historical quarterly time-series data...")
+        from companies_house_abm.data_sources.historical import (
+            fetch_all_historical,
+        )
+
+        historical = fetch_all_historical()
+        _write_json(output / "historical_quarterly.json", historical)
+        n_quarters = len(next(iter(historical.values()), []))
+        typer.echo(
+            f"  Historical data: {len(historical)} series,"
+            f" {n_quarters} quarters -> historical_quarterly.json"
+        )
+
+    # ---------------------------------------------------- HM Land Registry
+    if fetch_all or "land-registry" in requested:
+        typer.echo("Fetching HM Land Registry house price data...")
+        from companies_house_abm.data_sources.land_registry import (
+            fetch_regional_prices,
+            fetch_uk_average_price,
+        )
+
+        regional = fetch_regional_prices()
+        uk_avg = fetch_uk_average_price()
+        lr_data = {
+            "uk_average_price": uk_avg,
+            "regional_prices": regional,
+        }
+        _write_json(output / "land_registry_prices.json", lr_data)
+        typer.echo(
+            f"  Land Registry: UK avg £{uk_avg:,.0f},"
+            f" {len(regional)} regions -> land_registry_prices.json"
+        )
 
     # ----------------------------------------------------------- Calibration
     if calibrate:
@@ -891,6 +945,193 @@ def serve(
         port=port,
         reload=reload,
     )
+
+
+# ---------------------------------------------------------------------------
+# Housing sub-app
+# ---------------------------------------------------------------------------
+
+housing_app = typer.Typer(
+    name="housing",
+    help="Housing market simulation commands.",
+)
+app.add_typer(housing_app, name="housing")
+
+
+@housing_app.command(name="simulate-historical")
+def simulate_historical(
+    output: Annotated[
+        Path,
+        typer.Option(
+            "--output",
+            "-o",
+            help="Directory to write results.",
+        ),
+    ] = Path("results/historical"),
+    start: Annotated[
+        str,
+        typer.Option(
+            "--start",
+            help="Start quarter (e.g. 2013Q1).",
+        ),
+    ] = "2013Q1",
+    end: Annotated[
+        str,
+        typer.Option(
+            "--end",
+            help="End quarter (e.g. 2024Q4).",
+        ),
+    ] = "2024Q4",
+    output_format: Annotated[
+        str,
+        typer.Option(
+            "--format",
+            "-f",
+            help="Output format: csv, json, or parquet.",
+        ),
+    ] = "csv",
+    evaluate: Annotated[
+        bool,
+        typer.Option(
+            "--evaluate/--no-evaluate",
+            help="Compare against actual UK housing data.",
+        ),
+    ] = False,
+) -> None:
+    """Run a historical UK housing market simulation.
+
+    Drives the ABM with actual Bank Rate, mortgage rate, and income
+    data from the specified period, applying regulatory events
+    (MMR, stamp duty changes, COVID measures) at their historical
+    dates.  Compares simulated house prices against actual UK HPI.
+
+    Examples:
+
+    \\b
+        # Run full 2013-2024 simulation
+        companies_house_abm housing simulate-historical
+
+    \\b
+        # Run 2015-2024 with evaluation
+        companies_house_abm housing simulate-historical \\
+            --start 2015Q1 --evaluate
+
+    \\b
+        # Save as JSON
+        companies_house_abm housing simulate-historical \\
+            --format json --output results/historical
+    """
+    from companies_house_abm.abm.historical import HistoricalSimulation
+    from companies_house_abm.abm.scenarios import build_uk_2013_2024
+
+    if output_format not in ("csv", "json", "parquet"):
+        typer.echo(f"Error: unsupported format '{output_format}'", err=True)
+        raise typer.Exit(code=1)
+
+    typer.echo(f"Building UK housing scenario ({start} to {end})...")
+    scenario = build_uk_2013_2024()
+
+    # Trim scenario to requested window
+    labels = scenario.quarter_labels
+    if start != "2013Q1" or end != "2024Q4":
+        try:
+            s_idx = labels.index(start)
+        except ValueError:
+            typer.echo(f"Error: invalid start quarter '{start}'", err=True)
+            raise typer.Exit(code=1) from None
+        try:
+            e_idx = labels.index(end)
+        except ValueError:
+            typer.echo(f"Error: invalid end quarter '{end}'", err=True)
+            raise typer.Exit(code=1) from None
+
+        from dataclasses import replace as dc_replace
+
+        n = e_idx - s_idx + 1
+        scenario = dc_replace(
+            scenario,
+            start_quarter=start,
+            n_periods=n,
+            initial_average_price=scenario.actual_hpi[s_idx],
+            bank_rate_path=scenario.bank_rate_path[s_idx : e_idx + 1],
+            mortgage_rate_path=scenario.mortgage_rate_path[s_idx : e_idx + 1],
+            income_growth_path=scenario.income_growth_path[s_idx : e_idx + 1],
+            regulatory_events=[
+                dc_replace(e, period=e.period - s_idx)
+                for e in scenario.regulatory_events
+                if s_idx <= e.period <= e_idx
+            ],
+            actual_hpi=scenario.actual_hpi[s_idx : e_idx + 1],
+            actual_transactions=scenario.actual_transactions[s_idx : e_idx + 1],
+        )
+
+    typer.echo(
+        f"Scenario: {scenario.n_periods} periods, "
+        f"{len(scenario.regulatory_events)} regulatory events"
+    )
+
+    typer.echo("Running historical simulation...")
+    hsim = HistoricalSimulation(scenario)
+    result = hsim.run()
+
+    typer.echo(f"Simulation complete: {len(result.records)} periods.")
+    typer.echo(result.summary())
+
+    # ── Write results ────────────────────────────────────────────────
+    output.mkdir(parents=True, exist_ok=True)
+
+    import dataclasses
+
+    records_data = [dataclasses.asdict(r) for r in result.records]
+
+    # Add quarter labels and actual data
+    for i, rec in enumerate(records_data):
+        if i < len(result.quarter_labels):
+            rec["quarter"] = result.quarter_labels[i]
+        if i < len(result.actual_hpi):
+            rec["actual_house_price"] = result.actual_hpi[i]
+        if i < len(result.actual_transactions):
+            rec["actual_transactions"] = result.actual_transactions[i]
+
+    if output_format == "json":
+        _write_json(output / "historical_results.json", records_data)
+        typer.echo(f"  Results -> {output / 'historical_results.json'}")
+    elif output_format == "parquet":
+        try:
+            import polars as pl
+
+            df = pl.DataFrame(records_data)
+            df.write_parquet(output / "historical_results.parquet")
+            typer.echo(f"  Results -> {output / 'historical_results.parquet'}")
+        except ImportError:
+            typer.echo(
+                "polars required for parquet. Falling back to CSV.",
+                err=True,
+            )
+            output_format = "csv"
+
+    if output_format == "csv":
+        import csv
+
+        csv_path = output / "historical_results.csv"
+        with csv_path.open("w", newline="", encoding="utf-8") as fh:
+            if records_data:
+                writer = csv.DictWriter(fh, fieldnames=records_data[0].keys())
+                writer.writeheader()
+                writer.writerows(records_data)
+        typer.echo(f"  Results -> {csv_path}")
+
+    # ── Evaluation ───────────────────────────────────────────────────
+    if evaluate:
+        from companies_house_abm.abm.evaluation import evaluate_historical
+
+        typer.echo("\nEvaluating against actual UK housing data...")
+        report = evaluate_historical(result, warm_up=4)
+        typer.echo(report.summary())
+        _write_json(output / "historical_evaluation.json", report.as_dict())
+        typer.echo(f"  Report -> {output / 'historical_evaluation.json'}")
+
+    typer.echo("Done.")
 
 
 if __name__ == "__main__":

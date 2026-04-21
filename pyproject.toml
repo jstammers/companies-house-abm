@@ -122,6 +122,8 @@ addopts = [
 ]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "network: marks tests that require external network access",
+    "integration: marks integration tests that make real network requests (run with '-m integration')",
 ]
 
 # =============================================================================

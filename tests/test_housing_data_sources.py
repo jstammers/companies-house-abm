@@ -59,7 +59,7 @@ class TestLandRegistryFallback:
 
 class TestOnsHousing:
     def test_tenure_distribution_fallback(self):
-        from companies_house_abm.data_sources.ons_housing import (
+        from companies_house_abm.data_sources.ons import (
             fetch_tenure_distribution,
         )
 
@@ -70,24 +70,24 @@ class TestOnsHousing:
         assert total == pytest.approx(1.0)
 
     def test_affordability_ratio_fallback(self):
-        from companies_house_abm.data_sources.ons_housing import (
+        from companies_house_abm.data_sources.ons import (
             fetch_affordability_ratio,
         )
 
         with patch(
-            "companies_house_abm.data_sources.ons_housing._get_json",
+            "companies_house_abm.data_sources.ons.retry",
             side_effect=Exception("offline"),
         ):
             ratio = fetch_affordability_ratio()
         assert ratio == pytest.approx(8.3)
 
     def test_rental_growth_fallback(self):
-        from companies_house_abm.data_sources.ons_housing import (
+        from companies_house_abm.data_sources.ons import (
             fetch_rental_growth,
         )
 
         with patch(
-            "companies_house_abm.data_sources.ons_housing._get_json",
+            "companies_house_abm.data_sources.ons.retry",
             side_effect=Exception("offline"),
         ):
             growth = fetch_rental_growth()
@@ -113,7 +113,7 @@ class TestCalibrateHousing:
                 side_effect=Exception("offline"),
             ),
             patch(
-                "companies_house_abm.data_sources.ons_housing._get_json",
+                "companies_house_abm.data_sources.ons._get_json",
                 side_effect=Exception("offline"),
             ),
         ):
@@ -142,10 +142,6 @@ class TestCalibrateHousing:
             ),
             patch(
                 "companies_house_abm.data_sources.land_registry.retry",
-                side_effect=Exception("api down"),
-            ),
-            patch(
-                "companies_house_abm.data_sources.ons_housing.retry",
                 side_effect=Exception("api down"),
             ),
         ):

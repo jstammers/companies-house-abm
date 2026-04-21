@@ -38,6 +38,15 @@ from companies_house_abm.data_sources.companies_house import fetch_sic_codes
 from companies_house_abm.data_sources.firm_distributions import (
     run_profile_pipeline,
 )
+from companies_house_abm.data_sources.historical import (
+    fetch_all_historical,
+    fetch_bank_rate_quarterly,
+    fetch_earnings_index_quarterly,
+    fetch_hpi_quarterly,
+    fetch_mortgage_approvals_quarterly,
+    fetch_mortgage_rate_quarterly,
+    fetch_transactions_quarterly,
+)
 from companies_house_abm.data_sources.hmrc import (
     get_corporation_tax_rate,
     get_income_tax_bands,
@@ -49,15 +58,13 @@ from companies_house_abm.data_sources.land_registry import (
     fetch_uk_average_price,
 )
 from companies_house_abm.data_sources.ons import (
+    fetch_affordability_ratio,
     fetch_gdp,
     fetch_household_income,
     fetch_input_output_table,
     fetch_labour_market,
-    fetch_savings_ratio,
-)
-from companies_house_abm.data_sources.ons_housing import (
-    fetch_affordability_ratio,
     fetch_rental_growth,
+    fetch_savings_ratio,
     fetch_tenure_distribution,
 )
 
@@ -69,18 +76,25 @@ __all__ = [
     "calibrate_io_sectors",
     "calibrate_model",
     "fetch_affordability_ratio",
+    "fetch_all_historical",
     "fetch_bank_rate",
     "fetch_bank_rate_current",
+    "fetch_bank_rate_quarterly",
+    "fetch_earnings_index_quarterly",
     "fetch_gdp",
     "fetch_household_income",
+    "fetch_hpi_quarterly",
     "fetch_input_output_table",
     "fetch_labour_market",
     "fetch_lending_rates",
+    "fetch_mortgage_approvals_quarterly",
+    "fetch_mortgage_rate_quarterly",
     "fetch_regional_prices",
     "fetch_rental_growth",
     "fetch_savings_ratio",
     "fetch_sic_codes",
     "fetch_tenure_distribution",
+    "fetch_transactions_quarterly",
     "fetch_uk_average_price",
     "get_corporation_tax_rate",
     "get_income_tax_bands",

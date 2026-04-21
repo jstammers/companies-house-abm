@@ -54,7 +54,7 @@ _BULK_URL_TEMPLATE = (
 # CSV column names in the raw Companies House bulk data
 # ---------------------------------------------------------------------------
 
-_COL_COMPANY_NUMBER = "CompanyNumber"
+_COL_COMPANY_NUMBER = " CompanyNumber"
 _COL_SIC_1 = "SICCode.SicText_1"
 
 # Timeout for the bulk download — the file is ~400 MB so needs more time than
@@ -171,7 +171,8 @@ def _normalise(raw: pl.DataFrame) -> pl.DataFrame:
 
     Transformations applied:
 
-    - ``CompanyNumber`` → ``companies_house_registered_number``:
+    - ``CompanyNumber`` (with a leading space, as shipped in the CSV header)
+      → ``companies_house_registered_number``:
       strip whitespace and zero-pad to 8 characters.
     - ``SICCode.SicText_1`` → ``sic_code``:
       extract the leading 5-digit SIC code from strings like

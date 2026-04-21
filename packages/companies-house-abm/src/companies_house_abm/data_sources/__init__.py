@@ -21,7 +21,9 @@ no additional runtime dependencies are required.  Responses are cached in
 memory for the lifetime of the interpreter to avoid redundant requests.
 """
 
-from companies_house_abm.data_sources.boe import (
+from uk_data_client.client import UKDataClient
+from uk_data_client.models import Entity, Event, TimeSeries
+from uk_data_client.adapters.boe import (
     fetch_bank_rate,
     fetch_bank_rate_current,
     fetch_lending_rates,
@@ -34,11 +36,11 @@ from companies_house_abm.data_sources.calibration import (
     calibrate_io_sectors,
     calibrate_model,
 )
-from companies_house_abm.data_sources.companies_house import fetch_sic_codes
+from uk_data_client.adapters.companies_house import fetch_sic_codes
 from companies_house_abm.data_sources.firm_distributions import (
     run_profile_pipeline,
 )
-from companies_house_abm.data_sources.historical import (
+from uk_data_client.adapters.historical import (
     fetch_all_historical,
     fetch_bank_rate_quarterly,
     fetch_earnings_index_quarterly,
@@ -47,17 +49,17 @@ from companies_house_abm.data_sources.historical import (
     fetch_mortgage_rate_quarterly,
     fetch_transactions_quarterly,
 )
-from companies_house_abm.data_sources.hmrc import (
+from uk_data_client.adapters.hmrc import (
     get_corporation_tax_rate,
     get_income_tax_bands,
     get_national_insurance_rates,
     get_vat_rate,
 )
-from companies_house_abm.data_sources.land_registry import (
+from uk_data_client.adapters.land_registry import (
     fetch_regional_prices,
     fetch_uk_average_price,
 )
-from companies_house_abm.data_sources.ons import (
+from uk_data_client.adapters.ons import (
     fetch_affordability_ratio,
     fetch_gdp,
     fetch_household_income,
@@ -69,6 +71,10 @@ from companies_house_abm.data_sources.ons import (
 )
 
 __all__ = [
+    "Entity",
+    "Event",
+    "TimeSeries",
+    "UKDataClient",
     "calibrate_banks",
     "calibrate_government",
     "calibrate_households",

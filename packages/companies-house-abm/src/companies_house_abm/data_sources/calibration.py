@@ -63,7 +63,7 @@ def calibrate_households(
         >>> cfg.income_mean > 0
         True
     """
-    from companies_house_abm.data_sources.ons import (
+    from uk_data_client.adapters.ons import (
         fetch_labour_market,
         fetch_savings_ratio,
     )
@@ -143,7 +143,7 @@ def calibrate_banks(
         >>> 0.05 < cfg.capital_requirement < 0.30
         True
     """
-    from companies_house_abm.data_sources.boe import (
+    from uk_data_client.adapters.boe import (
         fetch_lending_rates,
         get_aggregate_capital_ratio,
     )
@@ -212,7 +212,7 @@ def calibrate_government(
         >>> fiscal.tax_rate_corporate == 0.25
         True
     """
-    from companies_house_abm.data_sources.hmrc import (
+    from uk_data_client.adapters.hmrc import (
         get_corporation_tax_rate,
         get_income_tax_bands,
     )
@@ -279,7 +279,7 @@ def calibrate_io_sectors() -> dict[str, Any]:
         >>> "sectors" in data and "use_coefficients" in data
         True
     """
-    from companies_house_abm.data_sources.ons import fetch_input_output_table
+    from uk_data_client.adapters.ons import fetch_input_output_table
 
     io_data = fetch_input_output_table()
     sectors = io_data["sectors"]
@@ -329,10 +329,10 @@ def calibrate_housing(
     Returns:
         Tuple of updated ``(PropertyConfig, HousingMarketConfig)``.
     """
-    from companies_house_abm.data_sources.land_registry import (
+    from uk_data_client.adapters.land_registry import (
         fetch_uk_average_price,
     )
-    from companies_house_abm.data_sources.ons import (
+    from uk_data_client.adapters.ons import (
         fetch_affordability_ratio,
         fetch_tenure_distribution,
     )

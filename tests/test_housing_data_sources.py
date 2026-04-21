@@ -16,12 +16,12 @@ import pytest
 
 class TestLandRegistryFallback:
     def test_regional_prices_fallback(self):
-        from companies_house_abm.data_sources.land_registry import (
+        from uk_data_client.adapters.land_registry import (
             fetch_regional_prices,
         )
 
         with patch(
-            "companies_house_abm.data_sources.land_registry._get_json",
+            "uk_data_client.adapters.land_registry._get_json",
             side_effect=Exception("offline"),
         ):
             prices = fetch_regional_prices()
@@ -30,19 +30,19 @@ class TestLandRegistryFallback:
         assert len(prices) == 11
 
     def test_uk_average_price_fallback(self):
-        from companies_house_abm.data_sources.land_registry import (
+        from uk_data_client.adapters.land_registry import (
             fetch_uk_average_price,
         )
 
         with patch(
-            "companies_house_abm.data_sources.land_registry._get_json",
+            "uk_data_client.adapters.land_registry._get_json",
             side_effect=Exception("offline"),
         ):
             price = fetch_uk_average_price()
         assert price > 0
 
     def test_price_by_type(self):
-        from companies_house_abm.data_sources.land_registry import (
+        from uk_data_client.adapters.land_registry import (
             fetch_price_by_type,
         )
 
@@ -59,7 +59,7 @@ class TestLandRegistryFallback:
 
 class TestOnsHousing:
     def test_tenure_distribution_fallback(self):
-        from companies_house_abm.data_sources.ons import (
+        from uk_data_client.adapters.ons import (
             fetch_tenure_distribution,
         )
 
@@ -70,24 +70,24 @@ class TestOnsHousing:
         assert total == pytest.approx(1.0)
 
     def test_affordability_ratio_fallback(self):
-        from companies_house_abm.data_sources.ons import (
+        from uk_data_client.adapters.ons import (
             fetch_affordability_ratio,
         )
 
         with patch(
-            "companies_house_abm.data_sources.ons.retry",
+            "uk_data_client.adapters.ons.retry",
             side_effect=Exception("offline"),
         ):
             ratio = fetch_affordability_ratio()
         assert ratio == pytest.approx(8.3)
 
     def test_rental_growth_fallback(self):
-        from companies_house_abm.data_sources.ons import (
+        from uk_data_client.adapters.ons import (
             fetch_rental_growth,
         )
 
         with patch(
-            "companies_house_abm.data_sources.ons.retry",
+            "uk_data_client.adapters.ons.retry",
             side_effect=Exception("offline"),
         ):
             growth = fetch_rental_growth()
@@ -109,11 +109,11 @@ class TestCalibrateHousing:
 
         with (
             patch(
-                "companies_house_abm.data_sources.land_registry._get_json",
+                "uk_data_client.adapters.land_registry._get_json",
                 side_effect=Exception("offline"),
             ),
             patch(
-                "companies_house_abm.data_sources.ons._get_json",
+                "uk_data_client.adapters.ons._get_json",
                 side_effect=Exception("offline"),
             ),
         ):
@@ -123,25 +123,25 @@ class TestCalibrateHousing:
         assert props.average_price > 0
 
     def test_calibrate_model_includes_housing(self):
-        from companies_house_abm.data_sources import _http
+        from uk_data_client import _http
         from companies_house_abm.data_sources.calibration import calibrate_model
 
         _http.clear_cache()
         with (
             patch(
-                "companies_house_abm.data_sources.ons.retry",
+                "uk_data_client.adapters.ons.retry",
                 side_effect=Exception("api down"),
             ),
             patch(
-                "companies_house_abm.data_sources.boe.retry",
+                "uk_data_client.adapters.boe.retry",
                 side_effect=Exception("api down"),
             ),
             patch(
-                "companies_house_abm.data_sources.boe.fetch_bank_rate",
+                "uk_data_client.adapters.boe.fetch_bank_rate",
                 return_value=[],
             ),
             patch(
-                "companies_house_abm.data_sources.land_registry.retry",
+                "uk_data_client.adapters.land_registry.retry",
                 side_effect=Exception("api down"),
             ),
         ):

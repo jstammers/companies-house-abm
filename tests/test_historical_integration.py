@@ -48,7 +48,7 @@ class TestLiveHpiDownload:
     """Land Registry UK HPI SPARQL endpoint."""
 
     def test_hpi_returns_plausible_data(self):
-        from companies_house_abm.data_sources.historical import (
+        from uk_data_client.adapters.historical import (
             fetch_hpi_quarterly,
         )
 
@@ -62,7 +62,7 @@ class TestLiveHpiDownload:
             )
 
     def test_hpi_full_window_48_quarters(self):
-        from companies_house_abm.data_sources.historical import (
+        from uk_data_client.adapters.historical import (
             fetch_hpi_quarterly,
         )
 
@@ -81,7 +81,7 @@ class TestLiveBankRateDownload:
     """BoE IADB Bank Rate series."""
 
     def test_bank_rate_returns_data(self):
-        from companies_house_abm.data_sources.historical import (
+        from uk_data_client.adapters.historical import (
             fetch_bank_rate_quarterly,
         )
 
@@ -94,7 +94,7 @@ class TestLiveBankRateDownload:
 
     def test_bank_rate_2020_low(self):
         """Bank Rate was cut to 0.10% in March 2020."""
-        from companies_house_abm.data_sources.historical import (
+        from uk_data_client.adapters.historical import (
             fetch_bank_rate_quarterly,
         )
 
@@ -106,7 +106,7 @@ class TestLiveBankRateDownload:
             )
 
     def test_bank_rate_full_window(self):
-        from companies_house_abm.data_sources.historical import (
+        from uk_data_client.adapters.historical import (
             fetch_bank_rate_quarterly,
         )
 
@@ -120,7 +120,7 @@ class TestLiveMortgageRateDownload:
     """BoE IADB household lending rate series."""
 
     def test_mortgage_rate_returns_data(self):
-        from companies_house_abm.data_sources.historical import (
+        from uk_data_client.adapters.historical import (
             fetch_mortgage_rate_quarterly,
         )
 
@@ -132,7 +132,7 @@ class TestLiveMortgageRateDownload:
             )
 
     def test_mortgage_rate_full_window(self):
-        from companies_house_abm.data_sources.historical import (
+        from uk_data_client.adapters.historical import (
             fetch_mortgage_rate_quarterly,
         )
 
@@ -148,7 +148,7 @@ class TestLiveEarningsDownload:
     """ONS Average Weekly Earnings (KAB9) series."""
 
     def test_earnings_returns_data(self):
-        from companies_house_abm.data_sources.historical import (
+        from uk_data_client.adapters.historical import (
             fetch_earnings_index_quarterly,
         )
 
@@ -161,7 +161,7 @@ class TestLiveEarningsDownload:
             )
 
     def test_earnings_grow_over_decade(self):
-        from companies_house_abm.data_sources.historical import (
+        from uk_data_client.adapters.historical import (
             fetch_earnings_index_quarterly,
         )
 
@@ -177,7 +177,7 @@ class TestLiveMortgageApprovalsDownload:
     """BoE IADB mortgage approvals series."""
 
     def test_approvals_returns_data(self):
-        from companies_house_abm.data_sources.historical import (
+        from uk_data_client.adapters.historical import (
             fetch_mortgage_approvals_quarterly,
         )
 
@@ -191,7 +191,7 @@ class TestLiveMortgageApprovalsDownload:
 
     def test_covid_dip_in_approvals(self):
         """Mortgage approvals collapsed in 2020Q2 during lockdown."""
-        from companies_house_abm.data_sources.historical import (
+        from uk_data_client.adapters.historical import (
             fetch_mortgage_approvals_quarterly,
         )
 
@@ -208,7 +208,7 @@ class TestLiveFetchAllHistorical:
     """End-to-end: fetch_all_historical returns all six series."""
 
     def test_all_series_present(self):
-        from companies_house_abm.data_sources.historical import (
+        from uk_data_client.adapters.historical import (
             fetch_all_historical,
         )
 
@@ -224,7 +224,7 @@ class TestLiveFetchAllHistorical:
         assert set(result.keys()) == expected_keys
 
     def test_all_series_non_empty(self):
-        from companies_house_abm.data_sources.historical import (
+        from uk_data_client.adapters.historical import (
             fetch_all_historical,
         )
 

@@ -70,7 +70,7 @@ class TestHistoricalSimulationNotebook:
 
         # Use a tiny offline scenario (all network calls mocked to fall back)
         with patch(
-            "companies_house_abm.data_sources.historical.retry",
+            "uk_data_client.adapters.historical.retry",
             side_effect=Exception("offline"),
         ):
             from companies_house_abm.abm.scenarios import build_uk_2013_2024

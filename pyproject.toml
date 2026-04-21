@@ -49,7 +49,12 @@ python = ["3.11", "3.12", "3.13", "3.14"]
 [tool.ruff]
 target-version = "py311"
 line-length = 88
-src = ["packages/companies-house/src", "packages/companies-house-abm/src", "tests"]
+src = [
+    "packages/companies-house/src",
+    "packages/companies-house-abm/src",
+    "packages/uk-data-client/src",
+    "tests",
+]
 
 [tool.ruff.lint]
 select = [
@@ -69,7 +74,7 @@ select = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["companies_house_abm", "companies_house"]
+known-first-party = ["companies_house_abm", "companies_house", "uk_data_client"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["ARG001"]
@@ -113,6 +118,7 @@ testpaths = ["tests"]
 pythonpath = [
     "packages/companies-house/src",
     "packages/companies-house-abm/src",
+    "packages/uk-data-client/src",
 ]
 addopts = [
     "-ra",
@@ -131,7 +137,7 @@ markers = [
 # =============================================================================
 
 [tool.coverage.run]
-source = ["companies_house", "companies_house_abm"]
+source = ["companies_house", "companies_house_abm", "uk_data_client"]
 branch = true
 parallel = true
 

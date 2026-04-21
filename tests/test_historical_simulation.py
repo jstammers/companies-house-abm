@@ -257,7 +257,6 @@ class TestHistoricalSimulationRegEvents:
         assert hsim._sim.config.mortgage.max_ltv == pytest.approx(0.80)
 
     def test_housing_override_applied(self):
-        from companies_house_abm.abm.config import HousingMarketConfig
 
         event = RegulatoryEvent(
             period=1,
@@ -275,17 +274,21 @@ class TestHistoricalSimulationRegEvents:
 
 
 class TestPearsonEdgeCases:
-    """Test edge cases of the Pearson correlation via the public price_correlation API."""
+    """Test edge cases of Pearson correlation via the public price_correlation API."""
 
     def _make_result(self, sim: list[float], actual: list[float]) -> HistoricalResult:
         from companies_house_abm.abm.model import PeriodRecord
 
-        records = [PeriodRecord(period=i, average_house_price=p) for i, p in enumerate(sim)]
+        records = [
+            PeriodRecord(period=i, average_house_price=p) for i, p in enumerate(sim)
+        ]
         return HistoricalResult(records=records, actual_hpi=actual)
 
     def test_constant_simulated_series_gives_nan(self):
         # Constant series has zero variance → correlation is undefined
-        result = self._make_result([200_000.0, 200_000.0, 200_000.0], [100.0, 200.0, 300.0])
+        result = self._make_result(
+            [200_000.0, 200_000.0, 200_000.0], [100.0, 200.0, 300.0]
+        )
         assert math.isnan(result.price_correlation())
 
     def test_single_period_gives_nan(self):
@@ -372,4 +375,3 @@ class TestHistoricalEvaluation:
         report = evaluate_historical(result)
         summary = report.summary()
         assert "Evaluation Report" in summary
-

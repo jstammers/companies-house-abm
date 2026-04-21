@@ -266,7 +266,8 @@ def fetch_data(
             "--source",
             "-s",
             help=(
-                "Data source to fetch: ons, boe, hmrc, io-tables, sic, all. "
+                "Data source to fetch: ons, boe, hmrc, io-tables, sic, "
+                "historical, land-registry, all. "
                 "May be repeated. Defaults to all."
             ),
         ),
@@ -281,9 +282,10 @@ def fetch_data(
 ) -> None:
     """Fetch publicly available UK economic data for ABM calibration.
 
-    Downloads data from ONS, Bank of England, and HMRC to calibrate
-    household income, government tax rates, bank interest rates, and
-    firm input-output production relations.
+    Downloads data from ONS, Bank of England, HMRC, HM Land Registry, and
+    Companies House to calibrate household income, government tax rates,
+    bank interest rates, firm input-output production relations, and
+    housing market parameters.
 
     Examples:
 
@@ -313,11 +315,14 @@ def fetch_data(
         get_vat_rate,
     )
     from companies_house_abm.data_sources.ons import (
+        fetch_affordability_ratio,
         fetch_gdp,
         fetch_household_income,
         fetch_input_output_table,
         fetch_labour_market,
+        fetch_rental_growth,
         fetch_savings_ratio,
+        fetch_tenure_distribution,
     )
 
     requested = set(sources) if sources else {"all"}
@@ -352,6 +357,20 @@ def fetch_data(
         typer.echo(
             f"  Labour market: unemployment={labour.get('unemployment_rate')}%"
             " -> ons_labour_market.json"
+        )
+
+        tenure = fetch_tenure_distribution()
+        affordability = fetch_affordability_ratio()
+        rental_growth = fetch_rental_growth()
+        ons_housing_data = {
+            "tenure_distribution": tenure,
+            "affordability_ratio": affordability,
+            "rental_growth": rental_growth,
+        }
+        _write_json(output / "ons_housing.json", ons_housing_data)
+        typer.echo(
+            f"  Housing: affordability={affordability:.1f}x,"
+            f" rental growth={rental_growth:.1%} -> ons_housing.json"
         )
 
     # ------------------------------------------------------------ IO tables
@@ -426,6 +445,41 @@ def fetch_data(
             typer.echo(f"  SIC codes: {len(df):,} companies -> {sic_output.name}")
         except RuntimeError as exc:
             typer.echo(f"  Warning: could not fetch SIC codes: {exc}", err=True)
+
+    # ----------------------------------------------- Historical time-series
+    if fetch_all or "historical" in requested:
+        typer.echo("Fetching historical quarterly time-series data...")
+        from companies_house_abm.data_sources.historical import (
+            fetch_all_historical,
+        )
+
+        historical = fetch_all_historical()
+        _write_json(output / "historical_quarterly.json", historical)
+        n_quarters = len(next(iter(historical.values()), []))
+        typer.echo(
+            f"  Historical data: {len(historical)} series,"
+            f" {n_quarters} quarters -> historical_quarterly.json"
+        )
+
+    # ---------------------------------------------------- HM Land Registry
+    if fetch_all or "land-registry" in requested:
+        typer.echo("Fetching HM Land Registry house price data...")
+        from companies_house_abm.data_sources.land_registry import (
+            fetch_regional_prices,
+            fetch_uk_average_price,
+        )
+
+        regional = fetch_regional_prices()
+        uk_avg = fetch_uk_average_price()
+        lr_data = {
+            "uk_average_price": uk_avg,
+            "regional_prices": regional,
+        }
+        _write_json(output / "land_registry_prices.json", lr_data)
+        typer.echo(
+            f"  Land Registry: UK avg £{uk_avg:,.0f},"
+            f" {len(regional)} regions -> land_registry_prices.json"
+        )
 
     # ----------------------------------------------------------- Calibration
     if calibrate:

@@ -81,39 +81,47 @@ _FALLBACK_AFFORDABILITY = 8.3
 _FALLBACK_RENTAL_GROWTH = 0.065
 
 # ---------------------------------------------------------------------------
-# Series → ONS dataset mapping
-# Each ONS timeseries belongs to one or more named datasets; this mapping
-# selects the canonical dataset to use for each series code.
+# Series → ONS Zebedee content URI mapping
+#
+# The ONS Zebedee reader API uses GET /v1/data?uri=<path> where <path> is
+# the full content URI for the timeseries page on ons.gov.uk.  The old
+# /v1/timeseries/{id}/dataset/{dataset}/data path pattern is no longer
+# served (returns 404).
+#
+# URIs confirmed against the live API.  Series not listed here fall back to
+# the _DEFAULT_URI_TEMPLATE which uses the GDP topic and ukea dataset —
+# suitable for national-accounts series.
 # ---------------------------------------------------------------------------
 
-_SERIES_DATASET: dict[str, str] = {
-    # National accounts (UK Economic Accounts)
-    "ABMI": "ukea",
-    "RPHQ": "ukea",
-    "NRJS": "ukea",
+_SERIES_URI: dict[str, str] = {
+    # National accounts (UK Economic Accounts / GDP topic)
+    "ABMI": "/economy/grossdomesticproductgdp/timeseries/abmi/ukea",
+    "RPHQ": "/economy/grossdomesticproductgdp/timeseries/rphq/ukea",
+    "NRJS": "/economy/grossdomesticproductgdp/timeseries/nrjs/ukea",
     # Labour market (Labour Market Statistics bulletin)
-    "MGSX": "lms",
-    "KAB9": "lms",
-    # Housing statistics
-    "HP7A": "housepricestatistics",
-    "D7RA": "mm23",
-    # GVA by industry (UK Economic Accounts)
-    "L2KL": "ukea",
-    "L2KP": "ukea",
-    "L2N8": "ukea",
-    "L2NC": "ukea",
-    "L2ND": "ukea",
-    "L2NE": "ukea",
-    "L2NF": "ukea",
-    "L2NG": "ukea",
-    "L2NI": "ukea",
-    "L2NJ": "ukea",
-    "L2NK": "ukea",
-    "L2NL": "ukea",
-    "L2NM": "ukea",
+    "MGSX": (
+        "/employmentandlabourmarket/peoplenotinwork/unemployment/timeseries/mgsx/lms"
+    ),
+    "KAB9": (
+        "/employmentandlabourmarket/peopleinwork"
+        "/earningsandworkinghours/timeseries/kab9/lms"
+    ),
+    # GVA by industry (UK Economic Accounts) — confirmed working subset.
+    # L2KL: Agriculture; L2N8: Construction; L2NC: Total Services;
+    # L2NE: Wholesale & Retail Trade.  Other SIC-division series
+    # (L2KP, L2ND, L2NF-L2NM) return 404 from the Zebedee API and are
+    # therefore omitted; fetch_input_output_table falls back to static
+    # Blue Book shares when fewer than 5 live series are returned.
+    "L2KL": "/economy/grossdomesticproductgdp/timeseries/l2kl/ukea",
+    "L2N8": "/economy/grossdomesticproductgdp/timeseries/l2n8/ukea",
+    "L2NC": "/economy/grossdomesticproductgdp/timeseries/l2nc/ukea",
+    "L2NE": "/economy/grossdomesticproductgdp/timeseries/l2ne/ukea",
+    # HP7A (affordability ratio) and D7RA (rental index) are not
+    # available via the Zebedee API; fetch_affordability_ratio and
+    # fetch_rental_growth use their hardcoded fallback values.
 }
 
-_DEFAULT_DATASET = "ukea"
+_DEFAULT_URI_TEMPLATE = "/economy/grossdomesticproductgdp/timeseries/{sid}/ukea"
 
 
 def _get_json(url: str) -> Any:
@@ -126,6 +134,10 @@ def _get_json(url: str) -> Any:
 def _fetch_timeseries(series_id: str, limit: int = 20) -> list[dict[str, Any]]:
     """Fetch the latest *limit* observations for an ONS time series.
 
+    Uses the ONS Zebedee reader API (``GET /v1/data?uri=<path>``).  Each
+    series has a content URI registered in ``_SERIES_URI``; unknown series
+    fall back to the GDP topic template.
+
     Args:
         series_id: ONS time-series identifier (e.g. ``"ABMI"``).
         limit: Maximum number of observations to return (most recent first).
@@ -134,8 +146,14 @@ def _fetch_timeseries(series_id: str, limit: int = 20) -> list[dict[str, Any]]:
         List of observation dicts with keys ``"date"`` (str) and
         ``"value"`` (str).
     """
-    dataset_id = _SERIES_DATASET.get(series_id.upper(), _DEFAULT_DATASET)
-    url = f"{_ONS_API}/timeseries/{series_id.lower()}/dataset/{dataset_id}/data"
+    sid_upper = series_id.upper()
+    content_uri = _SERIES_URI.get(
+        sid_upper,
+        _DEFAULT_URI_TEMPLATE.format(sid=series_id.lower()),
+    )
+    import urllib.parse
+
+    url = f"{_ONS_API}/data?uri={urllib.parse.quote(content_uri, safe='/')}"
     try:
         data = retry(_get_json, url)
     except Exception:
@@ -457,22 +475,18 @@ def fetch_input_output_table() -> dict[str, Any]:
     }
 
     # Attempt to enrich with live ONS industry output shares via the API.
-    # Series L2KL-L2NM: gross value added by industry (SA, GBP m, quarterly).
-    # If the API is unavailable, we fall back to the static values above.
+    # Only the four series below are accessible via the Zebedee API; the
+    # remainder (L2KP, L2ND, L2NF-L2NM) return 404 and are omitted.  The
+    # threshold for replacing static final_demand_shares is ≥ 5 live values,
+    # so with only 4 confirmed series the static Blue Book shares are always
+    # used — the live fetch still serves as a data-freshness check and will
+    # automatically enrich shares if ONS publish the missing series under a
+    # discoverable URI in future.
     gva_series: dict[str, str] = {
         "agriculture": "L2KL",
-        "manufacturing": "L2KP",
         "construction": "L2N8",
         "wholesale_retail": "L2NC",
-        "transport": "L2ND",
         "hospitality": "L2NE",
-        "information_communication": "L2NF",
-        "financial": "L2NG",
-        "professional_services": "L2NI",
-        "public_admin": "L2NJ",
-        "education": "L2NK",
-        "health": "L2NL",
-        "other_services": "L2NM",
     }
 
     gva_values: dict[str, float] = {}
@@ -515,7 +529,7 @@ def fetch_tenure_distribution() -> dict[str, float]:
     unavailable.
 
     Returns:
-        Dict mapping tenure type to share (0–1).
+        Dict mapping tenure type to share (0-1).
     """
     # ONS does not expose tenure via a simple timeseries endpoint; we rely
     # on the English Housing Survey headline figures as a stable fallback.

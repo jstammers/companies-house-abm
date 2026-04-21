@@ -813,7 +813,7 @@ def _make_fake_bulk_zip(rows: list[dict[str, str]]) -> bytes:
     import zipfile as _zf
 
     buf = _io.StringIO()
-    fieldnames = ["CompanyNumber", "SICCode.SicText_1", "CompanyName"]
+    fieldnames = [" CompanyNumber", "SICCode.SicText_1", "CompanyName"]
     writer = csv.DictWriter(buf, fieldnames=fieldnames)
     writer.writeheader()
     for row in rows:
@@ -834,7 +834,7 @@ class TestFetchSicCodesNormalise:
 
         raw = pl.DataFrame(
             {
-                "CompanyNumber": ["12345678", "  87654321  "],
+                " CompanyNumber": ["12345678", "  87654321  "],
                 "SICCode.SicText_1": [
                     "62020 - Computer programming",
                     "45110 - Sale of cars",
@@ -853,7 +853,7 @@ class TestFetchSicCodesNormalise:
 
         raw = pl.DataFrame(
             {
-                "CompanyNumber": ["1234"],
+                " CompanyNumber": ["1234"],
                 "SICCode.SicText_1": ["62020 - Computer programming"],
             }
         )
@@ -867,7 +867,7 @@ class TestFetchSicCodesNormalise:
 
         raw = pl.DataFrame(
             {
-                "CompanyNumber": ["12345678"],
+                " CompanyNumber": ["12345678"],
                 "SICCode.SicText_1": ["62020 - Computer programming, consultancy"],
             }
         )
@@ -881,7 +881,7 @@ class TestFetchSicCodesNormalise:
 
         raw = pl.DataFrame(
             {
-                "CompanyNumber": ["12345678", "87654321"],
+                " CompanyNumber": ["12345678", "87654321"],
                 "SICCode.SicText_1": ["None supplied", "62020 - valid"],
             }
         )
@@ -896,7 +896,7 @@ class TestFetchSicCodesNormalise:
 
         raw = pl.DataFrame(
             {
-                "CompanyNumber": ["12345678", None],
+                " CompanyNumber": ["12345678", None],
                 "SICCode.SicText_1": [None, "62020 - valid"],
             }
         )
@@ -910,7 +910,7 @@ class TestFetchSicCodesNormalise:
 
         raw = pl.DataFrame(
             {
-                "CompanyNumber": ["12345678", "12345678"],
+                " CompanyNumber": ["12345678", "12345678"],
                 "SICCode.SicText_1": [
                     "62020 - first entry",
                     "45110 - second entry",
@@ -927,7 +927,7 @@ class TestParseBulkZip:
 
         rows = [
             {
-                "CompanyNumber": "12345678",
+                " CompanyNumber": "12345678",
                 "SICCode.SicText_1": "62020 - Computer programming",
                 "CompanyName": "Test Co",
             }
@@ -937,7 +937,7 @@ class TestParseBulkZip:
         (tmp_path / "test.zip").write_bytes(zip_bytes)
 
         raw = _parse_bulk_zip(zip_path)
-        assert "CompanyNumber" in raw.columns
+        assert " CompanyNumber" in raw.columns
         assert "SICCode.SicText_1" in raw.columns
         assert len(raw) == 1
 
@@ -961,12 +961,12 @@ class TestFetchSicCodes:
     def test_returns_dataframe_on_success(self, tmp_path: Any) -> None:
         rows = [
             {
-                "CompanyNumber": "12345678",
+                " CompanyNumber": "12345678",
                 "SICCode.SicText_1": "62020 - Computer programming",
                 "CompanyName": "Test Co",
             },
             {
-                "CompanyNumber": "87654321",
+                " CompanyNumber": "87654321",
                 "SICCode.SicText_1": "45110 - Sale of cars",
                 "CompanyName": "Car Sales Ltd",
             },
@@ -993,7 +993,7 @@ class TestFetchSicCodes:
     def test_saves_parquet_when_output_path_given(self, tmp_path: Any) -> None:
         rows = [
             {
-                "CompanyNumber": "12345678",
+                " CompanyNumber": "12345678",
                 "SICCode.SicText_1": "62020 - Computer programming",
                 "CompanyName": "Test Co",
             }
@@ -1039,7 +1039,7 @@ class TestFetchSicCodes:
 
         rows = [
             {
-                "CompanyNumber": "11111111",
+                " CompanyNumber": "11111111",
                 "SICCode.SicText_1": "62020 - Computer programming",
                 "CompanyName": "Fallback Co",
             }

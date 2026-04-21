@@ -208,7 +208,7 @@ class TestHelpers:
         )
 
         rows = [
-            {"date": "01 Jan 2020", "value": "n/a"},  # invalid – skipped
+            {"date": "01 Jan 2020", "value": "n/a"},  # invalid - skipped
             {"date": "01 Feb 2020", "value": "1.5"},
         ]
         result = _quarterly_last(rows, start="2020Q1", end="2020Q1")
@@ -268,10 +268,7 @@ class TestHelpers:
         )
 
         csv_text = (
-            "Date,Bank Rate\n"
-            "01 Jan 2024,5.25\n"
-            "01 Feb 2024,5.25\n"
-            "01 Mar 2024,5.25\n"
+            "Date,Bank Rate\n01 Jan 2024,5.25\n01 Feb 2024,5.25\n01 Mar 2024,5.25\n"
         )
         rows = _parse_iadb_csv(csv_text)
         assert len(rows) == 3
@@ -284,12 +281,7 @@ class TestHelpers:
         )
 
         # Non-numeric line after data starts → parser stops
-        csv_text = (
-            "Date,Series\n"
-            "01 Jan 2024,1.0\n"
-            "Legal Notice,blah\n"
-            "01 Feb 2024,2.0\n"
-        )
+        csv_text = "Date,Series\n01 Jan 2024,1.0\nLegal Notice,blah\n01 Feb 2024,2.0\n"
         rows = _parse_iadb_csv(csv_text)
         assert len(rows) == 1  # stops at the non-numeric line
 
@@ -380,10 +372,7 @@ class TestFetchWithMockedSuccess:
         )
 
         csv_text = (
-            "Date,Bank Rate\n"
-            "01 Jan 2020,0.75\n"
-            "01 Feb 2020,0.25\n"
-            "01 Mar 2020,0.10\n"
+            "Date,Bank Rate\n01 Jan 2020,0.75\n01 Feb 2020,0.25\n01 Mar 2020,0.10\n"
         )
 
         with patch(
@@ -421,10 +410,7 @@ class TestFetchWithMockedSuccess:
         )
 
         csv_text = (
-            "Date,Mortgage Rate\n"
-            "01 Jan 2020,2.5\n"
-            "01 Feb 2020,2.4\n"
-            "01 Mar 2020,2.3\n"
+            "Date,Mortgage Rate\n01 Jan 2020,2.5\n01 Feb 2020,2.4\n01 Mar 2020,2.3\n"
         )
 
         with patch(
@@ -526,10 +512,7 @@ class TestFetchWithMockedSuccess:
         )
 
         csv_text = (
-            "Date,Approvals\n"
-            "01 Jan 2020,60000\n"
-            "01 Feb 2020,65000\n"
-            "01 Mar 2020,70000\n"
+            "Date,Approvals\n01 Jan 2020,60000\n01 Feb 2020,65000\n01 Mar 2020,70000\n"
         )
 
         with patch(

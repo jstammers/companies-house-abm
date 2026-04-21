@@ -451,7 +451,7 @@ class TestEvaluateSimulationEdgeCases:
 
 class TestHistoricalEvaluationReportEdgeCases:
     def test_summary_without_cross_sectional(self) -> None:
-        """HistoricalEvaluationReport.summary should work when cross_sectional is None."""
+        """HistoricalEvaluationReport.summary should work when cross_sectional is None."""  # noqa: E501
         from companies_house_abm.abm.evaluation import HistoricalEvaluationReport
 
         report = HistoricalEvaluationReport(

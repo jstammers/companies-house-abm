@@ -13,8 +13,6 @@ import sys
 from pathlib import Path
 from unittest.mock import patch
 
-import pytest
-
 NOTEBOOKS_DIR = Path(__file__).parent.parent / "notebooks"
 
 
@@ -43,8 +41,14 @@ class TestHistoricalSimulationNotebook:
         import subprocess
 
         result = subprocess.run(
-            [sys.executable, "-m", "marimo", "export", "script",
-             str(NOTEBOOKS_DIR / "historical_simulation.py")],
+            [
+                sys.executable,
+                "-m",
+                "marimo",
+                "export",
+                "script",
+                str(NOTEBOOKS_DIR / "historical_simulation.py"),
+            ],
             capture_output=True,
             text=True,
         )
@@ -54,7 +58,6 @@ class TestHistoricalSimulationNotebook:
 
     def test_notebook_core_logic_runs(self):
         """Run the core simulation steps that the notebook performs."""
-        from unittest.mock import patch
 
         from companies_house_abm.abm.config import (
             HouseholdConfig,
@@ -111,10 +114,9 @@ class TestHistoricalSimulationNotebook:
     def test_notebook_visualization_code_executes(self):
         """The matplotlib chart-building logic should not crash."""
         import matplotlib
+
         matplotlib.use("Agg")  # non-interactive backend for CI
         import matplotlib.pyplot as plt
-
-        from unittest.mock import patch
 
         from companies_house_abm.abm.config import (
             HouseholdConfig,

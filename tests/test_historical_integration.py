@@ -34,7 +34,7 @@ def _is_network_available() -> bool:
 
 network = pytest.mark.skipif(
     not _is_network_available(),
-    reason="External network not reachable – skipping live integration tests",
+    reason="External network not reachable - skipping live integration tests",
 )
 
 

@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class RawStore:
@@ -16,10 +18,10 @@ class RawStore:
 
     def write(self, *, source: str, key: str, payload: Any) -> Path:
         """Write a payload to the raw store."""
-        stamp = datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')
-        directory = self.root / 'raw' / source / key
+        stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+        directory = self.root / "raw" / source / key
         directory.mkdir(parents=True, exist_ok=True)
-        path = directory / f'{stamp}.json'
+        path = directory / f"{stamp}.json"
         path.write_text(json.dumps(payload, indent=2, sort_keys=True, default=str))
         return path
 

@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import duckdb
-import polars as pl
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    import polars as pl
 
 
 class CanonicalStore:
@@ -14,13 +17,13 @@ class CanonicalStore:
 
     def __init__(self, root: Path, *, database_path: Path | None = None) -> None:
         self.root = root
-        self.database_path = database_path or (root / 'queries' / 'uk_data.duckdb')
+        self.database_path = database_path or (root / "queries" / "uk_data.duckdb")
         self.database_path.parent.mkdir(parents=True, exist_ok=True)
         self.root.mkdir(parents=True, exist_ok=True)
 
     def write_parquet(self, frame: pl.DataFrame, relative_path: str) -> Path:
         """Write a canonical dataframe to a parquet file."""
-        path = self.root / 'canonical' / relative_path
+        path = self.root / "canonical" / relative_path
         path.parent.mkdir(parents=True, exist_ok=True)
         frame.write_parquet(path)
         return path

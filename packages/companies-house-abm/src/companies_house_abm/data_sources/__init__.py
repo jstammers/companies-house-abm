@@ -21,13 +21,6 @@ no additional runtime dependencies are required.  Responses are cached in
 memory for the lifetime of the interpreter to avoid redundant requests.
 """
 
-from uk_data_client.client import UKDataClient
-from uk_data_client.models import Entity, Event, TimeSeries
-from uk_data_client.adapters.boe import (
-    fetch_bank_rate,
-    fetch_bank_rate_current,
-    fetch_lending_rates,
-)
 from companies_house_abm.data_sources.calibration import (
     calibrate_banks,
     calibrate_government,
@@ -36,10 +29,15 @@ from companies_house_abm.data_sources.calibration import (
     calibrate_io_sectors,
     calibrate_model,
 )
-from uk_data_client.adapters.companies_house import fetch_sic_codes
 from companies_house_abm.data_sources.firm_distributions import (
     run_profile_pipeline,
 )
+from uk_data_client.adapters.boe import (
+    fetch_bank_rate,
+    fetch_bank_rate_current,
+    fetch_lending_rates,
+)
+from uk_data_client.adapters.companies_house import fetch_sic_codes
 from uk_data_client.adapters.historical import (
     fetch_all_historical,
     fetch_bank_rate_quarterly,
@@ -69,6 +67,8 @@ from uk_data_client.adapters.ons import (
     fetch_savings_ratio,
     fetch_tenure_distribution,
 )
+from uk_data_client.client import UKDataClient
+from uk_data_client.models import Entity, Event, TimeSeries
 
 __all__ = [
     "Entity",

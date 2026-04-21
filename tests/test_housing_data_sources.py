@@ -123,8 +123,8 @@ class TestCalibrateHousing:
         assert props.average_price > 0
 
     def test_calibrate_model_includes_housing(self):
-        from uk_data_client import _http
         from companies_house_abm.data_sources.calibration import calibrate_model
+        from uk_data_client import _http
 
         _http.clear_cache()
         with (

@@ -12,7 +12,7 @@ from uk_data_client.adapters.base import BaseAdapter
 class EPCAdapter(BaseAdapter):
     """Placeholder adapter for EPC data."""
 
-    def fetch_series(self, series_id: str, **kwargs: object):
+    def fetch_series(self, _series_id: str, **_kwargs: object):
         """EPC ingestion is not implemented yet."""
         msg = (
             "EPCAdapter is a placeholder. See jstammers/bytes-and-morter for "

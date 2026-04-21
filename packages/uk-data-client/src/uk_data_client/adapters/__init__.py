@@ -1,8 +1,17 @@
 """Canonical source adapters and compatibility helpers."""
 
 from uk_data_client.adapters.base import BaseAdapter
-from uk_data_client.adapters.boe import BoEAdapter, fetch_bank_rate, fetch_bank_rate_current, fetch_lending_rates, get_aggregate_capital_ratio
-from uk_data_client.adapters.companies_house import CompaniesHouseAdapter, fetch_sic_codes
+from uk_data_client.adapters.boe import (
+    BoEAdapter,
+    fetch_bank_rate,
+    fetch_bank_rate_current,
+    fetch_lending_rates,
+    get_aggregate_capital_ratio,
+)
+from uk_data_client.adapters.companies_house import (
+    CompaniesHouseAdapter,
+    fetch_sic_codes,
+)
 from uk_data_client.adapters.epc import EPCAdapter
 from uk_data_client.adapters.historical import (
     HistoricalAdapter,
@@ -24,7 +33,12 @@ from uk_data_client.adapters.hmrc import (
     get_national_insurance_rates,
     get_vat_rate,
 )
-from uk_data_client.adapters.land_registry import LandRegistryAdapter, fetch_price_by_type, fetch_regional_prices, fetch_uk_average_price
+from uk_data_client.adapters.land_registry import (
+    LandRegistryAdapter,
+    fetch_price_by_type,
+    fetch_regional_prices,
+    fetch_uk_average_price,
+)
 from uk_data_client.adapters.ons import (
     ONSAdapter,
     fetch_affordability_ratio,

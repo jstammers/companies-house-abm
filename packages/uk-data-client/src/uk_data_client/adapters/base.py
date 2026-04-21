@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING
 
-from uk_data_client.models import Entity, Event, TimeSeries
+if TYPE_CHECKING:
+    from uk_data_client.models import Entity, Event, TimeSeries
 
 
 class BaseAdapter(ABC):

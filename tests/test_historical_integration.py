@@ -6,12 +6,14 @@ skipped automatically when network access is unavailable.
 
 Run selectively with::
 
-    pytest tests/test_historical_integration.py -m network -v
+    pytest tests/test_historical_integration.py -m integration -v
 """
 
 from __future__ import annotations
 
 import pytest
+
+pytestmark = pytest.mark.integration
 
 # ---------------------------------------------------------------------------
 # Network availability fixture

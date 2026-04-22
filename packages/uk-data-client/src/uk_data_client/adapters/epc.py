@@ -318,8 +318,8 @@ class EPCAdapter(BaseAdapter):
         if filepath is None and output_path is not None and postcodes is not None:
             filepath = search_epc_data(
                 output_path,
-                api_user=str(api_user),
-                api_pass=str(api_pass),
+                api_user=(str(api_user) if api_user is not None else None),
+                api_pass=(str(api_pass) if api_pass is not None else None),
                 postcodes=list(postcodes),
                 local_authority=(str(local_authority) if local_authority else None),
                 from_month=(
@@ -330,8 +330,8 @@ class EPCAdapter(BaseAdapter):
         elif filepath is None and output_path is not None and api_user and api_pass:
             filepath = download_epc_data(
                 output_path,
-                api_user=str(api_user),
-                api_pass=str(api_pass),
+                api_user=(str(api_user) if api_user is not None else None),
+                api_pass=(str(api_pass) if api_pass is not None else None),
                 bulk_file=str(kwargs.get("bulk_file", "all-domestic-certificates.zip")),
             )
 

@@ -27,12 +27,13 @@ Agent-Based Modelling using Companies House Account Data
 
 ## Packages
 
-This repository contains two packages:
+This repository contains three packages:
 
 | Package | Install | Description |
 |---------|---------|-------------|
-| `companies-house` | `pip install companies-house[xbrl,llm]` | Standalone data ingestion and analysis |
-| `companies_house_abm` | `pip install companies_house_abm` | ABM simulation (depends on `companies-house`) |
+| [`companies-house`](packages/companies-house/) | `pip install companies-house[xbrl,llm]` | Standalone data ingestion and analysis |
+| [`companies_house_abm`](packages/companies-house-abm/) | `pip install companies_house_abm` | ABM simulation (depends on `companies-house`) |
+| [`uk-data-client`](packages/uk-data-client/README.md) | `pip install uk-data-client` | Unified client for UK public economic data (ONS, BoE, HMRC, Land Registry, Companies House, EPC) |
 
 ## Installation
 

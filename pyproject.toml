@@ -102,7 +102,7 @@ invalid-method-override = "warn"
 unresolved-import = "warn"
 
 [tool.ty.src]
-exclude = ["tests"]
+exclude = ["tests", "packages/uk-data-client/tests"]
 
 # kreuzberg is an optional dep — not installed in dev by default
 [[tool.ty.overrides]]
@@ -115,7 +115,7 @@ unresolved-import = "ignore"
 # =============================================================================
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "packages/uk-data-client/tests"]
 pythonpath = [
     "packages/companies-house/src",
     "packages/companies-house-abm/src",

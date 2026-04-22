@@ -1,4 +1,4 @@
-.PHONY: verify fix lint format format-check type-check install test test-cov test-integration test-matrix test-matrix-cov pysentry docs docs-serve build-rust benchmark
+.PHONY: verify fix lint format format-check type-check install test test-cov test-integration test-uk-data-client test-uk-data-client-integration test-matrix test-matrix-cov pysentry docs docs-serve build-rust benchmark
 
 # Verify - check everything without making changes
 verify: lint format-check type-check
@@ -25,9 +25,9 @@ type-check:
 install:
 	uv sync --all-groups
 
-# Run tests
+# Run tests (all packages, excluding integration)
 test:
-	uv run pytest tests/ -m "not integration" -v
+	uv run pytest tests/ packages/uk-data-client/tests/ -m "not integration" -v
 
 # Run tests with coverage
 test-cov:
@@ -35,7 +35,15 @@ test-cov:
 
 # Run live-source integration tests explicitly
 test-integration:
-	uv run pytest tests/ -m integration -v
+	uv run pytest tests/ packages/uk-data-client/tests/ -m integration -v
+
+# Run uk-data-client unit tests only
+test-uk-data-client:
+	uv run pytest packages/uk-data-client/tests/ -m "not integration" -v
+
+# Run uk-data-client integration tests only
+test-uk-data-client-integration:
+	uv run pytest packages/uk-data-client/tests/ -m integration -v
 
 # Run tests across all Python versions
 test-matrix:

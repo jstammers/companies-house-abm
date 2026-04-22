@@ -68,7 +68,7 @@ class TestBuildUk2013_2024:
     def _mock_apis(self):
         """Mock all external API calls for offline testing."""
         with patch(
-            "uk_data_client.adapters.historical.retry",
+            "uk_data.adapters.historical.retry",
             side_effect=Exception("offline"),
         ):
             yield

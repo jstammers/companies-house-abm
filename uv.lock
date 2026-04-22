@@ -18,7 +18,7 @@ resolution-markers = [
 members = [
     "companies-house",
     "companies-house-abm",
-    "uk-data-client",
+    "uk-data",
 ]
 
 [manifest.dependency-groups]
@@ -526,7 +526,7 @@ dependencies = [
     { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "typer" },
-    { name = "uk-data-client" },
+    { name = "uk-data" },
     { name = "uvicorn", extra = ["standard"] },
 ]
 
@@ -545,7 +545,7 @@ requires-dist = [
     { name = "pyzmq", specifier = ">=27.1.0" },
     { name = "scipy", specifier = ">=1.11.0" },
     { name = "typer", specifier = ">=0.12.0" },
-    { name = "uk-data-client", editable = "packages/uk-data-client" },
+    { name = "uk-data", editable = "packages/uk-data" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.30.0" },
 ]
 
@@ -3886,9 +3886,9 @@ wheels = [
 ]
 
 [[package]]
-name = "uk-data-client"
+name = "uk-data"
 version = "0.1.0"
-source = { editable = "packages/uk-data-client" }
+source = { editable = "packages/uk-data" }
 dependencies = [
     { name = "duckdb" },
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },

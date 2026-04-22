@@ -33,7 +33,7 @@ This repository contains three packages:
 |---------|---------|-------------|
 | [`companies-house`](packages/companies-house/) | `pip install companies-house[xbrl,llm]` | Standalone data ingestion and analysis |
 | [`companies_house_abm`](packages/companies-house-abm/) | `pip install companies_house_abm` | ABM simulation (depends on `companies-house`) |
-| [`uk-data-client`](packages/uk-data-client/README.md) | `pip install uk-data-client` | Unified client for UK public economic data (ONS, BoE, HMRC, Land Registry, Companies House, EPC) |
+| [`uk-data`](packages/uk-data/README.md) | `pip install uk-data` | Unified client for UK public economic data (ONS, BoE, HMRC, Land Registry, Companies House, EPC) |
 
 ## Installation
 

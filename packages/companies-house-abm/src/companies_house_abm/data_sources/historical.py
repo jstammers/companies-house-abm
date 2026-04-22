@@ -1,3 +1,3 @@
-"""Compatibility shim for :mod:`uk_data_client.adapters.historical`."""
+"""Compatibility shim for :mod:`uk_data.adapters.historical`."""
 
-from uk_data_client.adapters.historical import *  # noqa: F403
+from uk_data.adapters.historical import *  # noqa: F403

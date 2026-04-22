@@ -53,7 +53,7 @@ line-length = 88
 src = [
     "packages/companies-house/src",
     "packages/companies-house-abm/src",
-    "packages/uk-data-client/src",
+    "packages/uk-data/src",
     "tests",
 ]
 
@@ -75,7 +75,7 @@ select = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["companies_house_abm", "companies_house", "uk_data_client"]
+known-first-party = ["companies_house_abm", "companies_house", "uk_data"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["ARG001"]
@@ -102,7 +102,7 @@ invalid-method-override = "warn"
 unresolved-import = "warn"
 
 [tool.ty.src]
-exclude = ["tests", "packages/uk-data-client/tests", "packages/uk-data-client/tests/adapters"]
+exclude = ["tests", "packages/uk-data/tests", "packages/uk-data/tests/adapters"]
 
 # kreuzberg is an optional dep — not installed in dev by default
 [[tool.ty.overrides]]
@@ -115,11 +115,11 @@ unresolved-import = "ignore"
 # =============================================================================
 
 [tool.pytest.ini_options]
-testpaths = ["tests", "packages/uk-data-client/tests"]
+testpaths = ["tests", "packages/uk-data/tests"]
 pythonpath = [
     "packages/companies-house/src",
     "packages/companies-house-abm/src",
-    "packages/uk-data-client/src",
+    "packages/uk-data/src",
 ]
 addopts = [
     "-ra",
@@ -138,7 +138,7 @@ markers = [
 # =============================================================================
 
 [tool.coverage.run]
-source = ["companies_house", "companies_house_abm", "uk_data_client"]
+source = ["companies_house", "companies_house_abm", "uk_data"]
 branch = true
 parallel = true
 

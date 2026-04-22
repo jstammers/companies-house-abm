@@ -18,13 +18,13 @@ import pytest
 
 class TestHmrcIncomeTaxBands:
     def test_returns_four_bands(self) -> None:
-        from uk_data_client.adapters.hmrc import get_income_tax_bands
+        from uk_data.adapters.hmrc import get_income_tax_bands
 
         bands = get_income_tax_bands()
         assert len(bands) == 4
 
     def test_personal_allowance_band_zero_rate(self) -> None:
-        from uk_data_client.adapters.hmrc import get_income_tax_bands
+        from uk_data.adapters.hmrc import get_income_tax_bands
 
         bands = get_income_tax_bands()
         pa = bands[0]
@@ -33,7 +33,7 @@ class TestHmrcIncomeTaxBands:
         assert pa.lower == 0.0
 
     def test_basic_rate_is_twenty_percent(self) -> None:
-        from uk_data_client.adapters.hmrc import get_income_tax_bands
+        from uk_data.adapters.hmrc import get_income_tax_bands
 
         bands = get_income_tax_bands()
         basic = bands[1]
@@ -41,7 +41,7 @@ class TestHmrcIncomeTaxBands:
         assert basic.rate == pytest.approx(0.20)
 
     def test_higher_rate_is_forty_percent(self) -> None:
-        from uk_data_client.adapters.hmrc import get_income_tax_bands
+        from uk_data.adapters.hmrc import get_income_tax_bands
 
         bands = get_income_tax_bands()
         higher = bands[2]
@@ -49,7 +49,7 @@ class TestHmrcIncomeTaxBands:
         assert higher.rate == pytest.approx(0.40)
 
     def test_additional_rate_is_fortyfive_percent(self) -> None:
-        from uk_data_client.adapters.hmrc import get_income_tax_bands
+        from uk_data.adapters.hmrc import get_income_tax_bands
 
         bands = get_income_tax_bands()
         additional = bands[3]
@@ -58,7 +58,7 @@ class TestHmrcIncomeTaxBands:
         assert additional.upper is None
 
     def test_unsupported_tax_year_raises(self) -> None:
-        from uk_data_client.adapters.hmrc import get_income_tax_bands
+        from uk_data.adapters.hmrc import get_income_tax_bands
 
         with pytest.raises(ValueError, match="not supported"):
             get_income_tax_bands("2020/21")
@@ -66,23 +66,23 @@ class TestHmrcIncomeTaxBands:
 
 class TestHmrcComputeIncomeTax:
     def test_zero_income_gives_zero_tax(self) -> None:
-        from uk_data_client.adapters.hmrc import compute_income_tax
+        from uk_data.adapters.hmrc import compute_income_tax
 
         assert compute_income_tax(0) == pytest.approx(0.0)
 
     def test_income_below_personal_allowance_is_zero(self) -> None:
-        from uk_data_client.adapters.hmrc import compute_income_tax
+        from uk_data.adapters.hmrc import compute_income_tax
 
         assert compute_income_tax(12_570) == pytest.approx(0.0)
 
     def test_basic_rate_income(self) -> None:
-        from uk_data_client.adapters.hmrc import compute_income_tax
+        from uk_data.adapters.hmrc import compute_income_tax
 
         # 30000 gross: taxable = 30000 - 12570 = 17430 @ 20% = 3486
         assert compute_income_tax(30_000) == pytest.approx(3_486.0)
 
     def test_higher_rate_income(self) -> None:
-        from uk_data_client.adapters.hmrc import compute_income_tax
+        from uk_data.adapters.hmrc import compute_income_tax
 
         # Tax should be higher for income above £50,270
         tax_basic = compute_income_tax(50_000)
@@ -90,7 +90,7 @@ class TestHmrcComputeIncomeTax:
         assert tax_higher > tax_basic
 
     def test_personal_allowance_taper_above_100k(self) -> None:
-        from uk_data_client.adapters.hmrc import compute_income_tax
+        from uk_data.adapters.hmrc import compute_income_tax
 
         # At £125,140 the personal allowance is fully withdrawn
         tax_100k = compute_income_tax(100_000)
@@ -98,29 +98,29 @@ class TestHmrcComputeIncomeTax:
         assert tax_125k > tax_100k
 
     def test_negative_income_gives_zero(self) -> None:
-        from uk_data_client.adapters.hmrc import compute_income_tax
+        from uk_data.adapters.hmrc import compute_income_tax
 
         assert compute_income_tax(-5_000) == pytest.approx(0.0)
 
 
 class TestHmrcCorporationTax:
     def test_small_profits_rate(self) -> None:
-        from uk_data_client.adapters.hmrc import get_corporation_tax_rate
+        from uk_data.adapters.hmrc import get_corporation_tax_rate
 
         assert get_corporation_tax_rate(30_000) == pytest.approx(0.19)
 
     def test_main_rate(self) -> None:
-        from uk_data_client.adapters.hmrc import get_corporation_tax_rate
+        from uk_data.adapters.hmrc import get_corporation_tax_rate
 
         assert get_corporation_tax_rate(300_000) == pytest.approx(0.25)
 
     def test_main_rate_when_none(self) -> None:
-        from uk_data_client.adapters.hmrc import get_corporation_tax_rate
+        from uk_data.adapters.hmrc import get_corporation_tax_rate
 
         assert get_corporation_tax_rate(None) == pytest.approx(0.25)
 
     def test_marginal_relief_between_thresholds(self) -> None:
-        from uk_data_client.adapters.hmrc import get_corporation_tax_rate
+        from uk_data.adapters.hmrc import get_corporation_tax_rate
 
         rate = get_corporation_tax_rate(150_000)
         assert 0.19 < rate < 0.25
@@ -128,19 +128,19 @@ class TestHmrcCorporationTax:
 
 class TestHmrcNationalInsurance:
     def test_employee_main_rate(self) -> None:
-        from uk_data_client.adapters.hmrc import get_national_insurance_rates
+        from uk_data.adapters.hmrc import get_national_insurance_rates
 
         ni = get_national_insurance_rates()
         assert ni.employee_main_rate == pytest.approx(0.08)
 
     def test_employer_rate(self) -> None:
-        from uk_data_client.adapters.hmrc import get_national_insurance_rates
+        from uk_data.adapters.hmrc import get_national_insurance_rates
 
         ni = get_national_insurance_rates()
         assert ni.employer_rate == pytest.approx(0.138)
 
     def test_unsupported_year_raises(self) -> None:
-        from uk_data_client.adapters.hmrc import get_national_insurance_rates
+        from uk_data.adapters.hmrc import get_national_insurance_rates
 
         with pytest.raises(ValueError, match="not supported"):
             get_national_insurance_rates("2020/21")
@@ -148,22 +148,22 @@ class TestHmrcNationalInsurance:
 
 class TestHmrcVat:
     def test_standard_rate(self) -> None:
-        from uk_data_client.adapters.hmrc import get_vat_rate
+        from uk_data.adapters.hmrc import get_vat_rate
 
         assert get_vat_rate() == pytest.approx(0.20)
 
     def test_reduced_rate(self) -> None:
-        from uk_data_client.adapters.hmrc import get_vat_rate
+        from uk_data.adapters.hmrc import get_vat_rate
 
         assert get_vat_rate("reduced") == pytest.approx(0.05)
 
     def test_zero_rate(self) -> None:
-        from uk_data_client.adapters.hmrc import get_vat_rate
+        from uk_data.adapters.hmrc import get_vat_rate
 
         assert get_vat_rate("zero") == pytest.approx(0.0)
 
     def test_unknown_category_raises(self) -> None:
-        from uk_data_client.adapters.hmrc import get_vat_rate
+        from uk_data.adapters.hmrc import get_vat_rate
 
         with pytest.raises(ValueError, match="Unknown VAT category"):
             get_vat_rate("luxury")
@@ -171,7 +171,7 @@ class TestHmrcVat:
 
 class TestHmrcEffectiveTaxWedge:
     def test_returns_expected_keys(self) -> None:
-        from uk_data_client.adapters.hmrc import effective_tax_wedge
+        from uk_data.adapters.hmrc import effective_tax_wedge
 
         wedge = effective_tax_wedge(35_000)
         assert "gross_salary" in wedge
@@ -182,19 +182,19 @@ class TestHmrcEffectiveTaxWedge:
         assert "take_home" in wedge
 
     def test_take_home_less_than_gross(self) -> None:
-        from uk_data_client.adapters.hmrc import effective_tax_wedge
+        from uk_data.adapters.hmrc import effective_tax_wedge
 
         wedge = effective_tax_wedge(35_000)
         assert wedge["take_home"] < wedge["gross_salary"]
 
     def test_effective_rate_between_zero_and_one(self) -> None:
-        from uk_data_client.adapters.hmrc import effective_tax_wedge
+        from uk_data.adapters.hmrc import effective_tax_wedge
 
         wedge = effective_tax_wedge(50_000)
         assert 0.0 < wedge["effective_rate"] < 1.0
 
     def test_zero_salary(self) -> None:
-        from uk_data_client.adapters.hmrc import effective_tax_wedge
+        from uk_data.adapters.hmrc import effective_tax_wedge
 
         wedge = effective_tax_wedge(0)
         assert wedge["income_tax"] == pytest.approx(0.0)
@@ -208,15 +208,15 @@ class TestHmrcEffectiveTaxWedge:
 
 class TestBoeFetchBankRate:
     def test_returns_list_when_api_succeeds(self) -> None:
-        from uk_data_client import _http
+        from uk_data import _http
 
         fake_csv = "Date,Value\n01 Jan 2024,5.25\n01 Feb 2024,5.25\n"
         _http.clear_cache()
         with patch(
-            "uk_data_client.adapters.boe.retry",
+            "uk_data.adapters.boe.retry",
             return_value=fake_csv,
         ):
-            from uk_data_client.adapters.boe import fetch_bank_rate
+            from uk_data.adapters.boe import fetch_bank_rate
 
             obs = fetch_bank_rate()
         assert isinstance(obs, list)
@@ -224,40 +224,40 @@ class TestBoeFetchBankRate:
     def test_returns_empty_on_network_error(self) -> None:
         import urllib.error
 
-        from uk_data_client import _http
+        from uk_data import _http
 
         _http.clear_cache()
         with patch(
-            "uk_data_client.adapters.boe.retry",
+            "uk_data.adapters.boe.retry",
             side_effect=urllib.error.URLError("connection refused"),
         ):
-            from uk_data_client.adapters.boe import fetch_bank_rate
+            from uk_data.adapters.boe import fetch_bank_rate
 
             obs = fetch_bank_rate()
         assert obs == []
 
     def test_current_rate_falls_back_on_empty(self) -> None:
-        from uk_data_client import _http
+        from uk_data import _http
 
         _http.clear_cache()
         with patch(
-            "uk_data_client.adapters.boe.fetch_bank_rate",
+            "uk_data.adapters.boe.fetch_bank_rate",
             return_value=[],
         ):
-            from uk_data_client.adapters.boe import fetch_bank_rate_current
+            from uk_data.adapters.boe import fetch_bank_rate_current
 
             rate = fetch_bank_rate_current()
         assert 0.0 <= rate <= 0.25
 
     def test_current_rate_parses_csv_value(self) -> None:
-        from uk_data_client import _http
+        from uk_data import _http
 
         _http.clear_cache()
         with patch(
-            "uk_data_client.adapters.boe.fetch_bank_rate",
+            "uk_data.adapters.boe.fetch_bank_rate",
             return_value=[{"date": "01 Jan 2024", "value": "5.25"}],
         ):
-            from uk_data_client.adapters.boe import fetch_bank_rate_current
+            from uk_data.adapters.boe import fetch_bank_rate_current
 
             rate = fetch_bank_rate_current()
         assert rate == pytest.approx(0.0525)
@@ -265,20 +265,20 @@ class TestBoeFetchBankRate:
 
 class TestBoeLendingRates:
     def test_returns_expected_keys(self) -> None:
-        from uk_data_client import _http
+        from uk_data import _http
 
         _http.clear_cache()
         with (
             patch(
-                "uk_data_client.adapters.boe.fetch_bank_rate",
+                "uk_data.adapters.boe.fetch_bank_rate",
                 return_value=[{"date": "01 Jan 2024", "value": "5.25"}],
             ),
             patch(
-                "uk_data_client.adapters.boe.retry",
+                "uk_data.adapters.boe.retry",
                 side_effect=Exception("no network"),
             ),
         ):
-            from uk_data_client.adapters.boe import fetch_lending_rates
+            from uk_data.adapters.boe import fetch_lending_rates
 
             rates = fetch_lending_rates()
         assert "household_rate" in rates
@@ -288,20 +288,20 @@ class TestBoeLendingRates:
         assert "business_spread" in rates
 
     def test_spreads_are_non_negative(self) -> None:
-        from uk_data_client import _http
+        from uk_data import _http
 
         _http.clear_cache()
         with (
             patch(
-                "uk_data_client.adapters.boe.fetch_bank_rate",
+                "uk_data.adapters.boe.fetch_bank_rate",
                 return_value=[],
             ),
             patch(
-                "uk_data_client.adapters.boe.retry",
+                "uk_data.adapters.boe.retry",
                 side_effect=Exception("no network"),
             ),
         ):
-            from uk_data_client.adapters.boe import fetch_lending_rates
+            from uk_data.adapters.boe import fetch_lending_rates
 
             rates = fetch_lending_rates()
         assert rates["household_spread"] >= 0.0
@@ -310,7 +310,7 @@ class TestBoeLendingRates:
 
 class TestBoeCapitalRatio:
     def test_returns_reasonable_value(self) -> None:
-        from uk_data_client.adapters.boe import get_aggregate_capital_ratio
+        from uk_data.adapters.boe import get_aggregate_capital_ratio
 
         ratio = get_aggregate_capital_ratio()
         assert 0.05 < ratio < 0.40
@@ -339,41 +339,41 @@ _FAKE_ONS_MONTHLY_RESPONSE: dict[str, Any] = {
 
 class TestOnsGdp:
     def test_returns_list_on_success(self) -> None:
-        from uk_data_client import _http
+        from uk_data import _http
 
         _http.clear_cache()
         with patch(
-            "uk_data_client.adapters.ons.retry",
+            "uk_data.adapters.ons.retry",
             return_value=_FAKE_ONS_RESPONSE,
         ):
-            from uk_data_client.adapters.ons import fetch_gdp
+            from uk_data.adapters.ons import fetch_gdp
 
             obs = fetch_gdp(limit=4)
         assert isinstance(obs, list)
         assert len(obs) == 4
 
     def test_returns_empty_on_api_failure(self) -> None:
-        from uk_data_client import _http
+        from uk_data import _http
 
         _http.clear_cache()
         with patch(
-            "uk_data_client.adapters.ons.retry",
+            "uk_data.adapters.ons.retry",
             side_effect=Exception("api down"),
         ):
-            from uk_data_client.adapters.ons import fetch_gdp
+            from uk_data.adapters.ons import fetch_gdp
 
             obs = fetch_gdp()
         assert obs == []
 
     def test_limit_is_respected(self) -> None:
-        from uk_data_client import _http
+        from uk_data import _http
 
         _http.clear_cache()
         with patch(
-            "uk_data_client.adapters.ons.retry",
+            "uk_data.adapters.ons.retry",
             return_value=_FAKE_ONS_RESPONSE,
         ):
-            from uk_data_client.adapters.ons import fetch_gdp
+            from uk_data.adapters.ons import fetch_gdp
 
             obs = fetch_gdp(limit=2)
         assert len(obs) <= 2
@@ -381,14 +381,14 @@ class TestOnsGdp:
 
 class TestOnsHouseholdIncome:
     def test_returns_list(self) -> None:
-        from uk_data_client import _http
+        from uk_data import _http
 
         _http.clear_cache()
         with patch(
-            "uk_data_client.adapters.ons.retry",
+            "uk_data.adapters.ons.retry",
             return_value=_FAKE_ONS_RESPONSE,
         ):
-            from uk_data_client.adapters.ons import fetch_household_income
+            from uk_data.adapters.ons import fetch_household_income
 
             obs = fetch_household_income(limit=4)
         assert isinstance(obs, list)
@@ -396,14 +396,14 @@ class TestOnsHouseholdIncome:
 
 class TestOnsSavingsRatio:
     def test_returns_list(self) -> None:
-        from uk_data_client import _http
+        from uk_data import _http
 
         _http.clear_cache()
         with patch(
-            "uk_data_client.adapters.ons.retry",
+            "uk_data.adapters.ons.retry",
             return_value=_FAKE_ONS_RESPONSE,
         ):
-            from uk_data_client.adapters.ons import fetch_savings_ratio
+            from uk_data.adapters.ons import fetch_savings_ratio
 
             obs = fetch_savings_ratio(limit=4)
         assert isinstance(obs, list)
@@ -411,28 +411,28 @@ class TestOnsSavingsRatio:
 
 class TestOnsLabourMarket:
     def test_returns_expected_keys(self) -> None:
-        from uk_data_client import _http
+        from uk_data import _http
 
         _http.clear_cache()
         with patch(
-            "uk_data_client.adapters.ons.retry",
+            "uk_data.adapters.ons.retry",
             return_value=_FAKE_ONS_MONTHLY_RESPONSE,
         ):
-            from uk_data_client.adapters.ons import fetch_labour_market
+            from uk_data.adapters.ons import fetch_labour_market
 
             data = fetch_labour_market()
         assert "unemployment_rate" in data
         assert "average_weekly_earnings" in data
 
     def test_returns_none_on_api_failure(self) -> None:
-        from uk_data_client import _http
+        from uk_data import _http
 
         _http.clear_cache()
         with patch(
-            "uk_data_client.adapters.ons.retry",
+            "uk_data.adapters.ons.retry",
             side_effect=Exception("api down"),
         ):
-            from uk_data_client.adapters.ons import fetch_labour_market
+            from uk_data.adapters.ons import fetch_labour_market
 
             data = fetch_labour_market()
         assert data["unemployment_rate"] is None
@@ -441,14 +441,14 @@ class TestOnsLabourMarket:
 
 class TestOnsInputOutputTable:
     def test_returns_expected_keys(self) -> None:
-        from uk_data_client import _http
+        from uk_data import _http
 
         _http.clear_cache()
         with patch(
-            "uk_data_client.adapters.ons.retry",
+            "uk_data.adapters.ons.retry",
             side_effect=Exception("api down"),
         ):
-            from uk_data_client.adapters.ons import fetch_input_output_table
+            from uk_data.adapters.ons import fetch_input_output_table
 
             io = fetch_input_output_table()
         assert "sectors" in io
@@ -456,14 +456,14 @@ class TestOnsInputOutputTable:
         assert "final_demand_shares" in io
 
     def test_sectors_match_abm_config(self) -> None:
-        from uk_data_client import _http
+        from uk_data import _http
 
         _http.clear_cache()
         with patch(
-            "uk_data_client.adapters.ons.retry",
+            "uk_data.adapters.ons.retry",
             side_effect=Exception("api down"),
         ):
-            from uk_data_client.adapters.ons import fetch_input_output_table
+            from uk_data.adapters.ons import fetch_input_output_table
 
             io = fetch_input_output_table()
         expected_sectors = {
@@ -484,28 +484,28 @@ class TestOnsInputOutputTable:
         assert set(io["sectors"]) == expected_sectors
 
     def test_final_demand_shares_sum_to_approximately_one(self) -> None:
-        from uk_data_client import _http
+        from uk_data import _http
 
         _http.clear_cache()
         with patch(
-            "uk_data_client.adapters.ons.retry",
+            "uk_data.adapters.ons.retry",
             side_effect=Exception("api down"),
         ):
-            from uk_data_client.adapters.ons import fetch_input_output_table
+            from uk_data.adapters.ons import fetch_input_output_table
 
             io = fetch_input_output_table()
         total = sum(io["final_demand_shares"].values())
         assert total == pytest.approx(1.0, abs=0.05)
 
     def test_use_coefficients_are_between_zero_and_one(self) -> None:
-        from uk_data_client import _http
+        from uk_data import _http
 
         _http.clear_cache()
         with patch(
-            "uk_data_client.adapters.ons.retry",
+            "uk_data.adapters.ons.retry",
             side_effect=Exception("api down"),
         ):
-            from uk_data_client.adapters.ons import fetch_input_output_table
+            from uk_data.adapters.ons import fetch_input_output_table
 
             io = fetch_input_output_table()
         for sector, inputs in io["use_coefficients"].items():
@@ -522,11 +522,11 @@ class TestOnsInputOutputTable:
 
 class TestCalibrateHouseholds:
     def test_returns_household_config(self) -> None:
-        from uk_data_client import _http
+        from uk_data import _http
 
         _http.clear_cache()
         with patch(
-            "uk_data_client.adapters.ons.retry",
+            "uk_data.adapters.ons.retry",
             side_effect=Exception("api down"),
         ):
             from companies_house_abm.data_sources.calibration import (
@@ -540,12 +540,12 @@ class TestCalibrateHouseholds:
 
     def test_falls_back_to_defaults_on_api_failure(self) -> None:
         from companies_house_abm.abm.config import HouseholdConfig
-        from uk_data_client import _http
+        from uk_data import _http
 
         _http.clear_cache()
         default = HouseholdConfig()
         with patch(
-            "uk_data_client.adapters.ons.retry",
+            "uk_data.adapters.ons.retry",
             side_effect=Exception("api down"),
         ):
             from companies_house_abm.data_sources.calibration import (
@@ -558,7 +558,7 @@ class TestCalibrateHouseholds:
         assert cfg.income_distribution == default.income_distribution
 
     def test_updates_mpc_from_savings_ratio(self) -> None:
-        from uk_data_client import _http
+        from uk_data import _http
 
         _http.clear_cache()
         fake_savings = {"quarters": [{"value": "8.0"}]}  # 8% savings ratio
@@ -574,7 +574,7 @@ class TestCalibrateHouseholds:
             return fake_labour
 
         with patch(
-            "uk_data_client.adapters.ons.retry",
+            "uk_data.adapters.ons.retry",
             side_effect=_fake_retry,
         ):
             from companies_house_abm.data_sources.calibration import (
@@ -588,16 +588,16 @@ class TestCalibrateHouseholds:
 
 class TestCalibrateBanks:
     def test_returns_config_and_behavior(self) -> None:
-        from uk_data_client import _http
+        from uk_data import _http
 
         _http.clear_cache()
         with (
             patch(
-                "uk_data_client.adapters.boe.retry",
+                "uk_data.adapters.boe.retry",
                 side_effect=Exception("no network"),
             ),
             patch(
-                "uk_data_client.adapters.boe.fetch_bank_rate",
+                "uk_data.adapters.boe.fetch_bank_rate",
                 return_value=[],
             ),
         ):
@@ -610,16 +610,16 @@ class TestCalibrateBanks:
         assert isinstance(beh, BankBehaviorConfig)
 
     def test_capital_requirement_from_cet1(self) -> None:
-        from uk_data_client import _http
+        from uk_data import _http
 
         _http.clear_cache()
         with (
             patch(
-                "uk_data_client.adapters.boe.get_aggregate_capital_ratio",
+                "uk_data.adapters.boe.get_aggregate_capital_ratio",
                 return_value=0.148,
             ),
             patch(
-                "uk_data_client.adapters.boe.fetch_lending_rates",
+                "uk_data.adapters.boe.fetch_lending_rates",
                 return_value={
                     "household_rate": 0.057,
                     "business_rate": 0.065,
@@ -657,11 +657,11 @@ class TestCalibrateGovernment:
 
 class TestCalibrateIoSectors:
     def test_returns_expected_keys(self) -> None:
-        from uk_data_client import _http
+        from uk_data import _http
 
         _http.clear_cache()
         with patch(
-            "uk_data_client.adapters.ons.retry",
+            "uk_data.adapters.ons.retry",
             side_effect=Exception("api down"),
         ):
             from companies_house_abm.data_sources.calibration import (
@@ -675,11 +675,11 @@ class TestCalibrateIoSectors:
         assert "output_multipliers" in data
 
     def test_output_multipliers_are_above_one(self) -> None:
-        from uk_data_client import _http
+        from uk_data import _http
 
         _http.clear_cache()
         with patch(
-            "uk_data_client.adapters.ons.retry",
+            "uk_data.adapters.ons.retry",
             side_effect=Exception("api down"),
         ):
             from companies_house_abm.data_sources.calibration import (
@@ -694,24 +694,24 @@ class TestCalibrateIoSectors:
 
 class TestCalibrateModel:
     def test_returns_model_config(self) -> None:
-        from uk_data_client import _http
+        from uk_data import _http
 
         _http.clear_cache()
         with (
             patch(
-                "uk_data_client.adapters.ons.retry",
+                "uk_data.adapters.ons.retry",
                 side_effect=Exception("api down"),
             ),
             patch(
-                "uk_data_client.adapters.boe.retry",
+                "uk_data.adapters.boe.retry",
                 side_effect=Exception("api down"),
             ),
             patch(
-                "uk_data_client.adapters.boe.fetch_bank_rate",
+                "uk_data.adapters.boe.fetch_bank_rate",
                 return_value=[],
             ),
             patch(
-                "uk_data_client.adapters.land_registry.retry",
+                "uk_data.adapters.land_registry.retry",
                 side_effect=Exception("api down"),
             ),
         ):
@@ -723,24 +723,24 @@ class TestCalibrateModel:
         assert isinstance(cfg, ModelConfig)
 
     def test_corporation_tax_calibrated(self) -> None:
-        from uk_data_client import _http
+        from uk_data import _http
 
         _http.clear_cache()
         with (
             patch(
-                "uk_data_client.adapters.ons.retry",
+                "uk_data.adapters.ons.retry",
                 side_effect=Exception("api down"),
             ),
             patch(
-                "uk_data_client.adapters.boe.retry",
+                "uk_data.adapters.boe.retry",
                 side_effect=Exception("api down"),
             ),
             patch(
-                "uk_data_client.adapters.boe.fetch_bank_rate",
+                "uk_data.adapters.boe.fetch_bank_rate",
                 return_value=[],
             ),
             patch(
-                "uk_data_client.adapters.land_registry.retry",
+                "uk_data.adapters.land_registry.retry",
                 side_effect=Exception("api down"),
             ),
         ):
@@ -757,7 +757,7 @@ class TestCalibrateModel:
 
 class TestHttpCache:
     def test_clear_cache_empties_dict(self) -> None:
-        from uk_data_client._http import _CACHE, clear_cache
+        from uk_data._http import _CACHE, clear_cache
 
         _CACHE["test_key"] = "test_value"
         clear_cache()
@@ -766,7 +766,7 @@ class TestHttpCache:
 
 class TestHttpRetry:
     def test_succeeds_on_first_attempt(self) -> None:
-        from uk_data_client._http import retry
+        from uk_data._http import retry
 
         result = retry(lambda: 42)
         assert result == 42
@@ -774,7 +774,7 @@ class TestHttpRetry:
     def test_retries_on_failure(self) -> None:
         import urllib.error
 
-        from uk_data_client._http import retry
+        from uk_data._http import retry
 
         call_count = 0
 
@@ -792,7 +792,7 @@ class TestHttpRetry:
     def test_raises_after_all_retries_exhausted(self) -> None:
         import urllib.error
 
-        from uk_data_client._http import retry
+        from uk_data._http import retry
 
         def always_fails() -> None:
             raise urllib.error.URLError("permanent failure")
@@ -830,7 +830,7 @@ class TestFetchSicCodesNormalise:
     def test_extracts_company_number_and_sic(self) -> None:
         import polars as pl
 
-        from uk_data_client.adapters.companies_house import _normalise
+        from uk_data.adapters.companies_house import _normalise
 
         raw = pl.DataFrame(
             {
@@ -849,7 +849,7 @@ class TestFetchSicCodesNormalise:
     def test_zero_pads_short_company_numbers(self) -> None:
         import polars as pl
 
-        from uk_data_client.adapters.companies_house import _normalise
+        from uk_data.adapters.companies_house import _normalise
 
         raw = pl.DataFrame(
             {
@@ -863,7 +863,7 @@ class TestFetchSicCodesNormalise:
     def test_extracts_five_digit_sic_code(self) -> None:
         import polars as pl
 
-        from uk_data_client.adapters.companies_house import _normalise
+        from uk_data.adapters.companies_house import _normalise
 
         raw = pl.DataFrame(
             {
@@ -877,7 +877,7 @@ class TestFetchSicCodesNormalise:
     def test_drops_non_numeric_sic_codes(self) -> None:
         import polars as pl
 
-        from uk_data_client.adapters.companies_house import _normalise
+        from uk_data.adapters.companies_house import _normalise
 
         raw = pl.DataFrame(
             {
@@ -892,7 +892,7 @@ class TestFetchSicCodesNormalise:
     def test_drops_null_rows(self) -> None:
         import polars as pl
 
-        from uk_data_client.adapters.companies_house import _normalise
+        from uk_data.adapters.companies_house import _normalise
 
         raw = pl.DataFrame(
             {
@@ -906,7 +906,7 @@ class TestFetchSicCodesNormalise:
     def test_deduplicates_per_company(self) -> None:
         import polars as pl
 
-        from uk_data_client.adapters.companies_house import _normalise
+        from uk_data.adapters.companies_house import _normalise
 
         raw = pl.DataFrame(
             {
@@ -923,7 +923,7 @@ class TestFetchSicCodesNormalise:
 
 class TestParseBulkZip:
     def test_parses_csv_from_zip(self, tmp_path: Any) -> None:
-        from uk_data_client.adapters.companies_house import _parse_bulk_zip
+        from uk_data.adapters.companies_house import _parse_bulk_zip
 
         rows = [
             {
@@ -945,7 +945,7 @@ class TestParseBulkZip:
         import io as _io
         import zipfile as _zf
 
-        from uk_data_client.adapters.companies_house import _parse_bulk_zip
+        from uk_data.adapters.companies_house import _parse_bulk_zip
 
         zip_buf = _io.BytesIO()
         with _zf.ZipFile(zip_buf, "w") as zf:
@@ -974,13 +974,13 @@ class TestFetchSicCodes:
         fake_zip = _make_fake_bulk_zip(rows)
 
         with patch(
-            "uk_data_client.adapters.companies_house._stream_to_tempfile",
+            "uk_data.adapters.companies_house._stream_to_tempfile",
         ) as mock_stream:
             zip_path = str(tmp_path / "fake.zip")
             (tmp_path / "fake.zip").write_bytes(fake_zip)
             mock_stream.return_value = zip_path
 
-            from uk_data_client.adapters.companies_house import (
+            from uk_data.adapters.companies_house import (
                 fetch_sic_codes,
             )
 
@@ -1002,13 +1002,13 @@ class TestFetchSicCodes:
         out_path = tmp_path / "sic_codes.parquet"
 
         with patch(
-            "uk_data_client.adapters.companies_house._stream_to_tempfile",
+            "uk_data.adapters.companies_house._stream_to_tempfile",
         ) as mock_stream:
             zip_path = str(tmp_path / "fake.zip")
             (tmp_path / "fake.zip").write_bytes(fake_zip)
             mock_stream.return_value = zip_path
 
-            from uk_data_client.adapters.companies_house import (
+            from uk_data.adapters.companies_house import (
                 fetch_sic_codes,
             )
 
@@ -1024,10 +1024,10 @@ class TestFetchSicCodes:
         import urllib.error
 
         with patch(
-            "uk_data_client.adapters.companies_house._stream_to_tempfile",
+            "uk_data.adapters.companies_house._stream_to_tempfile",
             side_effect=urllib.error.URLError("connection refused"),
         ):
-            from uk_data_client.adapters.companies_house import (
+            from uk_data.adapters.companies_house import (
                 fetch_sic_codes,
             )
 
@@ -1057,10 +1057,10 @@ class TestFetchSicCodes:
             return zip_path
 
         with patch(
-            "uk_data_client.adapters.companies_house._stream_to_tempfile",
+            "uk_data.adapters.companies_house._stream_to_tempfile",
             side_effect=_fake_stream,
         ):
-            from uk_data_client.adapters.companies_house import (
+            from uk_data.adapters.companies_house import (
                 fetch_sic_codes,
             )
 
@@ -1090,7 +1090,7 @@ class TestFetchDataCli:
         from typer.testing import CliRunner
 
         from companies_house_abm.cli import app
-        from uk_data_client import _http
+        from uk_data import _http
 
         _http.clear_cache()
 
@@ -1099,19 +1099,19 @@ class TestFetchDataCli:
         # Patch all network calls to return empty/minimal data
         with (
             patch(
-                "uk_data_client.adapters.ons.retry",
+                "uk_data.adapters.ons.retry",
                 side_effect=Exception("no network"),
             ),
             patch(
-                "uk_data_client.adapters.boe.retry",
+                "uk_data.adapters.boe.retry",
                 side_effect=Exception("no network"),
             ),
             patch(
-                "uk_data_client.adapters.boe.fetch_bank_rate",
+                "uk_data.adapters.boe.fetch_bank_rate",
                 return_value=[],
             ),
             patch(
-                "uk_data_client.adapters.companies_house._stream_to_tempfile",
+                "uk_data.adapters.companies_house._stream_to_tempfile",
                 side_effect=Exception("no network"),
             ),
         ):

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import base64
 import logging
+import os
 import urllib.parse
 import urllib.request
 from datetime import UTC, date, datetime, time
@@ -31,6 +32,21 @@ _EPC_DOMESTIC_SEARCH = "https://epc.opendatacommunities.org/api/v1/domestic/sear
 _EPC_PAGE_SIZE = 5000
 
 
+def _resolve_epc_credentials(
+    api_user: str | None = None,
+    api_pass: str | None = None,
+) -> tuple[str, str]:
+    user = api_user or os.environ.get("EPC_API_USER")
+    password = api_pass or os.environ.get("EPC_API_PASS")
+    if not user or not password:
+        msg = (
+            "EPC API credentials are required. Set EPC_API_USER/EPC_API_PASS "
+            "or pass api_user/api_pass."
+        )
+        raise ValueError(msg)
+    return user, password
+
+
 def _encode_basic_auth(user: str, password: str) -> str:
     token = f"{user}:{password}".encode()
     return base64.b64encode(token).decode()
@@ -42,12 +58,7 @@ def _epc_headers(
     api_pass: str | None = None,
     accept: str = "application/json",
 ) -> dict[str, str]:
-    if not api_user or not api_pass:
-        msg = (
-            "EPC API credentials are required. Pass api_user/api_pass or set "
-            "EPC_API_USER and EPC_API_PASS."
-        )
-        raise ValueError(msg)
+    api_user, api_pass = _resolve_epc_credentials(api_user, api_pass)
     return {
         "Authorization": f"Basic {_encode_basic_auth(api_user, api_pass)}",
         "Accept": accept,
@@ -72,8 +83,8 @@ def _request_bytes(
 def download_epc_data(
     output_path: str | Path,
     *,
-    api_user: str,
-    api_pass: str,
+    api_user: str | None = None,
+    api_pass: str | None = None,
     bulk_file: str = "all-domestic-certificates.zip",
     timeout: int = 300,
 ) -> Path:
@@ -106,8 +117,8 @@ def download_epc_data(
 def search_epc_data(
     output_path: str | Path,
     *,
-    api_user: str,
-    api_pass: str,
+    api_user: str | None = None,
+    api_pass: str | None = None,
     postcodes: list[str] | None = None,
     local_authority: str | None = None,
     from_month: int | None = None,

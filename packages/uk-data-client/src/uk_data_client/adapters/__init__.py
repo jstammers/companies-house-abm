@@ -12,7 +12,12 @@ from uk_data_client.adapters.companies_house import (
     CompaniesHouseAdapter,
     fetch_sic_codes,
 )
-from uk_data_client.adapters.epc import EPCAdapter
+from uk_data_client.adapters.epc import (
+    EPCAdapter,
+    download_epc_data,
+    fetch_epc_lodgement_events,
+    search_epc_data,
+)
 from uk_data_client.adapters.historical import (
     HistoricalAdapter,
     fetch_all_historical,
@@ -35,9 +40,17 @@ from uk_data_client.adapters.hmrc import (
 )
 from uk_data_client.adapters.land_registry import (
     LandRegistryAdapter,
+    clean_price_paid_data,
+    clean_uk_hpi_data,
+    download_price_paid_data,
+    download_uk_hpi_data,
     fetch_price_by_type,
+    fetch_property_transaction_events,
     fetch_regional_prices,
     fetch_uk_average_price,
+    fetch_uk_hpi_history,
+    load_price_paid_data,
+    load_uk_hpi_data,
 )
 from uk_data_client.adapters.ons import (
     ONSAdapter,
@@ -60,8 +73,13 @@ __all__ = [
     "HistoricalAdapter",
     "LandRegistryAdapter",
     "ONSAdapter",
+    "clean_price_paid_data",
+    "clean_uk_hpi_data",
     "compute_employer_ni",
     "compute_income_tax",
+    "download_epc_data",
+    "download_price_paid_data",
+    "download_uk_hpi_data",
     "effective_tax_wedge",
     "fetch_affordability_ratio",
     "fetch_all_historical",
@@ -69,6 +87,7 @@ __all__ = [
     "fetch_bank_rate_current",
     "fetch_bank_rate_quarterly",
     "fetch_earnings_index_quarterly",
+    "fetch_epc_lodgement_events",
     "fetch_gdp",
     "fetch_household_income",
     "fetch_hpi_quarterly",
@@ -78,6 +97,7 @@ __all__ = [
     "fetch_mortgage_approvals_quarterly",
     "fetch_mortgage_rate_quarterly",
     "fetch_price_by_type",
+    "fetch_property_transaction_events",
     "fetch_regional_prices",
     "fetch_rental_growth",
     "fetch_savings_ratio",
@@ -85,9 +105,13 @@ __all__ = [
     "fetch_tenure_distribution",
     "fetch_transactions_quarterly",
     "fetch_uk_average_price",
+    "fetch_uk_hpi_history",
     "get_aggregate_capital_ratio",
     "get_corporation_tax_rate",
     "get_income_tax_bands",
     "get_national_insurance_rates",
     "get_vat_rate",
+    "load_price_paid_data",
+    "load_uk_hpi_data",
+    "search_epc_data",
 ]

@@ -467,6 +467,10 @@ class LandRegistryAdapter(BaseAdapter):
         """Return the Land Registry series IDs supported by this adapter."""
         return ["uk_hpi_average", "uk_hpi_full"]
 
+    def available_event_types(self) -> list[str]:
+        """Return the event types supported by this adapter."""
+        return ["property_transaction"]
+
     def fetch_series(self, series_id: str, **kwargs: object):
         """Fetch canonical Land Registry series."""
         concept = str(kwargs.get("concept", series_id.lower()))

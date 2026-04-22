@@ -24,6 +24,26 @@ class BaseAdapter(ABC):
         """
         return []
 
+    def available_entity_types(self) -> list[str]:
+        """Return the entity types that can be fetched via :meth:`fetch_entity`.
+
+        Subclasses that implement ``fetch_entity`` should override this to
+        advertise the entity type strings they produce (e.g. ``["company"]``).
+        Returns an empty list by default (i.e. the adapter does not support
+        entity lookup).
+        """
+        return []
+
+    def available_event_types(self) -> list[str]:
+        """Return the event types that can be fetched via :meth:`fetch_events`.
+
+        Subclasses that implement ``fetch_events`` should override this to
+        advertise the event type strings they produce
+        (e.g. ``["property_transaction"]``).
+        Returns an empty list by default.
+        """
+        return []
+
     def fetch_entity(self, entity_id: str, **kwargs: object) -> Entity:
         """Fetch a canonical entity."""
         raise NotImplementedError

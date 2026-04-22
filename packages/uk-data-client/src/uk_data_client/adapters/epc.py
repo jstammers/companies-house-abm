@@ -298,6 +298,10 @@ class EPCAdapter(BaseAdapter):
         """EPC integration does not expose canonical series yet."""
         raise NotImplementedError("EPCAdapter currently supports event ingestion only.")
 
+    def available_event_types(self) -> list[str]:
+        """Return the event types supported by this adapter."""
+        return ["epc_lodgement"]
+
     def fetch_events(
         self,
         entity_id: str | None = None,

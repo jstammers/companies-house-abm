@@ -1,8 +1,54 @@
-"""Tests for the bytes-and-mortar-derived property and EPC source helpers."""
+"""Unit tests for LandRegistryAdapter — including file-based helpers."""
 
 from __future__ import annotations
 
-from uk_data_client.client import UKDataClient
+from unittest.mock import patch
+
+import pytest
+
+from uk_data_client.adapters.land_registry import LandRegistryAdapter
+
+
+class TestLandRegistryAdapterAvailableSeries:
+    def test_returns_two_series(self) -> None:
+        adapter = LandRegistryAdapter()
+        series = adapter.available_series()
+        assert len(series) == 2
+
+    def test_contains_expected_ids(self) -> None:
+        adapter = LandRegistryAdapter()
+        series = adapter.available_series()
+        assert set(series) == {"uk_hpi_average", "uk_hpi_full"}
+
+
+class TestLandRegistryAdapterFetchSeriesOffline:
+    def test_uk_hpi_average_returns_timeseries(self) -> None:
+        with patch(
+            "uk_data_client.adapters.land_registry.fetch_uk_average_price",
+            return_value=285_000.0,
+        ):
+            adapter = LandRegistryAdapter()
+            ts = adapter.fetch_series("uk_hpi_average")
+            assert ts.source == "land_registry"
+            assert ts.latest_value == pytest.approx(285_000.0)
+
+    def test_uk_hpi_full_requires_filepath(self) -> None:
+        adapter = LandRegistryAdapter()
+        with pytest.raises(ValueError, match="filepath"):
+            adapter.fetch_series("uk_hpi_full")
+
+    def test_unsupported_series_raises(self) -> None:
+        adapter = LandRegistryAdapter()
+        with pytest.raises(ValueError, match="Unsupported Land Registry series"):
+            adapter.fetch_series("invalid_lr_series")
+
+
+class TestLandRegistryAdapterEventTypes:
+    def test_event_types_contains_property_transaction(self) -> None:
+        assert "property_transaction" in LandRegistryAdapter().available_event_types()
+
+    def test_no_entity_types(self) -> None:
+        assert LandRegistryAdapter().available_entity_types() == []
 
 
 def test_price_paid_load_clean_and_event_conversion(tmp_path):
@@ -55,8 +101,6 @@ def test_uk_hpi_history_from_local_file(tmp_path):
 
 
 def test_land_registry_adapter_events_and_series(tmp_path):
-    from uk_data_client.adapters.land_registry import LandRegistryAdapter
-
     price_paid_path = tmp_path / "pp-sample.csv"
     price_paid_path.write_text(
         "{tx-1},{250000},{2024-01-15 00:00},{SW1A 1AA},{D},{N},{F},{10},,"
@@ -74,37 +118,3 @@ def test_land_registry_adapter_events_and_series(tmp_path):
     assert len(events) == 1
     assert events[0].event_type == "property_transaction"
     assert series.latest_value == 285000.0
-
-
-def test_epc_clean_and_event_conversion(tmp_path):
-    from uk_data_client.adapters.epc import (
-        EPCAdapter,
-        clean_epc_data,
-        fetch_epc_lodgement_events,
-        load_epc_data,
-    )
-
-    csv_path = tmp_path / "epc.csv"
-    csv_path.write_text(
-        "lmk-key,postcode,current-energy-rating,inspection-date,lodgement-date,total-floor-area,number-habitable-rooms,transaction-type,uprn\n"
-        "abc-123,sw1a1aa,C,2024-01-01,2024-01-10,85.0,5,sale,10001\n"
-        "bad-row,,Z,2024-01-01,2024-01-10,70.0,4,rental,\n"
-    )
-
-    cleaned = clean_epc_data(load_epc_data(csv_path)).collect()
-    assert len(cleaned) == 1
-    assert cleaned["postcode"][0] == "SW1A1AA"
-
-    events = fetch_epc_lodgement_events(csv_path)
-    assert len(events) == 1
-    assert events[0].event_type == "epc_lodgement"
-    assert events[0].entity_id == "epc:uprn:10001"
-
-    adapter = EPCAdapter()
-    adapter_events = adapter.fetch_events(filepath=csv_path)
-    assert len(adapter_events) == 1
-
-
-def test_uk_data_client_registers_epc_adapter():
-    client = UKDataClient()
-    assert "epc" in client.adapters

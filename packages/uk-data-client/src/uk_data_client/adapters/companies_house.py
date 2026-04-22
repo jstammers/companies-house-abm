@@ -291,6 +291,14 @@ class CompaniesHouseAdapter(BaseAdapter):
         msg = f"Unsupported Companies House series: {series_id}"
         raise ValueError(msg)
 
+    def available_entity_types(self) -> list[str]:
+        """Return the entity types supported by this adapter."""
+        return ["company"]
+
+    def available_event_types(self) -> list[str]:
+        """Return the event types supported by this adapter."""
+        return ["filing"]
+
     def fetch_entity(self, entity_id: str, **_kwargs: object) -> Entity:
         """Search for and return a canonical company entity."""
         from companies_house.api.client import CompaniesHouseClient

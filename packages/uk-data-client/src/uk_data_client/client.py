@@ -83,6 +83,44 @@ class UKDataClient:
             for name, adapter in self.adapters.items()
         ]
 
+    def list_entities(self) -> list[EntityTypeInfo]:
+        """Return metadata about each adapter that supports entity lookup.
+
+        Only adapters that advertise at least one entity type via
+        :meth:`~uk_data_client.adapters.base.BaseAdapter.available_entity_types`
+        are included.
+
+        Example
+        -------
+        >>> client = UKDataClient()
+        >>> for info in client.list_entities():
+        ...     print(info.source, info.entity_types)
+        """
+        return [
+            EntityTypeInfo(source=name, entity_types=adapter.available_entity_types())
+            for name, adapter in self.adapters.items()
+            if adapter.available_entity_types()
+        ]
+
+    def list_events(self) -> list[EventTypeInfo]:
+        """Return metadata about each adapter that supports event fetching.
+
+        Only adapters that advertise at least one event type via
+        :meth:`~uk_data_client.adapters.base.BaseAdapter.available_event_types`
+        are included.
+
+        Example
+        -------
+        >>> client = UKDataClient()
+        >>> for info in client.list_events():
+        ...     print(info.source, info.event_types)
+        """
+        return [
+            EventTypeInfo(source=name, event_types=adapter.available_event_types())
+            for name, adapter in self.adapters.items()
+            if adapter.available_event_types()
+        ]
+
 
 @dataclass
 class SourceInfo:
@@ -93,3 +131,25 @@ class SourceInfo:
     series: list[str] = field(default_factory=list)
     """Series IDs that can be passed to :meth:`UKDataClient.get_series` for this
     source."""
+
+
+@dataclass
+class EntityTypeInfo:
+    """Metadata about entity types available from a source adapter."""
+
+    source: str
+    """Adapter key (e.g. ``"companies_house"``)."""
+    entity_types: list[str] = field(default_factory=list)
+    """Entity type strings that :meth:`UKDataClient.get_entity` can return for
+    this source (e.g. ``["company"]``)."""
+
+
+@dataclass
+class EventTypeInfo:
+    """Metadata about event types available from a source adapter."""
+
+    source: str
+    """Adapter key (e.g. ``"land_registry"``, ``"epc"``)."""
+    event_types: list[str] = field(default_factory=list)
+    """Event type strings that :meth:`UKDataClient.get_events` can return for
+    this source (e.g. ``["property_transaction"]``)."""

@@ -52,8 +52,8 @@ def sources() -> None:
         typer.echo(f"{src.name}: {series_str}")
 
 
-@app.command()
-def series(
+@app.command(name="get-series")
+def get_series_cmd(
     concept: str = typer.Argument(..., help="Concept name, e.g. 'gdp' or 'bank_rate'."),
     source: str | None = typer.Option(
         None, "--source", "-s", help="Preferred data source adapter name."
@@ -61,13 +61,16 @@ def series(
     limit: int | None = typer.Option(
         None, "--limit", "-n", help="Maximum number of observations to return."
     ),
-    filepath: Annotated[
+    data_path: Annotated[
         Path | None,
         typer.Option(
-            "--filepath",
-            "-f",
-            help="Path to a local data file (required for some series, "
-            "e.g. uk_hpi_full).",
+            "--data-path",
+            "-d",
+            help=(
+                "Directory for cached/downloaded data files "
+                "(required for some series, e.g. uk_hpi_full). "
+                "Defaults to platform cache dir."
+            ),
         ),
     ] = None,
     output: str | None = typer.Option(
@@ -76,9 +79,8 @@ def series(
 ) -> None:
     """Fetch a canonical time series by concept name."""
     client = UKDataClient()
-    series_kwargs: dict[str, object] = {}
-    if filepath is not None:
-        series_kwargs["filepath"] = str(filepath)
+    resolved_data_path = data_path if data_path is not None else _default_cache_dir()
+    series_kwargs: dict[str, object] = {"filepath": str(resolved_data_path)}
     ts = client.get_series(
         concept,
         source=source,
@@ -144,11 +146,24 @@ def get_entity(
         "-s",
         help="Data source adapter to query (default: companies_house).",
     ),
+    data_path: Annotated[
+        Path | None,
+        typer.Option(
+            "--data-path",
+            "-d",
+            help=(
+                "Directory for cached/downloaded data files. "
+                "Defaults to platform cache dir."
+            ),
+        ),
+    ] = None,
     output: str | None = typer.Option(
         None, "--output", "-o", help="Output format: 'json' or 'text' (default)."
     ),
 ) -> None:
     """Fetch a single entity by name or ID from the specified source."""
+    resolved_data_path = data_path if data_path is not None else _default_cache_dir()
+    del resolved_data_path  # available for future file-backed entity sources
     client = UKDataClient()
     entity = client.get_entity(name, source=source)
     if entity is None:

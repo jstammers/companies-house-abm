@@ -429,6 +429,14 @@ def effective_tax_wedge(gross_salary: float) -> dict[str, float]:
 class HMRCAdapter(BaseAdapter):
     """Canonical adapter for static HMRC tax parameters."""
 
+    def available_series(self) -> list[str]:
+        """Return the HMRC series IDs supported by this adapter."""
+        return [
+            "corporation_tax_2024",
+            "income_tax_basic_2024",
+            "vat_standard_2024",
+        ]
+
     def fetch_series(self, series_id: str, **kwargs: object):
         """Fetch canonical one-point HMRC policy series."""
         concept = str(kwargs.get("concept", series_id.lower()))

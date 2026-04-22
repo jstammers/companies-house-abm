@@ -16,6 +16,14 @@ class BaseAdapter(ABC):
     def fetch_series(self, series_id: str, **kwargs: object) -> TimeSeries:
         """Fetch a canonical time series."""
 
+    def available_series(self) -> list[str]:
+        """Return the list of series IDs supported by this adapter.
+
+        Subclasses should override this to advertise their valid series IDs.
+        Returns an empty list by default (e.g. for event-only adapters).
+        """
+        return []
+
     def fetch_entity(self, entity_id: str, **kwargs: object) -> Entity:
         """Fetch a canonical entity."""
         raise NotImplementedError

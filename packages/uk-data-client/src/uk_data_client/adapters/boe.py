@@ -251,6 +251,15 @@ def get_aggregate_capital_ratio() -> float:
 class BoEAdapter(BaseAdapter):
     """Canonical adapter for Bank of England data."""
 
+    def available_series(self) -> list[str]:
+        """Return the BoE series IDs supported by this adapter."""
+        return [
+            _BANK_RATE_SERIES,
+            _HOUSEHOLD_LENDING_SERIES,
+            _BUSINESS_LENDING_SERIES,
+            "LNMVNZL",
+        ]
+
     def fetch_series(self, series_id: str, **kwargs: object):
         """Fetch a canonical BoE time series."""
         concept = str(kwargs.get("concept", series_id.lower()))

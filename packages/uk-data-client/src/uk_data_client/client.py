@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from uk_data_client.adapters.boe import BoEAdapter
@@ -67,3 +68,28 @@ class UKDataClient:
             msg = "UKDataClient.query requires a CanonicalStore"
             raise ValueError(msg)
         return self.canonical_store.query(sql)
+
+    def list_sources(self) -> list[SourceInfo]:
+        """Return metadata about each registered adapter and its available series.
+
+        Example
+        -------
+        >>> client = UKDataClient()
+        >>> for src in client.list_sources():
+        ...     print(src.name, src.series)
+        """
+        return [
+            SourceInfo(name=name, series=adapter.available_series())
+            for name, adapter in self.adapters.items()
+        ]
+
+
+@dataclass
+class SourceInfo:
+    """Metadata about a single registered data source adapter."""
+
+    name: str
+    """Adapter key used to address this source (e.g. ``"ons"``, ``"boe"``)."""
+    series: list[str] = field(default_factory=list)
+    """Series IDs that can be passed to :meth:`UKDataClient.get_series` for this
+    source."""

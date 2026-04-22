@@ -591,6 +591,18 @@ def fetch_rental_growth() -> float:
 class ONSAdapter(BaseAdapter):
     """Canonical adapter for Office for National Statistics data."""
 
+    def available_series(self) -> list[str]:
+        """Return the ONS series IDs supported by this adapter."""
+        return [
+            _GDP_SERIES,
+            _HOUSEHOLD_INCOME_SERIES,
+            _SAVINGS_RATIO_SERIES,
+            _UNEMPLOYMENT_RATE_SERIES,
+            _AVERAGE_EARNINGS_SERIES,
+            _AFFORDABILITY_SERIES,
+            _RENTAL_INDEX_SERIES,
+        ]
+
     def fetch_series(self, series_id: str, **kwargs: object):
         """Fetch a canonical ONS time series."""
         concept = str(kwargs.get("concept", series_id.lower()))

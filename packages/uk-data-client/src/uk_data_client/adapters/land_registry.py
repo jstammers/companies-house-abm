@@ -226,12 +226,12 @@ def clean_price_paid_data(lazy_frame: pl.LazyFrame) -> pl.LazyFrame:
     )
 
 
-def _transaction_event_timestamp(value: Any) -> datetime:
+def _transaction_event_timestamp(value: Any) -> datetime | None:
     if isinstance(value, datetime):
         return value if value.tzinfo else value.replace(tzinfo=UTC)
     if isinstance(value, date):
         return datetime.combine(value, time.min, tzinfo=UTC)
-    return datetime.now(UTC)
+    return None
 
 
 def fetch_property_transaction_events(
@@ -250,6 +250,9 @@ def fetch_property_transaction_events(
 
     events: list[Event] = []
     for row in data.to_dicts():
+        timestamp = _transaction_event_timestamp(row.get("date_of_transfer"))
+        if timestamp is None:
+            continue
         raw_postcode = row.get("postcode")
         event_id = str(row.get("transaction_id") or len(events))
         entity_id = f"land_registry:postcode:{raw_postcode}" if raw_postcode else None
@@ -258,7 +261,7 @@ def fetch_property_transaction_events(
                 event_id=f"land_registry:{event_id}",
                 entity_id=entity_id,
                 event_type="property_transaction",
-                timestamp=_transaction_event_timestamp(row.get("date_of_transfer")),
+                timestamp=timestamp,
                 payload=row,
                 source="land_registry",
             )

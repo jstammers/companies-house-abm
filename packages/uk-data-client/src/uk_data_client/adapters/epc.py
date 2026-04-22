@@ -231,14 +231,14 @@ def clean_epc_data(lazy_frame: pl.LazyFrame) -> pl.LazyFrame:
     return lazy_frame
 
 
-def _epc_event_timestamp(row: dict[str, object]) -> datetime:
+def _epc_event_timestamp(row: dict[str, object]) -> datetime | None:
     for key in ("lodgement_date", "inspection_date"):
         value = row.get(key)
         if isinstance(value, datetime):
             return value if value.tzinfo else value.replace(tzinfo=UTC)
         if isinstance(value, date):
             return datetime.combine(value, time.min, tzinfo=UTC)
-    return datetime.now(UTC)
+    return None
 
 
 def fetch_epc_lodgement_events(
@@ -256,19 +256,21 @@ def fetch_epc_lodgement_events(
 
     events: list[Event] = []
     for index, row in enumerate(data.to_dicts()):
+        timestamp = _epc_event_timestamp(row)
+        if timestamp is None:
+            continue
         lmk_key = row.get("lmk_key") or f"row-{index}"
         uprn = row.get("uprn")
+        postcode = row.get("postcode") or "unknown"
         entity_id = (
-            f"epc:uprn:{uprn}"
-            if uprn not in (None, "")
-            else f"epc:postcode:{row['postcode']}"
+            f"epc:uprn:{uprn}" if uprn not in (None, "") else f"epc:postcode:{postcode}"
         )
         events.append(
             Event(
                 event_id=f"epc:{lmk_key}",
                 entity_id=entity_id,
                 event_type="epc_lodgement",
-                timestamp=_epc_event_timestamp(row),
+                timestamp=timestamp,
                 payload=row,
                 source="epc",
             )

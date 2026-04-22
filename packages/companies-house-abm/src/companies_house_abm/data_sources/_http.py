@@ -1,6 +1,6 @@
-"""Compatibility shim for the standalone uk_data_client HTTP helpers."""
+"""Compatibility shim for the standalone uk_data HTTP helpers."""
 
-from uk_data_client import _http as _impl
+from uk_data import _http as _impl
 
 _CACHE = _impl._CACHE
 _DEFAULT_TIMEOUT = _impl._DEFAULT_TIMEOUT

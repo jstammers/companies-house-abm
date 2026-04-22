@@ -1,3 +1,3 @@
-"""Compatibility shim for :mod:`uk_data_client.adapters.hmrc`."""
+"""Compatibility shim for :mod:`uk_data.adapters.hmrc`."""
 
-from uk_data_client.adapters.hmrc import *  # noqa: F403
+from uk_data.adapters.hmrc import *  # noqa: F403

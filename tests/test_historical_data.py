@@ -16,12 +16,12 @@ import pytest
 
 class TestHistoricalFallbacks:
     def test_hpi_fallback_returns_48_quarters(self):
-        from uk_data_client.adapters.historical import (
+        from uk_data.adapters.historical import (
             fetch_hpi_quarterly,
         )
 
         with patch(
-            "uk_data_client.adapters.historical.retry",
+            "uk_data.adapters.historical.retry",
             side_effect=Exception("offline"),
         ):
             data = fetch_hpi_quarterly()
@@ -31,12 +31,12 @@ class TestHistoricalFallbacks:
         assert all(d["value"] > 0 for d in data)
 
     def test_hpi_fallback_prices_plausible(self):
-        from uk_data_client.adapters.historical import (
+        from uk_data.adapters.historical import (
             fetch_hpi_quarterly,
         )
 
         with patch(
-            "uk_data_client.adapters.historical.retry",
+            "uk_data.adapters.historical.retry",
             side_effect=Exception("offline"),
         ):
             data = fetch_hpi_quarterly()
@@ -47,12 +47,12 @@ class TestHistoricalFallbacks:
         assert prices[-1] > prices[0]
 
     def test_bank_rate_fallback(self):
-        from uk_data_client.adapters.historical import (
+        from uk_data.adapters.historical import (
             fetch_bank_rate_quarterly,
         )
 
         with patch(
-            "uk_data_client.adapters.historical.retry",
+            "uk_data.adapters.historical.retry",
             side_effect=Exception("offline"),
         ):
             data = fetch_bank_rate_quarterly()
@@ -66,12 +66,12 @@ class TestHistoricalFallbacks:
         assert q2020q1["value"] == pytest.approx(0.10)
 
     def test_mortgage_rate_fallback(self):
-        from uk_data_client.adapters.historical import (
+        from uk_data.adapters.historical import (
             fetch_mortgage_rate_quarterly,
         )
 
         with patch(
-            "uk_data_client.adapters.historical.retry",
+            "uk_data.adapters.historical.retry",
             side_effect=Exception("offline"),
         ):
             data = fetch_mortgage_rate_quarterly()
@@ -80,12 +80,12 @@ class TestHistoricalFallbacks:
         assert all(1.0 <= d["value"] <= 6.0 for d in data)
 
     def test_earnings_index_fallback(self):
-        from uk_data_client.adapters.historical import (
+        from uk_data.adapters.historical import (
             fetch_earnings_index_quarterly,
         )
 
         with patch(
-            "uk_data_client.adapters.historical.retry",
+            "uk_data.adapters.historical.retry",
             side_effect=Exception("offline"),
         ):
             data = fetch_earnings_index_quarterly()
@@ -94,7 +94,7 @@ class TestHistoricalFallbacks:
         assert data[0]["value"] < data[-1]["value"]
 
     def test_transactions_fallback(self):
-        from uk_data_client.adapters.historical import (
+        from uk_data.adapters.historical import (
             fetch_transactions_quarterly,
         )
 
@@ -108,12 +108,12 @@ class TestHistoricalFallbacks:
         assert q2020q2["value"] < q2020q1["value"]
 
     def test_mortgage_approvals_fallback(self):
-        from uk_data_client.adapters.historical import (
+        from uk_data.adapters.historical import (
             fetch_mortgage_approvals_quarterly,
         )
 
         with patch(
-            "uk_data_client.adapters.historical.retry",
+            "uk_data.adapters.historical.retry",
             side_effect=Exception("offline"),
         ):
             data = fetch_mortgage_approvals_quarterly()
@@ -128,12 +128,12 @@ class TestHistoricalFallbacks:
 
 class TestDateFiltering:
     def test_custom_start_end(self):
-        from uk_data_client.adapters.historical import (
+        from uk_data.adapters.historical import (
             fetch_hpi_quarterly,
         )
 
         with patch(
-            "uk_data_client.adapters.historical.retry",
+            "uk_data.adapters.historical.retry",
             side_effect=Exception("offline"),
         ):
             data = fetch_hpi_quarterly(start="2020Q1", end="2022Q4")
@@ -142,12 +142,12 @@ class TestDateFiltering:
         assert data[-1]["quarter"] == "2022Q4"
 
     def test_single_quarter(self):
-        from uk_data_client.adapters.historical import (
+        from uk_data.adapters.historical import (
             fetch_bank_rate_quarterly,
         )
 
         with patch(
-            "uk_data_client.adapters.historical.retry",
+            "uk_data.adapters.historical.retry",
             side_effect=Exception("offline"),
         ):
             data = fetch_bank_rate_quarterly(start="2023Q3", end="2023Q3")
@@ -162,12 +162,12 @@ class TestDateFiltering:
 
 class TestFetchAllHistorical:
     def test_returns_all_series(self):
-        from uk_data_client.adapters.historical import (
+        from uk_data.adapters.historical import (
             fetch_all_historical,
         )
 
         with patch(
-            "uk_data_client.adapters.historical.retry",
+            "uk_data.adapters.historical.retry",
             side_effect=Exception("offline"),
         ):
             result = fetch_all_historical()
@@ -189,7 +189,7 @@ class TestFetchAllHistorical:
 
 class TestHelpers:
     def test_quarterly_last_takes_last_month(self):
-        from uk_data_client.adapters.historical import (
+        from uk_data.adapters.historical import (
             _quarterly_last,
         )
 
@@ -203,7 +203,7 @@ class TestHelpers:
         assert result[0]["value"] == pytest.approx(3.0)
 
     def test_quarterly_last_skips_invalid_values(self):
-        from uk_data_client.adapters.historical import (
+        from uk_data.adapters.historical import (
             _quarterly_last,
         )
 
@@ -216,7 +216,7 @@ class TestHelpers:
         assert result[0]["value"] == pytest.approx(1.5)
 
     def test_quarterly_last_skips_unknown_quarter(self):
-        from uk_data_client.adapters.historical import (
+        from uk_data.adapters.historical import (
             _quarterly_last,
         )
 
@@ -226,7 +226,7 @@ class TestHelpers:
         assert result == []
 
     def test_to_quarter_label(self):
-        from uk_data_client.adapters.historical import (
+        from uk_data.adapters.historical import (
             _to_quarter_label,
         )
 
@@ -236,7 +236,7 @@ class TestHelpers:
         assert _to_quarter_label(2024, 12) == "2024Q4"
 
     def test_to_quarter_label_invalid_month(self):
-        from uk_data_client.adapters.historical import (
+        from uk_data.adapters.historical import (
             _to_quarter_label,
         )
 
@@ -244,7 +244,7 @@ class TestHelpers:
         assert _to_quarter_label(2024, 0) == ""
 
     def test_parse_boe_date_valid(self):
-        from uk_data_client.adapters.historical import (
+        from uk_data.adapters.historical import (
             _parse_boe_date,
         )
 
@@ -253,7 +253,7 @@ class TestHelpers:
         assert month == 3
 
     def test_parse_boe_date_invalid_format(self):
-        from uk_data_client.adapters.historical import (
+        from uk_data.adapters.historical import (
             _parse_boe_date,
         )
 
@@ -263,7 +263,7 @@ class TestHelpers:
         assert month == 0
 
     def test_parse_iadb_csv_basic(self):
-        from uk_data_client.adapters.historical import (
+        from uk_data.adapters.historical import (
             _parse_iadb_csv,
         )
 
@@ -276,7 +276,7 @@ class TestHelpers:
         assert rows[0]["value"] == "5.25"
 
     def test_parse_iadb_csv_stops_after_data(self):
-        from uk_data_client.adapters.historical import (
+        from uk_data.adapters.historical import (
             _parse_iadb_csv,
         )
 
@@ -286,7 +286,7 @@ class TestHelpers:
         assert len(rows) == 1  # stops at the non-numeric line
 
     def test_parse_iadb_csv_empty(self):
-        from uk_data_client.adapters.historical import (
+        from uk_data.adapters.historical import (
             _parse_iadb_csv,
         )
 
@@ -294,7 +294,7 @@ class TestHelpers:
         assert rows == []
 
     def test_build_iadb_url(self):
-        from uk_data_client.adapters.historical import (
+        from uk_data.adapters.historical import (
             _build_iadb_url,
         )
 
@@ -315,7 +315,7 @@ class TestFetchWithMockedSuccess:
     def test_fetch_hpi_quarterly_sparql_success(self):
         from unittest.mock import patch
 
-        from uk_data_client.adapters.historical import (
+        from uk_data.adapters.historical import (
             fetch_hpi_quarterly,
         )
 
@@ -335,7 +335,7 @@ class TestFetchWithMockedSuccess:
         }
 
         with patch(
-            "uk_data_client.adapters.historical.retry",
+            "uk_data.adapters.historical.retry",
             return_value=mock_response,
         ):
             data = fetch_hpi_quarterly(start="2020Q1", end="2020Q2")
@@ -348,7 +348,7 @@ class TestFetchWithMockedSuccess:
     def test_fetch_hpi_quarterly_sparql_empty_bindings_falls_back(self):
         from unittest.mock import patch
 
-        from uk_data_client.adapters.historical import (
+        from uk_data.adapters.historical import (
             fetch_hpi_quarterly,
         )
 
@@ -356,7 +356,7 @@ class TestFetchWithMockedSuccess:
         mock_response = {"results": {"bindings": []}}
 
         with patch(
-            "uk_data_client.adapters.historical.retry",
+            "uk_data.adapters.historical.retry",
             return_value=mock_response,
         ):
             data = fetch_hpi_quarterly(start="2020Q1", end="2020Q1")
@@ -367,7 +367,7 @@ class TestFetchWithMockedSuccess:
     def test_fetch_bank_rate_quarterly_success(self):
         from unittest.mock import patch
 
-        from uk_data_client.adapters.historical import (
+        from uk_data.adapters.historical import (
             fetch_bank_rate_quarterly,
         )
 
@@ -376,7 +376,7 @@ class TestFetchWithMockedSuccess:
         )
 
         with patch(
-            "uk_data_client.adapters.historical.retry",
+            "uk_data.adapters.historical.retry",
             return_value=csv_text,
         ):
             data = fetch_bank_rate_quarterly(start="2020Q1", end="2020Q1")
@@ -388,13 +388,13 @@ class TestFetchWithMockedSuccess:
     def test_fetch_bank_rate_empty_result_falls_back(self):
         from unittest.mock import patch
 
-        from uk_data_client.adapters.historical import (
+        from uk_data.adapters.historical import (
             fetch_bank_rate_quarterly,
         )
 
         # CSV with no parseable data → falls back to hardcoded
         with patch(
-            "uk_data_client.adapters.historical.retry",
+            "uk_data.adapters.historical.retry",
             return_value="Date,Rate\nno data here\n",
         ):
             data = fetch_bank_rate_quarterly(start="2020Q1", end="2020Q1")
@@ -405,7 +405,7 @@ class TestFetchWithMockedSuccess:
     def test_fetch_mortgage_rate_quarterly_success(self):
         from unittest.mock import patch
 
-        from uk_data_client.adapters.historical import (
+        from uk_data.adapters.historical import (
             fetch_mortgage_rate_quarterly,
         )
 
@@ -414,7 +414,7 @@ class TestFetchWithMockedSuccess:
         )
 
         with patch(
-            "uk_data_client.adapters.historical.retry",
+            "uk_data.adapters.historical.retry",
             return_value=csv_text,
         ):
             data = fetch_mortgage_rate_quarterly(start="2020Q1", end="2020Q1")
@@ -426,12 +426,12 @@ class TestFetchWithMockedSuccess:
     def test_fetch_mortgage_rate_empty_falls_back(self):
         from unittest.mock import patch
 
-        from uk_data_client.adapters.historical import (
+        from uk_data.adapters.historical import (
             fetch_mortgage_rate_quarterly,
         )
 
         with patch(
-            "uk_data_client.adapters.historical.retry",
+            "uk_data.adapters.historical.retry",
             return_value="no valid csv",
         ):
             data = fetch_mortgage_rate_quarterly(start="2020Q1", end="2020Q1")
@@ -441,7 +441,7 @@ class TestFetchWithMockedSuccess:
     def test_fetch_earnings_quarterly_success(self):
         from unittest.mock import patch
 
-        from uk_data_client.adapters.historical import (
+        from uk_data.adapters.historical import (
             fetch_earnings_index_quarterly,
         )
 
@@ -454,7 +454,7 @@ class TestFetchWithMockedSuccess:
         }
 
         with patch(
-            "uk_data_client.adapters.historical.retry",
+            "uk_data.adapters.historical.retry",
             return_value=mock_response,
         ):
             data = fetch_earnings_index_quarterly(start="2020Q1", end="2020Q1")
@@ -466,14 +466,14 @@ class TestFetchWithMockedSuccess:
     def test_fetch_earnings_empty_falls_back(self):
         from unittest.mock import patch
 
-        from uk_data_client.adapters.historical import (
+        from uk_data.adapters.historical import (
             fetch_earnings_index_quarterly,
         )
 
         mock_response = {"months": []}
 
         with patch(
-            "uk_data_client.adapters.historical.retry",
+            "uk_data.adapters.historical.retry",
             return_value=mock_response,
         ):
             data = fetch_earnings_index_quarterly(start="2020Q1", end="2020Q1")
@@ -483,7 +483,7 @@ class TestFetchWithMockedSuccess:
     def test_fetch_earnings_invalid_value_skipped(self):
         from unittest.mock import patch
 
-        from uk_data_client.adapters.historical import (
+        from uk_data.adapters.historical import (
             fetch_earnings_index_quarterly,
         )
 
@@ -495,7 +495,7 @@ class TestFetchWithMockedSuccess:
         }
 
         with patch(
-            "uk_data_client.adapters.historical.retry",
+            "uk_data.adapters.historical.retry",
             return_value=mock_response,
         ):
             data = fetch_earnings_index_quarterly(start="2020Q1", end="2020Q1")
@@ -507,7 +507,7 @@ class TestFetchWithMockedSuccess:
     def test_fetch_mortgage_approvals_success(self):
         from unittest.mock import patch
 
-        from uk_data_client.adapters.historical import (
+        from uk_data.adapters.historical import (
             fetch_mortgage_approvals_quarterly,
         )
 
@@ -516,7 +516,7 @@ class TestFetchWithMockedSuccess:
         )
 
         with patch(
-            "uk_data_client.adapters.historical.retry",
+            "uk_data.adapters.historical.retry",
             return_value=csv_text,
         ):
             data = fetch_mortgage_approvals_quarterly(start="2020Q1", end="2020Q1")
@@ -529,12 +529,12 @@ class TestFetchWithMockedSuccess:
     def test_fetch_mortgage_approvals_empty_falls_back(self):
         from unittest.mock import patch
 
-        from uk_data_client.adapters.historical import (
+        from uk_data.adapters.historical import (
             fetch_mortgage_approvals_quarterly,
         )
 
         with patch(
-            "uk_data_client.adapters.historical.retry",
+            "uk_data.adapters.historical.retry",
             return_value="no valid data",
         ):
             data = fetch_mortgage_approvals_quarterly(start="2020Q1", end="2020Q1")

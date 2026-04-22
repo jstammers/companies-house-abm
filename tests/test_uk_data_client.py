@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 import pytest
 
-from uk_data_client import SourceInfo, UKDataClient
+from uk_data_client import EntityTypeInfo, EventTypeInfo, SourceInfo, UKDataClient
 from uk_data_client.adapters.boe import BoEAdapter
 from uk_data_client.adapters.companies_house import CompaniesHouseAdapter
 from uk_data_client.adapters.epc import EPCAdapter
@@ -392,3 +392,160 @@ class TestEPCAdapterFetchSeries:
     def test_available_series_is_empty(self) -> None:
         adapter = EPCAdapter()
         assert adapter.available_series() == []
+
+
+# ---------------------------------------------------------------------------
+# Per-adapter available_entity_types() and available_event_types()
+# ---------------------------------------------------------------------------
+
+
+class TestBaseAdapterEntityEventDefaults:
+    """Adapters that do not override the methods return empty lists."""
+
+    def test_ons_no_entity_types(self) -> None:
+        assert ONSAdapter().available_entity_types() == []
+
+    def test_boe_no_entity_types(self) -> None:
+        assert BoEAdapter().available_entity_types() == []
+
+    def test_hmrc_no_entity_types(self) -> None:
+        assert HMRCAdapter().available_entity_types() == []
+
+    def test_land_registry_no_entity_types(self) -> None:
+        assert LandRegistryAdapter().available_entity_types() == []
+
+    def test_ons_no_event_types(self) -> None:
+        assert ONSAdapter().available_event_types() == []
+
+    def test_boe_no_event_types(self) -> None:
+        assert BoEAdapter().available_event_types() == []
+
+    def test_hmrc_no_event_types(self) -> None:
+        assert HMRCAdapter().available_event_types() == []
+
+
+class TestCompaniesHouseAdapterEntityEventTypes:
+    def test_entity_types_contains_company(self) -> None:
+        assert "company" in CompaniesHouseAdapter().available_entity_types()
+
+    def test_event_types_contains_filing(self) -> None:
+        assert "filing" in CompaniesHouseAdapter().available_event_types()
+
+    def test_entity_types_is_list_of_strings(self) -> None:
+        types = CompaniesHouseAdapter().available_entity_types()
+        assert all(isinstance(t, str) for t in types)
+
+    def test_event_types_is_list_of_strings(self) -> None:
+        types = CompaniesHouseAdapter().available_event_types()
+        assert all(isinstance(t, str) for t in types)
+
+
+class TestLandRegistryAdapterEventTypes:
+    def test_event_types_contains_property_transaction(self) -> None:
+        assert "property_transaction" in LandRegistryAdapter().available_event_types()
+
+    def test_no_entity_types(self) -> None:
+        assert LandRegistryAdapter().available_entity_types() == []
+
+
+class TestEPCAdapterEventTypes:
+    def test_event_types_contains_epc_lodgement(self) -> None:
+        assert "epc_lodgement" in EPCAdapter().available_event_types()
+
+    def test_no_entity_types(self) -> None:
+        assert EPCAdapter().available_entity_types() == []
+
+
+# ---------------------------------------------------------------------------
+# Client list_entities helper
+# ---------------------------------------------------------------------------
+
+
+class TestUKDataClientListEntities:
+    def test_returns_list_of_entity_type_info(self) -> None:
+        client = UKDataClient()
+        entities = client.list_entities()
+        assert isinstance(entities, list)
+        assert all(isinstance(e, EntityTypeInfo) for e in entities)
+
+    def test_only_companies_house_has_entities(self) -> None:
+        """Of the six registered adapters only companies_house exposes entities."""
+        client = UKDataClient()
+        sources = {e.source for e in client.list_entities()}
+        assert sources == {"companies_house"}
+
+    def test_companies_house_entity_types(self) -> None:
+        client = UKDataClient()
+        ch = next(e for e in client.list_entities() if e.source == "companies_house")
+        assert "company" in ch.entity_types
+
+    def test_entity_type_info_structure(self) -> None:
+        client = UKDataClient()
+        for info in client.list_entities():
+            assert isinstance(info.source, str) and info.source
+            assert isinstance(info.entity_types, list)
+            assert all(isinstance(t, str) for t in info.entity_types)
+            assert len(info.entity_types) > 0
+
+    def test_entity_type_info_repr_contains_source(self) -> None:
+        info = EntityTypeInfo(source="companies_house", entity_types=["company"])
+        assert "companies_house" in repr(info)
+
+    def test_no_entity_type_info_for_series_only_adapters(self) -> None:
+        client = UKDataClient()
+        sources = {e.source for e in client.list_entities()}
+        for series_only in ("ons", "boe", "hmrc"):
+            assert series_only not in sources
+
+
+# ---------------------------------------------------------------------------
+# Client list_events helper
+# ---------------------------------------------------------------------------
+
+
+class TestUKDataClientListEvents:
+    def test_returns_list_of_event_type_info(self) -> None:
+        client = UKDataClient()
+        events = client.list_events()
+        assert isinstance(events, list)
+        assert all(isinstance(e, EventTypeInfo) for e in events)
+
+    def test_expected_sources_present(self) -> None:
+        client = UKDataClient()
+        sources = {e.source for e in client.list_events()}
+        assert {"companies_house", "land_registry", "epc"} == sources
+
+    def test_companies_house_event_types(self) -> None:
+        client = UKDataClient()
+        ch = next(e for e in client.list_events() if e.source == "companies_house")
+        assert "filing" in ch.event_types
+
+    def test_land_registry_event_types(self) -> None:
+        client = UKDataClient()
+        lr = next(e for e in client.list_events() if e.source == "land_registry")
+        assert "property_transaction" in lr.event_types
+
+    def test_epc_event_types(self) -> None:
+        client = UKDataClient()
+        epc = next(e for e in client.list_events() if e.source == "epc")
+        assert "epc_lodgement" in epc.event_types
+
+    def test_event_type_info_structure(self) -> None:
+        client = UKDataClient()
+        for info in client.list_events():
+            assert isinstance(info.source, str) and info.source
+            assert isinstance(info.event_types, list)
+            assert all(isinstance(t, str) for t in info.event_types)
+            assert len(info.event_types) > 0
+
+    def test_event_type_info_repr_contains_source(self) -> None:
+        info = EventTypeInfo(
+            source="land_registry", event_types=["property_transaction"]
+        )
+        assert "land_registry" in repr(info)
+
+    def test_no_event_type_info_for_series_only_adapters(self) -> None:
+        client = UKDataClient()
+        sources = {e.source for e in client.list_events()}
+        for series_only in ("ons", "boe", "hmrc"):
+            assert series_only not in sources

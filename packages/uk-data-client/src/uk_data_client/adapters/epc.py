@@ -261,9 +261,11 @@ def fetch_epc_lodgement_events(
             continue
         lmk_key = row.get("lmk_key") or f"row-{index}"
         uprn = row.get("uprn")
-        postcode = row.get("postcode") or "unknown"
+        row_postcode = row.get("postcode") or "unknown"
         entity_id = (
-            f"epc:uprn:{uprn}" if uprn not in (None, "") else f"epc:postcode:{postcode}"
+            f"epc:uprn:{uprn}"
+            if uprn not in (None, "")
+            else f"epc:postcode:{row_postcode}"
         )
         events.append(
             Event(

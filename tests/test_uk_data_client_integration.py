@@ -302,3 +302,162 @@ class TestUKDataClientConceptResolutionIntegration:
         for concept in CONCEPT_REGISTRY:
             ts = client.get_series(concept)
             assert ts is not None, f"Concept {concept!r} returned None"
+
+
+# ---------------------------------------------------------------------------
+# UKDataClient.list_entities() / list_events() — structural integration
+# ---------------------------------------------------------------------------
+
+
+class TestUKDataClientListEntitiesIntegration:
+    """Verify that list_entities() reports the correct structure at runtime."""
+
+    def test_list_entities_non_empty(self) -> None:
+        client = UKDataClient()
+        entities = client.list_entities()
+        assert len(entities) > 0
+
+    def test_companies_house_in_list_entities(self) -> None:
+        client = UKDataClient()
+        sources = {e.source for e in client.list_entities()}
+        assert "companies_house" in sources
+
+    def test_companies_house_advertises_company_type(self) -> None:
+        client = UKDataClient()
+        ch = next(e for e in client.list_entities() if e.source == "companies_house")
+        assert "company" in ch.entity_types
+
+    def test_series_only_adapters_absent_from_list_entities(self) -> None:
+        client = UKDataClient()
+        sources = {e.source for e in client.list_entities()}
+        for series_only in ("ons", "boe", "hmrc"):
+            assert series_only not in sources
+
+
+class TestUKDataClientListEventsIntegration:
+    """Verify that list_events() reports the correct structure at runtime."""
+
+    def test_list_events_non_empty(self) -> None:
+        client = UKDataClient()
+        events = client.list_events()
+        assert len(events) > 0
+
+    def test_expected_event_sources_present(self) -> None:
+        client = UKDataClient()
+        sources = {e.source for e in client.list_events()}
+        assert {"companies_house", "land_registry", "epc"} == sources
+
+    def test_companies_house_advertises_filing(self) -> None:
+        client = UKDataClient()
+        ch = next(e for e in client.list_events() if e.source == "companies_house")
+        assert "filing" in ch.event_types
+
+    def test_land_registry_advertises_property_transaction(self) -> None:
+        client = UKDataClient()
+        lr = next(e for e in client.list_events() if e.source == "land_registry")
+        assert "property_transaction" in lr.event_types
+
+    def test_epc_advertises_epc_lodgement(self) -> None:
+        client = UKDataClient()
+        epc = next(e for e in client.list_events() if e.source == "epc")
+        assert "epc_lodgement" in epc.event_types
+
+    def test_series_only_adapters_absent_from_list_events(self) -> None:
+        client = UKDataClient()
+        sources = {e.source for e in client.list_events()}
+        for series_only in ("ons", "boe", "hmrc"):
+            assert series_only not in sources
+
+
+# ---------------------------------------------------------------------------
+# CompaniesHouseAdapter.fetch_entity() live
+# ---------------------------------------------------------------------------
+
+_CH_API_URL = "https://api.companieshouse.gov.uk"
+
+
+class TestCompaniesHouseAdapterEntityIntegration:
+    """Verify fetch_entity() returns a well-formed Entity for a known company."""
+
+    def test_fetch_entity_returns_company(self) -> None:
+        _skip_if_cannot_reach(_CH_API_URL)
+        from uk_data_client.adapters.companies_house import CompaniesHouseAdapter
+        from uk_data_client.models import Entity
+
+        adapter = CompaniesHouseAdapter()
+        # BBC (a well-known UK company always present in CH data)
+        entity = adapter.fetch_entity("BBC")
+        assert isinstance(entity, Entity)
+        assert entity.entity_type == "company"
+        assert entity.source == "companies_house"
+        assert entity.source_id is not None
+        assert entity.name
+
+    def test_get_entity_via_client(self) -> None:
+        _skip_if_cannot_reach(_CH_API_URL)
+        from uk_data_client.models import Entity
+
+        client = UKDataClient()
+        entity = client.get_entity("BBC")
+        assert isinstance(entity, Entity)
+        assert entity.entity_type == "company"
+
+    def test_fetch_entity_attributes_present(self) -> None:
+        _skip_if_cannot_reach(_CH_API_URL)
+        from uk_data_client.adapters.companies_house import CompaniesHouseAdapter
+
+        adapter = CompaniesHouseAdapter()
+        entity = adapter.fetch_entity("BBC")
+        assert "company_status" in entity.attributes
+
+    def test_fetch_entity_not_found_raises(self) -> None:
+        _skip_if_cannot_reach(_CH_API_URL)
+        from uk_data_client.adapters.companies_house import CompaniesHouseAdapter
+
+        adapter = CompaniesHouseAdapter()
+        with pytest.raises(ValueError, match="No Companies House entity found"):
+            adapter.fetch_entity("XYZNOTAREALCOMPANYNAME99999ZZZ")
+
+
+# ---------------------------------------------------------------------------
+# CompaniesHouseAdapter.fetch_events() live
+# ---------------------------------------------------------------------------
+
+
+class TestCompaniesHouseAdapterEventsIntegration:
+    """Verify fetch_events() returns filing events for a known company number."""
+
+    def test_fetch_events_returns_filings(self) -> None:
+        _skip_if_cannot_reach(_CH_API_URL)
+        from uk_data_client.adapters.companies_house import CompaniesHouseAdapter
+        from uk_data_client.models import Event
+
+        adapter = CompaniesHouseAdapter()
+        # BBC's company number: 00101498
+        events = adapter.fetch_events(entity_id="companies_house:00101498")
+        assert isinstance(events, list)
+        assert len(events) > 0
+        for event in events:
+            assert isinstance(event, Event)
+            assert event.event_type == "filing"
+            assert event.source == "companies_house"
+            assert event.entity_id == "companies_house:00101498"
+
+    def test_fetch_events_requires_entity_id(self) -> None:
+        from uk_data_client.adapters.companies_house import CompaniesHouseAdapter
+
+        adapter = CompaniesHouseAdapter()
+        with pytest.raises(ValueError, match="entity_id"):
+            adapter.fetch_events(entity_id=None)
+
+    def test_get_events_via_client(self) -> None:
+        _skip_if_cannot_reach(_CH_API_URL)
+        from uk_data_client.models import Event
+
+        client = UKDataClient()
+        events = client.get_events(
+            entity_id="companies_house:00101498", source="companies_house"
+        )
+        assert isinstance(events, list)
+        assert len(events) > 0
+        assert all(isinstance(e, Event) for e in events)

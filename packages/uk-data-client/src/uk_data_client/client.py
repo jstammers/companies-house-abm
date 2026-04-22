@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 from uk_data_client.adapters.boe import BoEAdapter
 from uk_data_client.adapters.companies_house import CompaniesHouseAdapter
+from uk_data_client.adapters.epc import EPCAdapter
 from uk_data_client.adapters.hmrc import HMRCAdapter
 from uk_data_client.adapters.land_registry import LandRegistryAdapter
 from uk_data_client.adapters.ons import ONSAdapter
@@ -26,6 +27,7 @@ class UKDataClient:
             "hmrc": HMRCAdapter(),
             "land_registry": LandRegistryAdapter(),
             "companies_house": CompaniesHouseAdapter(),
+            "epc": EPCAdapter(),
         }
         self.resolver = ConceptResolver(self.adapters)
         self.canonical_store = canonical_store

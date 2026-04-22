@@ -1,35 +1,93 @@
-"""HM Land Registry house price data fetcher.
+"""HM Land Registry and UK HPI data helpers.
 
-Provides summary statistics from HM Land Registry Price Paid data and
-the UK House Price Index (UK HPI), available at
-https://landregistry.data.gov.uk/.
+Provides summary statistics from HM Land Registry linked data plus file-based
+helpers for the Price Paid Data and full UK House Price Index datasets.
 
 Data is Crown Copyright, reproduced under the Open Government Licence.
-
-See also ``jstammers/bytes-and-morter`` for future prior art around
-transaction-level Price Paid and EPC ingestion once that repository is
-available.
+The Price Paid / UK HPI ingestion helpers are adapted from the public
+``jstammers/bytes-and-mortar`` data-source modules.
 """
 
 from __future__ import annotations
 
 import logging
+import urllib.parse
+import urllib.request
+from datetime import UTC, date, datetime, time
+from pathlib import Path
 from typing import Any
 
-from uk_data_client._http import retry
+import polars as pl
+
+from uk_data_client._http import _USER_AGENT, retry
 from uk_data_client.adapters.base import BaseAdapter
-from uk_data_client.models import point_timeseries
+from uk_data_client.models import Event, point_timeseries, series_from_observations
 
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# UK HPI Linked Data API
+# Linked-data summary APIs
 # ---------------------------------------------------------------------------
 
 _UK_HPI_API = "https://landregistry.data.gov.uk/app/ukhpi"
-
-# SPARQL endpoint for UK HPI
 _SPARQL_ENDPOINT = "https://landregistry.data.gov.uk/landregistry/query"
+
+# ---------------------------------------------------------------------------
+# Bulk download sources adapted from bytes-and-mortar
+# ---------------------------------------------------------------------------
+
+_PRICE_PAID_BASE_URL = (
+    "http://prod.publicdata.landregistry.gov.uk.s3-website-eu-west-1.amazonaws.com"
+)
+_PRICE_PAID_COMPLETE_CSV_URL = f"{_PRICE_PAID_BASE_URL}/pp-complete.csv"
+_PRICE_PAID_YEARLY_CSV_URL = f"{_PRICE_PAID_BASE_URL}/pp-{{year}}.csv"
+_UK_HPI_DOWNLOAD_URL = (
+    "https://publicdata.landregistry.gov.uk/market-trend-data/"
+    "house-price-index-data/UK-HPI-full-file-2025-04.csv"
+)
+
+_PRICE_PAID_COLUMNS = [
+    "transaction_id",
+    "price",
+    "date_of_transfer",
+    "postcode",
+    "property_type",
+    "old_new",
+    "duration",
+    "paon",
+    "saon",
+    "street",
+    "locality",
+    "town_city",
+    "district",
+    "county",
+    "ppd_category",
+    "record_status",
+]
+
+_PRICE_PAID_SCHEMA: dict[str, pl.DataType] = dict.fromkeys(
+    _PRICE_PAID_COLUMNS,
+    pl.String,
+)
+
+_PROPERTY_TYPE_MAP = {
+    "D": "Detached",
+    "S": "Semi-Detached",
+    "T": "Terraced",
+    "F": "Flats/Maisonettes",
+    "O": "Other",
+}
+
+_OLD_NEW_MAP = {
+    "Y": "New build",
+    "N": "Established",
+}
+
+_DURATION_MAP = {
+    "F": "Freehold",
+    "L": "Leasehold",
+    "U": "Unknown",
+}
 
 # Fallback values (2024 Q3, ONS UK HPI)
 _FALLBACK_PRICES: dict[str, float] = {
@@ -49,6 +107,291 @@ _FALLBACK_PRICES: dict[str, float] = {
 _FALLBACK_UK_AVERAGE = 285_000.0
 
 
+def _download_file(url: str, destination: Path, *, timeout: int = 600) -> Path:
+    """Download a raw source file to *destination*."""
+    if destination.exists():
+        logger.info("Using existing file %s", destination)
+        return destination
+
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    request = urllib.request.Request(url, headers={"User-Agent": _USER_AGENT})
+    with (
+        urllib.request.urlopen(request, timeout=timeout) as response,
+        destination.open("wb") as output,
+    ):
+        output.write(response.read())
+
+    logger.info("Downloaded %s to %s", url, destination)
+    return destination
+
+
+def download_price_paid_data(
+    output_path: str | Path,
+    *,
+    year: int | None = None,
+    timeout: int = 600,
+) -> Path:
+    """Download HM Land Registry Price Paid Data."""
+    destination = Path(output_path)
+    url = (
+        _PRICE_PAID_YEARLY_CSV_URL.format(year=year)
+        if year is not None
+        else _PRICE_PAID_COMPLETE_CSV_URL
+    )
+    return _download_file(url, destination, timeout=timeout)
+
+
+def load_price_paid_data(
+    filepath: str | Path,
+    *,
+    nrows: int | None = None,
+) -> pl.LazyFrame:
+    """Build a lazy scan for Price Paid Data."""
+    source = Path(filepath)
+    if source.suffix == ".csv" and source.with_suffix(".parquet").exists():
+        source = source.with_suffix(".parquet")
+    if not source.exists():
+        raise FileNotFoundError(f"Price Paid Data file not found: {source}")
+
+    if source.suffix == ".parquet":
+        lazy_frame = pl.scan_parquet(source)
+        return lazy_frame.head(nrows) if nrows is not None else lazy_frame
+
+    lazy_frame = pl.scan_csv(
+        source,
+        has_header=False,
+        schema=_PRICE_PAID_SCHEMA,
+        n_rows=nrows,
+    )
+    return lazy_frame.with_columns(
+        [
+            pl.col(column).str.strip_chars("{}").str.strip_chars()
+            for column in _PRICE_PAID_COLUMNS
+        ]
+    )
+
+
+def clean_price_paid_data(lazy_frame: pl.LazyFrame) -> pl.LazyFrame:
+    """Clean and standardise Price Paid Data."""
+    return (
+        lazy_frame.with_columns(
+            [
+                pl.when(pl.col(column) == "")
+                .then(pl.lit(None, dtype=pl.String))
+                .otherwise(pl.col(column))
+                .alias(column)
+                for column in _PRICE_PAID_COLUMNS
+            ]
+        )
+        .with_columns(
+            [
+                pl.col("price").cast(pl.Int64, strict=False),
+                pl.col("date_of_transfer").str.to_datetime(
+                    format="%Y-%m-%d %H:%M",
+                    strict=False,
+                ),
+            ]
+        )
+        .filter(pl.col("record_status") != "D")
+        .drop_nulls(subset=["postcode"])
+        .with_columns(
+            [
+                pl.col("postcode")
+                .str.to_uppercase()
+                .str.strip_chars()
+                .str.replace_all(r"\s+", " "),
+                pl.col("property_type")
+                .replace_strict(_PROPERTY_TYPE_MAP, default=pl.col("property_type"))
+                .alias("property_type_label"),
+                pl.col("old_new")
+                .replace_strict(_OLD_NEW_MAP, default=pl.col("old_new"))
+                .alias("old_new_label"),
+                pl.col("duration")
+                .replace_strict(_DURATION_MAP, default=pl.col("duration"))
+                .alias("duration_label"),
+            ]
+        )
+        .filter(pl.col("property_type").is_in(["D", "S", "T", "F"]))
+        .filter((pl.col("price") > 10_000) & (pl.col("price") < 50_000_000))
+        .with_columns(
+            [
+                pl.col("date_of_transfer").dt.year().alias("year"),
+                pl.col("date_of_transfer").dt.month().alias("month"),
+                pl.col("postcode")
+                .str.split(" ")
+                .list.first()
+                .alias("postcode_outward"),
+            ]
+        )
+    )
+
+
+def _event_timestamp(value: Any) -> datetime:
+    if isinstance(value, datetime):
+        return value if value.tzinfo else value.replace(tzinfo=UTC)
+    if isinstance(value, date):
+        return datetime.combine(value, time.min, tzinfo=UTC)
+    return datetime.now(UTC)
+
+
+def fetch_property_transaction_events(
+    filepath: str | Path,
+    *,
+    postcode: str | None = None,
+    limit: int = 100,
+) -> list[Event]:
+    """Convert cleaned Price Paid records into canonical transaction events."""
+    data = clean_price_paid_data(load_price_paid_data(filepath)).collect()
+    if postcode is not None:
+        normalized = postcode.upper().strip()
+        data = data.filter(pl.col("postcode") == normalized)
+    if limit >= 0:
+        data = data.head(limit)
+
+    events: list[Event] = []
+    for row in data.to_dicts():
+        raw_postcode = row.get("postcode")
+        event_id = str(row.get("transaction_id") or len(events))
+        entity_id = f"land_registry:postcode:{raw_postcode}" if raw_postcode else None
+        events.append(
+            Event(
+                event_id=f"land_registry:{event_id}",
+                entity_id=entity_id,
+                event_type="property_transaction",
+                timestamp=_event_timestamp(row.get("date_of_transfer")),
+                payload=row,
+                source="land_registry",
+            )
+        )
+    return events
+
+
+def download_uk_hpi_data(
+    output_path: str | Path,
+    *,
+    url: str = _UK_HPI_DOWNLOAD_URL,
+    timeout: int = 600,
+) -> Path:
+    """Download the full UK HPI CSV file."""
+    return _download_file(url, Path(output_path), timeout=timeout)
+
+
+def load_uk_hpi_data(filepath: str | Path) -> pl.LazyFrame:
+    """Build a lazy scan for the full UK HPI dataset."""
+    source = Path(filepath)
+    if source.suffix == ".csv" and source.with_suffix(".parquet").exists():
+        source = source.with_suffix(".parquet")
+    if not source.exists():
+        raise FileNotFoundError(f"UK HPI data file not found: {source}")
+
+    if source.suffix == ".parquet":
+        return pl.scan_parquet(source)
+
+    return pl.scan_csv(source, infer_schema_length=10_000)
+
+
+def clean_uk_hpi_data(lazy_frame: pl.LazyFrame) -> pl.LazyFrame:
+    """Clean and standardise UK HPI data."""
+    schema = lazy_frame.collect_schema()
+    rename_map = {
+        column: column.strip().lower().replace(" ", "_") for column in schema.names()
+    }
+    lazy_frame = lazy_frame.rename(rename_map)
+    schema = lazy_frame.collect_schema()
+
+    if "date" in schema and schema["date"] == pl.String:
+        lazy_frame = lazy_frame.with_columns(
+            pl.col("date").str.to_date(format="%d/%m/%Y", strict=False)
+        )
+
+    numeric_columns = [
+        column
+        for column in schema.names()
+        if any(
+            keyword in column
+            for keyword in (
+                "average_price",
+                "sales_volume",
+                "percentage_change",
+                "index",
+            )
+        )
+    ]
+    if numeric_columns:
+        lazy_frame = lazy_frame.with_columns(
+            [
+                pl.col(column).cast(pl.Float64, strict=False)
+                for column in numeric_columns
+            ]
+        )
+
+    if "date" in lazy_frame.collect_schema():
+        lazy_frame = lazy_frame.with_columns(
+            [
+                pl.col("date").dt.year().alias("year"),
+                pl.col("date").dt.month().alias("month"),
+            ]
+        )
+
+    area_column = next(
+        (
+            column
+            for column in ("regionname", "region_name", "area_code", "areacode")
+            if column in lazy_frame.collect_schema().names()
+        ),
+        None,
+    )
+    if area_column is not None:
+        lazy_frame = lazy_frame.drop_nulls(subset=[area_column])
+
+    return lazy_frame
+
+
+def fetch_uk_hpi_history(
+    filepath: str | Path,
+    *,
+    area_name: str = "United Kingdom",
+    limit: int = 20,
+):
+    """Convert UK HPI rows for an area into a canonical time series."""
+    data = clean_uk_hpi_data(load_uk_hpi_data(filepath)).collect()
+    schema_names = data.columns
+    area_column = next(
+        (column for column in ("regionname", "region_name") if column in schema_names),
+        None,
+    )
+    if (
+        area_column is None
+        or "average_price" not in schema_names
+        or "date" not in schema_names
+    ):
+        raise KeyError(
+            "UK HPI data requires region name, average_price, and date columns"
+        )
+
+    filtered = data.filter(
+        pl.col(area_column).str.to_lowercase() == area_name.lower()
+    ).sort("date")
+    if limit >= 0:
+        filtered = filtered.tail(limit)
+
+    observations = [
+        {"date": row["date"].isoformat(), "value": row["average_price"]}
+        for row in filtered.to_dicts()
+    ]
+    return series_from_observations(
+        series_id="uk_hpi_monthly",
+        name=f"UK HPI average price ({area_name})",
+        frequency="M",
+        units="GBP",
+        seasonal_adjustment="NSA",
+        geography=area_name,
+        observations=observations,
+        source="land_registry",
+        source_series_id="uk_hpi_full",
+    )
+
+
 def _get_json(url: str) -> Any:
     """Fetch JSON from the Land Registry API with retry."""
     from uk_data_client._http import get_json
@@ -57,15 +400,7 @@ def _get_json(url: str) -> Any:
 
 
 def fetch_regional_prices() -> dict[str, float]:
-    """Fetch average house prices by UK region.
-
-    Attempts to query the UK HPI SPARQL endpoint for the most recent
-    regional average prices.  Falls back to hardcoded 2024 values if
-    the API is unavailable.
-
-    Returns:
-        Dict mapping region name to average price (GBP).
-    """
+    """Fetch average house prices by UK region."""
     try:
         query = """
         PREFIX ukhpi: <http://landregistry.data.gov.uk/def/ukhpi/>
@@ -100,11 +435,7 @@ def fetch_regional_prices() -> dict[str, float]:
 
 
 def fetch_uk_average_price() -> float:
-    """Fetch the current UK average house price.
-
-    Returns:
-        UK average house price in GBP.
-    """
+    """Fetch the current UK average house price."""
     prices = fetch_regional_prices()
     if prices:
         return sum(prices.values()) / len(prices)
@@ -112,12 +443,7 @@ def fetch_uk_average_price() -> float:
 
 
 def fetch_price_by_type() -> dict[str, float]:
-    """Fetch average prices by property type.
-
-    Returns:
-        Dict mapping property type to average price (GBP).
-        Falls back to approximate 2024 values.
-    """
+    """Fetch average prices by property type."""
     return {
         "detached": 440_000.0,
         "semi_detached": 275_000.0,
@@ -128,25 +454,56 @@ def fetch_price_by_type() -> dict[str, float]:
 
 def _encode_query(query: str) -> str:
     """URL-encode a SPARQL query string."""
-    import urllib.parse
-
     return urllib.parse.quote(query.strip())
 
 
 class LandRegistryAdapter(BaseAdapter):
-    """Canonical adapter for Land Registry house price data."""
+    """Canonical adapter for Land Registry house-price and transaction data."""
 
     def fetch_series(self, series_id: str, **kwargs: object):
         """Fetch canonical Land Registry series."""
         concept = str(kwargs.get("concept", series_id.lower()))
-        if series_id != "uk_hpi_average":
-            msg = f"Unsupported Land Registry series: {series_id}"
+        if series_id == "uk_hpi_average":
+            return point_timeseries(
+                series_id=concept,
+                name="UK average house price",
+                value=fetch_uk_average_price(),
+                units="GBP",
+                source="land_registry",
+                source_series_id=series_id,
+            )
+        if series_id == "uk_hpi_full":
+            filepath = kwargs.get("filepath")
+            if filepath is None:
+                msg = "uk_hpi_full requires a filepath to the downloaded UK HPI data"
+                raise ValueError(msg)
+            return fetch_uk_hpi_history(
+                filepath,
+                area_name=str(kwargs.get("area_name", "United Kingdom")),
+                limit=int(kwargs.get("limit", 20)),
+            )
+        msg = f"Unsupported Land Registry series: {series_id}"
+        raise ValueError(msg)
+
+    def fetch_events(
+        self,
+        entity_id: str | None = None,
+        event_type: str | None = None,
+        **kwargs: object,
+    ) -> list[Event]:
+        """Fetch canonical property transaction events."""
+        if event_type not in (None, "property_transaction"):
+            return []
+        filepath = kwargs.get("filepath")
+        if filepath is None:
+            msg = "LandRegistryAdapter.fetch_events requires a filepath"
             raise ValueError(msg)
-        return point_timeseries(
-            series_id=concept,
-            name="UK average house price",
-            value=fetch_uk_average_price(),
-            units="GBP",
-            source="land_registry",
-            source_series_id=series_id,
+        postcode = None
+        if entity_id and entity_id.startswith("land_registry:postcode:"):
+            postcode = entity_id.removeprefix("land_registry:postcode:")
+        postcode = postcode or kwargs.get("postcode")
+        return fetch_property_transaction_events(
+            filepath,
+            postcode=str(postcode) if postcode else None,
+            limit=int(kwargs.get("limit", 100)),
         )

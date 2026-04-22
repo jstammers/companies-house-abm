@@ -226,7 +226,7 @@ def clean_price_paid_data(lazy_frame: pl.LazyFrame) -> pl.LazyFrame:
     )
 
 
-def _event_timestamp(value: Any) -> datetime:
+def _transaction_event_timestamp(value: Any) -> datetime:
     if isinstance(value, datetime):
         return value if value.tzinfo else value.replace(tzinfo=UTC)
     if isinstance(value, date):
@@ -258,7 +258,7 @@ def fetch_property_transaction_events(
                 event_id=f"land_registry:{event_id}",
                 entity_id=entity_id,
                 event_type="property_transaction",
-                timestamp=_event_timestamp(row.get("date_of_transfer")),
+                timestamp=_transaction_event_timestamp(row.get("date_of_transfer")),
                 payload=row,
                 source="land_registry",
             )

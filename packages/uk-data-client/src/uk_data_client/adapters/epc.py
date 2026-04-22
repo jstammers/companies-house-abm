@@ -231,7 +231,7 @@ def clean_epc_data(lazy_frame: pl.LazyFrame) -> pl.LazyFrame:
     return lazy_frame
 
 
-def _event_timestamp(row: dict[str, object]) -> datetime:
+def _epc_event_timestamp(row: dict[str, object]) -> datetime:
     for key in ("lodgement_date", "inspection_date"):
         value = row.get(key)
         if isinstance(value, datetime):
@@ -268,7 +268,7 @@ def fetch_epc_lodgement_events(
                 event_id=f"epc:{lmk_key}",
                 entity_id=entity_id,
                 event_type="epc_lodgement",
-                timestamp=_event_timestamp(row),
+                timestamp=_epc_event_timestamp(row),
                 payload=row,
                 source="epc",
             )

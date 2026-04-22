@@ -463,6 +463,10 @@ def _encode_query(query: str) -> str:
 class LandRegistryAdapter(BaseAdapter):
     """Canonical adapter for Land Registry house-price and transaction data."""
 
+    def available_series(self) -> list[str]:
+        """Return the Land Registry series IDs supported by this adapter."""
+        return ["uk_hpi_average", "uk_hpi_full"]
+
     def fetch_series(self, series_id: str, **kwargs: object):
         """Fetch canonical Land Registry series."""
         concept = str(kwargs.get("concept", series_id.lower()))

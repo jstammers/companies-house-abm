@@ -102,7 +102,7 @@ invalid-method-override = "warn"
 unresolved-import = "warn"
 
 [tool.ty.src]
-exclude = ["tests", "packages/uk-data-client/tests"]
+exclude = ["tests", "packages/uk-data-client/tests", "packages/uk-data-client/tests/adapters"]
 
 # kreuzberg is an optional dep — not installed in dev by default
 [[tool.ty.overrides]]

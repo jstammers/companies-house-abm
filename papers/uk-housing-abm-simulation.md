@@ -325,12 +325,12 @@ scenario:
   name: "Rate rise + unemployment shock"
   horizon_months: 60
   ensemble_size: 100
-  
+
   macro_path:
     bank_rate: [5.25, 5.50, 5.75, 5.50, 5.25, ...]
     unemployment_rate: [4.2, 4.5, 5.0, 5.5, 5.5, ...]
     inflation_cpi: [3.2, 3.0, 2.8, 2.5, 2.2, ...]
-    
+
   policy_changes:
     - type: "ltv_cap"
       value: 0.85
@@ -338,7 +338,7 @@ scenario:
     - type: "stamp_duty"
       threshold_0pct: 250000
       effective_month: 1
-      
+
   supply_shocks:
     - region: "London"
       new_builds_change_pct: -20

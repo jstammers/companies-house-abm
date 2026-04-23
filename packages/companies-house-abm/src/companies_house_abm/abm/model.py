@@ -6,12 +6,13 @@ the period-by-period execution loop described in the design document.
 
 from __future__ import annotations
 
-import random
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from typing import TYPE_CHECKING
 
 import numpy as np
 from mesa.agent import AgentSet
+from mesa.datacollection import DataCollector
+from mesa.model import Model
 
 from companies_house_abm.abm.agents.bank import Bank
 from companies_house_abm.abm.agents.central_bank import CentralBank
@@ -28,8 +29,6 @@ from companies_house_abm.abm.markets.labor import LaborMarket
 if TYPE_CHECKING:
     from pathlib import Path
     from typing import Any
-
-    from numpy.random import Generator
 
 
 @dataclass
@@ -91,7 +90,24 @@ class SimulationResult:
         return [r.homeownership_rate for r in self.records]
 
 
-class Simulation:
+class SimulationDataCollector(DataCollector):
+    """Mesa data collector configured for the simulation's macro metrics."""
+
+    metric_names = tuple(field.name for field in fields(PeriodRecord))
+
+    def __init__(self) -> None:
+        super().__init__(
+            model_reporters={
+                name: self._model_metric_reporter(name) for name in self.metric_names
+            }
+        )
+
+    @staticmethod
+    def _model_metric_reporter(name: str):
+        return lambda model, name=name: getattr(model.latest_record, name)
+
+
+class Simulation(Model):
     """The top-level simulation orchestrator.
 
     Usage::
@@ -115,10 +131,9 @@ class Simulation:
     def __init__(self, config: ModelConfig | None = None) -> None:
         self.config = config or ModelConfig()
         seed = self.config.simulation.seed
-        self._rng: Generator = np.random.default_rng(seed)
-        self.random = random.Random(seed)
-        self.steps = 0
-        self.time = 0.0
+        super().__init__(rng=seed)
+        self.latest_record = PeriodRecord()
+        self.datacollector = SimulationDataCollector()
 
         # Agents
         self.firms: list[Firm] = []
@@ -145,7 +160,20 @@ class Simulation:
     def _attach_model(self, agent: Any) -> Any:
         """Attach the simulation model reference required by Mesa AgentSets."""
         agent.model = self
+        self.register_agent(agent)
         return agent
+
+    def _clear_registered_agents(self) -> None:
+        """Remove existing registered agents before re-initialisation."""
+        for agent in [*self.firms, *self.households, *self.banks]:
+            if getattr(agent, "model", None) is not self or not hasattr(
+                agent, "unique_id"
+            ):
+                continue
+            try:
+                self.deregister_agent(agent)
+            except KeyError:
+                continue
 
     def _agent_set(self, agents: list[Any]) -> AgentSet:
         """Create a Mesa AgentSet from the current agent list."""
@@ -193,11 +221,14 @@ class Simulation:
     def initialize_agents(self) -> None:
         """Create the initial population of agents from configuration."""
         cfg = self.config
+        self._clear_registered_agents()
         self.firms = []
         self.households = []
         self.banks = []
         self.properties = []
         self.mortgages = []
+        self.latest_record = PeriodRecord()
+        self.datacollector = SimulationDataCollector()
 
         # --- Firms ---
         n_firms = min(cfg.firms.sample_size, 1000)  # cap for prototype
@@ -213,21 +244,19 @@ class Simulation:
             sectors = [
                 cfg.firms.sectors[i % len(cfg.firms.sectors)] for i in range(n_firms)
             ]
-            employees = self._rng.integers(1, max(2, mean_firm_size * 2), size=n_firms)
-            wage_rates = self._rng.lognormal(np.log(35_000 / 4), 0.3, size=n_firms)
+            employees = self.rng.integers(1, max(2, mean_firm_size * 2), size=n_firms)
+            wage_rates = self.rng.lognormal(np.log(35_000 / 4), 0.3, size=n_firms)
             # Calibrate turnover so the wage share is 35-70 % (UK SME range).
             # Drawing turnover independently can produce wage_share > 200 %,
             # causing immediate equity collapse and mass bankruptcy in period 1.
             wage_bills = employees * wage_rates
-            wage_shares = np.clip(
-                self._rng.normal(0.50, 0.10, size=n_firms), 0.35, 0.70
-            )
+            wage_shares = np.clip(self.rng.normal(0.50, 0.10, size=n_firms), 0.35, 0.70)
             turnover = wage_bills / wage_shares
             # Capital set to ~2x quarterly turnover so the capacity constraint
             # (capital x utilisation_target) does not bind in period 1 and
             # prevent firms from producing enough to cover their wage bill.
-            capital = self._rng.lognormal(np.log(np.maximum(turnover * 2.0, 1.0)), 0.4)
-            cash = self._rng.lognormal(np.log(np.maximum(turnover * 0.15, 1.0)), 0.4)
+            capital = self.rng.lognormal(np.log(np.maximum(turnover * 2.0, 1.0)), 0.4)
+            cash = self.rng.lognormal(np.log(np.maximum(turnover * 0.15, 1.0)), 0.4)
 
             self.firms = [
                 self._attach_model(
@@ -250,14 +279,14 @@ class Simulation:
         # --- Households ---
         n_hh = min(cfg.households.count, 5000)
         if n_hh > 0:
-            incomes = self._rng.lognormal(
+            incomes = self.rng.lognormal(
                 np.log(cfg.households.income_mean),
                 cfg.households.income_std / cfg.households.income_mean,
                 size=n_hh,
             )
-            wealths = self._rng.pareto(cfg.households.wealth_shape, size=n_hh) * incomes
+            wealths = self.rng.pareto(cfg.households.wealth_shape, size=n_hh) * incomes
             mpcs = np.clip(
-                self._rng.normal(
+                self.rng.normal(
                     cfg.households.mpc_mean, cfg.households.mpc_std, size=n_hh
                 ),
                 0.1,
@@ -278,7 +307,7 @@ class Simulation:
 
         # --- Banks ---
         if cfg.banks.count > 0:
-            bank_capital = self._rng.lognormal(np.log(1e9), 0.5, size=cfg.banks.count)
+            bank_capital = self.rng.lognormal(np.log(1e9), 0.5, size=cfg.banks.count)
             self.banks = [
                 self._attach_model(
                     Bank(
@@ -301,10 +330,10 @@ class Simulation:
 
         # --- Wire markets ---
         self.goods_market.set_agents(self.firms, self.households, self.government)
-        self.labor_market.set_agents(self.firms, self.households, self._rng)
-        self.credit_market.set_agents(self.firms, self.banks, self._rng)
+        self.labor_market.set_agents(self.firms, self.households, self.rng)
+        self.credit_market.set_agents(self.firms, self.banks, self.rng)
         self.housing_market.set_agents(
-            self.properties, self.households, self.banks, self.mortgages, rng=self._rng
+            self.properties, self.households, self.banks, self.mortgages, rng=self.rng
         )
 
     def _initial_employment(self) -> None:
@@ -363,12 +392,12 @@ class Simulation:
 
         for i in range(n_props):
             region = cfg.regions[i % len(cfg.regions)]
-            ptype_idx = self._rng.choice(len(cfg.types), p=cfg.type_shares)
+            ptype_idx = self.rng.choice(len(cfg.types), p=cfg.type_shares)
             ptype = cfg.types[int(ptype_idx)]
-            quality = float(np.clip(self._rng.normal(0.5, 0.15), 0.05, 0.95))
+            quality = float(np.clip(self.rng.normal(0.5, 0.15), 0.05, 0.95))
             multiplier = region_price.get(region, 1.0)
             base_price = cfg.average_price * multiplier
-            price = float(self._rng.lognormal(np.log(base_price), 0.3))
+            price = float(self.rng.lognormal(np.log(base_price), 0.3))
             rental_yield = self.config.housing_market.rental_yield
             monthly_rent = price * rental_yield / 12.0
 
@@ -391,7 +420,7 @@ class Simulation:
 
         # Shuffle property indices for random assignment
         prop_indices = list(range(n_props))
-        self._rng.shuffle(prop_indices)
+        self.rng.shuffle(prop_indices)
 
         for i in range(n_owners):
             hh = self.households[i]
@@ -489,8 +518,8 @@ class Simulation:
         result = SimulationResult()
 
         for _ in range(n):
-            record = self._period_step()
-            result.records.append(record)
+            self.run_for(1)
+            result.records.append(self.latest_record)
 
             if collect_micro:
                 result.firm_states.append([f.get_state() for f in self.firms])
@@ -498,9 +527,11 @@ class Simulation:
 
         return result
 
-    def step(self) -> PeriodRecord:
-        """Execute a single simulation period."""
-        return self._period_step()
+    def step(self) -> None:
+        """Execute a single simulation period using the Mesa model API."""
+        self.current_period = self.steps
+        self.latest_record = self._period_step()
+        self.datacollector.collect(self)
 
     def _period_step(self) -> PeriodRecord:
         """Execute a single period of the simulation.
@@ -527,9 +558,6 @@ class Simulation:
         Returns:
             A :class:`PeriodRecord` for this period.
         """
-        self.steps += 1
-        self.time = float(self.steps)
-        self.current_period += 1
         firms = self.firm_agents
         households = self.household_agents
         banks = self.bank_agents
@@ -599,7 +627,7 @@ class Simulation:
                 sell_prob = 0.015
                 if not hh.employed:
                     sell_prob = 0.04  # financial stress: ~16 % annual
-                if float(self._rng.random()) < sell_prob:
+                if float(self.rng.random()) < sell_prob:
                     hh.wants_to_sell = True
                     property_ = properties_by_id.get(hh.property_id)
                     if property_ and not property_.on_market:
@@ -615,7 +643,7 @@ class Simulation:
         self.government.calculate_spending()
 
         # 12. Goods market clears
-        goods_state = self.goods_market.clear(rng=self._rng)
+        goods_state = self.goods_market.clear(rng=self.rng)
 
         # 13. Tax collection
         for firm in self.firms:

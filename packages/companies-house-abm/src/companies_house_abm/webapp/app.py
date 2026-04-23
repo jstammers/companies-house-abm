@@ -1,4 +1,4 @@
-"""FastAPI web application for the economy simulator."""
+"""Deprecated FastAPI web application for the economy simulator."""
 
 from __future__ import annotations
 
@@ -22,8 +22,11 @@ from companies_house_abm.webapp.models import (
 _STATIC_DIR = Path(__file__).parent / "static"
 
 app = FastAPI(
-    title="Economy Simulator",
-    description="Interactive ABM economy simulator using Companies House data",
+    title="Economy Simulator (deprecated FastAPI app)",
+    description=(
+        "Legacy interactive ABM economy simulator. This FastAPI surface is "
+        "deprecated while the project shifts toward Mesa-native tooling."
+    ),
     version="0.1.0",
 )
 

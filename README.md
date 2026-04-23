@@ -100,12 +100,15 @@ companies_house_abm fetch-data --source ons --source boe
 # Fetch data and write a calibrated model config
 companies_house_abm fetch-data --calibrate --output ./calibrated/
 
-# Launch the economy simulator web application
+# Launch the deprecated FastAPI economy simulator web application
 companies_house_abm serve
 
 # Launch with custom host and port
 companies_house_abm serve --host 0.0.0.0 --port 8080
 ```
+
+The `serve` command remains available as a legacy interface, but it is now
+deprecated while the project transitions toward Mesa-native simulation tooling.
 
 ### ABM Usage
 

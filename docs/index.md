@@ -91,7 +91,7 @@ marimo edit notebooks/ecosystem.py
 companies_house_abm fetch-data --calibrate --output ./calibrated/
 ```
 
-#### Launch the web application
+#### Launch the deprecated FastAPI web application
 
 ```bash
 # Start the economy simulator at http://127.0.0.1:8000
@@ -103,6 +103,9 @@ companies_house_abm serve --host 0.0.0.0 --port 8080
 # Enable auto-reload for development
 companies_house_abm serve --reload
 ```
+
+`companies_house_abm serve` remains available as a legacy interface, but it is
+deprecated while the simulator transitions toward Mesa-native tooling.
 
 ### ABM Usage
 

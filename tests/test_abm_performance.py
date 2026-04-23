@@ -1,7 +1,7 @@
-"""Performance benchmark tests for the ABM simulation.
+"""Performance benchmark tests for the Mesa-backed ABM simulation.
 
 Measures runtime per simulation as the number of agents scales up,
-covering both the pure-Python implementation and (when available) the
+covering both the Mesa-backed Python implementation and (when available) the
 Rust-backed implementation exposed via ``companies_house_abm._rust_abm``.
 
 Run the full benchmark suite with::
@@ -167,7 +167,7 @@ def run_benchmarks(
     results: list[BenchmarkResult] = []
 
     for n_firms, n_households, n_banks in scenarios:
-        # Python backend
+        # Mesa-backed Python backend
         py_times: list[float] = []
         for _ in range(n_reps):
             elapsed = _time_python(n_firms, n_households, n_banks, periods)
@@ -175,7 +175,7 @@ def run_benchmarks(
 
         results.append(
             BenchmarkResult(
-                backend="python",
+                backend="mesa-python",
                 n_firms=n_firms,
                 n_households=n_households,
                 n_banks=n_banks,
@@ -238,7 +238,7 @@ def print_table(results: list[BenchmarkResult]) -> None:
 
         # Print speedup if both backends present
         scenario_results = by_scenario[key]
-        py_res = next((r for r in scenario_results if r.backend == "python"), None)
+        py_res = next((r for r in scenario_results if r.backend == "mesa-python"), None)
         rust_res = next((r for r in scenario_results if r.backend == "rust"), None)
         if py_res and rust_res and rust_res.median_s > 0:
             speedup = py_res.median_s / rust_res.median_s
@@ -267,7 +267,7 @@ def save_results(results: list[BenchmarkResult], output_path: Path) -> None:
 
 @pytest.mark.slow
 class TestPythonPerformance:
-    """Slow benchmark tests for the Python ABM backend."""
+    """Slow benchmark tests for the Mesa-backed Python ABM backend."""
 
     @pytest.mark.parametrize(
         "n_firms,n_households,n_banks",
@@ -277,13 +277,13 @@ class TestPythonPerformance:
     def test_python_runtime(
         self, n_firms: int, n_households: int, n_banks: int
     ) -> None:
-        """Python simulation completes within a generous time budget."""
+        """Mesa-backed Python simulation completes within a generous time budget."""
         elapsed = _time_python(n_firms, n_households, n_banks, periods=BENCH_PERIODS)
         # No hard limit - just record timing; assert it completes
         assert elapsed >= 0.0
         ms_per_period = (elapsed / BENCH_PERIODS) * 1000
         print(
-            f"\n[python] firms={n_firms} hh={n_households} banks={n_banks}: "
+            f"\n[mesa-python] firms={n_firms} hh={n_households} banks={n_banks}: "
             f"{elapsed:.4f}s total, {ms_per_period:.2f}ms/period"
         )
 

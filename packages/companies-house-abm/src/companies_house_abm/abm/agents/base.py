@@ -21,14 +21,16 @@ class BaseAgent(ABC):
         agent_type: Type of agent (e.g., 'firm', 'household', 'bank').
     """
 
-    def __init__(self, agent_id: str | None = None) -> None:
+    def __init__(self, agent_id: str | None = None, *, model: Any | None = None) -> None:
         """Initialize the base agent.
 
         Args:
             agent_id: Optional unique identifier. If not provided, a UUID is generated.
+            model: Optional simulation model reference.
         """
         self.agent_id = agent_id or str(uuid4())
         self.agent_type = self.__class__.__name__.lower()
+        self.model = model
 
     @abstractmethod
     def step(self) -> None:

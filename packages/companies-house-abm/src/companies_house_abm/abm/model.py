@@ -10,6 +10,8 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 import numpy as np
+from mesa import Model
+from mesa.agent import AgentSet
 
 from companies_house_abm.abm.agents.bank import Bank
 from companies_house_abm.abm.agents.central_bank import CentralBank
@@ -87,7 +89,7 @@ class SimulationResult:
         return [r.homeownership_rate for r in self.records]
 
 
-class Simulation:
+class Simulation(Model):
     """The top-level simulation orchestrator.
 
     Usage::
@@ -110,6 +112,7 @@ class Simulation:
 
     def __init__(self, config: ModelConfig | None = None) -> None:
         self.config = config or ModelConfig()
+        super().__init__(seed=self.config.simulation.seed)
         self._rng = np.random.default_rng(self.config.simulation.seed)
 
         # Agents
@@ -133,6 +136,30 @@ class Simulation:
         self.housing_market = HousingMarket(config=self.config.housing_market)
 
         self.current_period: int = 0
+
+    def _attach_model(self, agent: Any) -> Any:
+        """Attach the simulation model reference required by Mesa AgentSets."""
+        agent.model = self
+        return agent
+
+    def _agent_set(self, agents: list[Any]) -> AgentSet:
+        """Create a Mesa AgentSet from the current agent list."""
+        return AgentSet(agents, random=self.random)
+
+    @property
+    def firm_agents(self) -> AgentSet:
+        """Mesa AgentSet view over firm agents."""
+        return self._agent_set(self.firms)
+
+    @property
+    def household_agents(self) -> AgentSet:
+        """Mesa AgentSet view over household agents."""
+        return self._agent_set(self.households)
+
+    @property
+    def bank_agents(self) -> AgentSet:
+        """Mesa AgentSet view over bank agents."""
+        return self._agent_set(self.banks)
 
     # ------------------------------------------------------------------
     # Factory methods
@@ -161,11 +188,15 @@ class Simulation:
     def initialize_agents(self) -> None:
         """Create the initial population of agents from configuration."""
         cfg = self.config
+        self.firms = []
+        self.households = []
+        self.banks = []
+        self.properties = []
+        self.mortgages = []
 
         # --- Firms ---
         n_firms = min(cfg.firms.sample_size, 1000)  # cap for prototype
-        for i in range(n_firms):
-            sector = cfg.firms.sectors[i % len(cfg.firms.sectors)]
+        if n_firms > 0:
             # Size firms to the available workforce.  With 1 000 firms and
             # 5 000 household agents, the mean firm size must be ≈ 5 so that
             # total employee slots (firms x mean_size) ≈ n_households.  The
@@ -174,75 +205,82 @@ class Simulation:
             # making every firm immediately insolvent.
             n_hh = min(cfg.households.count, 5000)
             mean_firm_size = max(1, n_hh // n_firms)
-            employees = int(self._rng.integers(1, max(2, mean_firm_size * 2)))
-            wage_rate = float(self._rng.lognormal(np.log(35_000 / 4), 0.3))
+            sectors = [cfg.firms.sectors[i % len(cfg.firms.sectors)] for i in range(n_firms)]
+            employees = self._rng.integers(1, max(2, mean_firm_size * 2), size=n_firms)
+            wage_rates = self._rng.lognormal(np.log(35_000 / 4), 0.3, size=n_firms)
             # Calibrate turnover so the wage share is 35-70 % (UK SME range).
             # Drawing turnover independently can produce wage_share > 200 %,
             # causing immediate equity collapse and mass bankruptcy in period 1.
-            wage_bill = employees * wage_rate
-            wage_share = float(np.clip(self._rng.normal(0.50, 0.10), 0.35, 0.70))
-            turnover = wage_bill / wage_share
+            wage_bills = employees * wage_rates
+            wage_shares = np.clip(self._rng.normal(0.50, 0.10, size=n_firms), 0.35, 0.70)
+            turnover = wage_bills / wage_shares
             # Capital set to ~2x quarterly turnover so the capacity constraint
             # (capital x utilisation_target) does not bind in period 1 and
             # prevent firms from producing enough to cover their wage bill.
-            capital = float(self._rng.lognormal(np.log(max(turnover * 2.0, 1.0)), 0.4))
-            cash = float(self._rng.lognormal(np.log(max(turnover * 0.15, 1.0)), 0.4))
+            capital = self._rng.lognormal(np.log(np.maximum(turnover * 2.0, 1.0)), 0.4)
+            cash = self._rng.lognormal(np.log(np.maximum(turnover * 0.15, 1.0)), 0.4)
 
-            self.firms.append(
-                Firm(
+            self.firms = [
+                self._attach_model(
+                    Firm(
                     agent_id=f"firm_{i:05d}",
-                    sector=sector,
-                    employees=employees,
-                    wage_bill=employees * wage_rate,
-                    turnover=turnover,
-                    capital=capital,
-                    cash=cash,
+                    sector=sectors[i],
+                    employees=int(employees[i]),
+                    wage_bill=float(wage_bills[i]),
+                    turnover=float(turnover[i]),
+                    capital=float(capital[i]),
+                    cash=float(cash[i]),
                     debt=0.0,
-                    equity=capital + cash,
+                    equity=float(capital[i] + cash[i]),
                     behavior=cfg.firm_behavior,
                 )
-            )
+                )
+                for i in range(n_firms)
+            ]
 
         # --- Households ---
         n_hh = min(cfg.households.count, 5000)
-        for i in range(n_hh):
-            income = float(
-                self._rng.lognormal(
-                    np.log(cfg.households.income_mean),
-                    cfg.households.income_std / cfg.households.income_mean,
-                )
+        if n_hh > 0:
+            incomes = self._rng.lognormal(
+                np.log(cfg.households.income_mean),
+                cfg.households.income_std / cfg.households.income_mean,
+                size=n_hh,
             )
-            wealth = float(self._rng.pareto(cfg.households.wealth_shape) * income)
-            mpc = float(
-                np.clip(
-                    self._rng.normal(cfg.households.mpc_mean, cfg.households.mpc_std),
-                    0.1,
-                    0.99,
-                )
+            wealths = self._rng.pareto(cfg.households.wealth_shape, size=n_hh) * incomes
+            mpcs = np.clip(
+                self._rng.normal(cfg.households.mpc_mean, cfg.households.mpc_std, size=n_hh),
+                0.1,
+                0.99,
             )
-            self.households.append(
-                Household(
-                    agent_id=f"hh_{i:05d}",
-                    income=income / 4,  # quarterly
-                    wealth=wealth,
-                    mpc=mpc,
-                    behavior=cfg.household_behavior,
+            self.households = [
+                self._attach_model(
+                    Household(
+                        agent_id=f"hh_{i:05d}",
+                        income=float(incomes[i] / 4),  # quarterly
+                        wealth=float(wealths[i]),
+                        mpc=float(mpcs[i]),
+                        behavior=cfg.household_behavior,
+                    )
                 )
-            )
+                for i in range(n_hh)
+            ]
 
         # --- Banks ---
-        for i in range(cfg.banks.count):
-            capital = float(self._rng.lognormal(np.log(1e9), 0.5))
-            self.banks.append(
-                Bank(
+        if cfg.banks.count > 0:
+            bank_capital = self._rng.lognormal(np.log(1e9), 0.5, size=cfg.banks.count)
+            self.banks = [
+                self._attach_model(
+                    Bank(
                     agent_id=f"bank_{i:02d}",
-                    capital=capital,
-                    reserves=capital * 0.1,
+                    capital=float(bank_capital[i]),
+                    reserves=float(bank_capital[i] * 0.1),
                     config=cfg.banks,
                     behavior=cfg.bank_behavior,
                     mortgage_config=cfg.mortgage,
                 )
-            )
+                )
+                for i in range(cfg.banks.count)
+            ]
 
         # --- Initial employment: assign some households to firms ---
         self._initial_employment()
@@ -380,26 +418,20 @@ class Simulation:
             Number of foreclosures this period.
         """
         count = 0
+        banks_by_id = {bank.agent_id: bank for bank in self.banks}
+        households_by_id = {household.agent_id: household for household in self.households}
+        properties_by_id = {prop.property_id: prop for prop in self.properties}
         for mortgage in list(self.mortgages):
             if not mortgage.in_arrears:
                 continue
-            # Find the lending bank
-            bank = None
-            for b in self.banks:
-                if b.agent_id == mortgage.lender_id:
-                    bank = b
-                    break
+            bank = banks_by_id.get(mortgage.lender_id)
             if bank is None:
                 continue
             if not bank.assess_foreclosure(mortgage):
                 continue
 
             # Foreclose: bank takes possession, household loses home
-            borrower = None
-            for hh in self.households:
-                if hh.agent_id == mortgage.borrower_id:
-                    borrower = hh
-                    break
+            borrower = households_by_id.get(mortgage.borrower_id)
 
             bank.record_mortgage_default(mortgage.outstanding)
 
@@ -410,11 +442,9 @@ class Simulation:
                 borrower.housing_wealth = 0.0
 
             # Mark property as available
-            for prop in self.properties:
-                if prop.property_id == mortgage.property_id:
-                    prop.owner_id = None
-                    prop.on_market = False
-                    break
+            if property_ := properties_by_id.get(mortgage.property_id):
+                property_.owner_id = None
+                property_.on_market = False
 
             self.mortgages = [
                 m for m in self.mortgages if m.mortgage_id != mortgage.mortgage_id
@@ -481,6 +511,9 @@ class Simulation:
             A :class:`PeriodRecord` for this period.
         """
         self.current_period += 1
+        firms = self.firm_agents
+        households = self.household_agents
+        banks = self.bank_agents
 
         # 1. Government begins period
         self.government.begin_period()
@@ -489,16 +522,14 @@ class Simulation:
         self.central_bank.step()
 
         # 3. Banks update lending rates and mortgage rates
-        for bank in self.banks:
-            bank.set_policy_rate(self.central_bank.policy_rate)
-            bank.set_mortgage_rate(self.central_bank.policy_rate)
+        banks.do("set_policy_rate", self.central_bank.policy_rate)
+        banks.do("set_mortgage_rate", self.central_bank.policy_rate)
 
         # 4. Credit market clears
         self.credit_market.clear()
 
         # 5. Firms step
-        for firm in self.firms:
-            firm.step()
+        firms.do("step")
 
         # 6. Labour market clears
         labor_state = self.labor_market.clear()
@@ -509,26 +540,29 @@ class Simulation:
         # 8. Households step
         # First set transfer income for unemployed
         avg_wage = labor_state["average_wage"]
-        unemployed = [h for h in self.households if not h.employed]
-        if unemployed and avg_wage > 0:
+        unemployed = households.select(lambda household: not household.employed)
+        if len(unemployed) > 0 and avg_wage > 0:
             benefit = self.government.pay_unemployment_benefit(
                 avg_wage, len(unemployed)
             )
             per_hh = benefit / len(unemployed)
-            for hh in unemployed:
-                hh.transfer_income = per_hh
+            unemployed.do(
+                lambda household, transfer_income: setattr(
+                    household, "transfer_income", transfer_income
+                ),
+                per_hh,
+            )
 
-        for hh in self.households:
-            hh.step()
+        households.do("step")
 
         # Reset transfer income after step
-        for hh in self.households:
-            hh.transfer_income = 0.0
+        households.do(lambda household: setattr(household, "transfer_income", 0.0))
 
         # 9. Households make buy/sell decisions
         mortgage_rate = self.banks[0].mortgage_rate if self.banks else 0.04
         rental_yield = self.config.housing_market.rental_yield
         markup = self.config.housing_market.initial_markup
+        properties_by_id = {prop.property_id: prop for prop in self.properties}
         for hh in self.households:
             hh.decide_buy_or_rent(
                 average_price=self.housing_market.average_price,
@@ -548,17 +582,16 @@ class Simulation:
                     sell_prob = 0.04  # financial stress: ~16 % annual
                 if float(self._rng.random()) < sell_prob:
                     hh.wants_to_sell = True
-                    for prop in self.properties:
-                        if prop.property_id == hh.property_id and not prop.on_market:
-                            prop.list_for_sale(initial_markup=markup)
-                            break
+                    property_ = properties_by_id.get(hh.property_id)
+                    if property_ and not property_.on_market:
+                        property_.list_for_sale(initial_markup=markup)
 
         # 10. Housing market clears
         self.housing_market.set_period(self.current_period)
         housing_state = self.housing_market.clear()
 
         # 11. Government spending
-        gdp = sum(f.turnover for f in self.firms if not f.bankrupt)
+        gdp = sum(firms.select(lambda firm: not firm.bankrupt).get("turnover"))
         self.government.gdp_estimate = gdp
         self.government.calculate_spending()
 
@@ -605,11 +638,10 @@ class Simulation:
         )
 
         # 16. Bank step
-        for bank in self.banks:
-            bank.step()
+        banks.do("step")
 
         # Record
-        bankruptcies = sum(1 for f in self.firms if f.bankrupt)
+        bankruptcies = len(firms.select(lambda firm: firm.bankrupt))
 
         return PeriodRecord(
             period=self.current_period,

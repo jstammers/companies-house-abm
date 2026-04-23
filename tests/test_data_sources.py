@@ -343,8 +343,8 @@ class TestOnsGdp:
 
         _http.clear_cache()
         with patch(
-            "uk_data.adapters.ons.retry",
-            return_value=_FAKE_ONS_RESPONSE,
+            "uk_data.adapters.ons.fetch_sdmx_series",
+            return_value=_FAKE_ONS_RESPONSE["quarters"],
         ):
             from uk_data.adapters.ons import fetch_gdp
 
@@ -357,7 +357,7 @@ class TestOnsGdp:
 
         _http.clear_cache()
         with patch(
-            "uk_data.adapters.ons.retry",
+            "uk_data.adapters.ons.fetch_sdmx_series",
             side_effect=Exception("api down"),
         ):
             from uk_data.adapters.ons import fetch_gdp
@@ -370,8 +370,8 @@ class TestOnsGdp:
 
         _http.clear_cache()
         with patch(
-            "uk_data.adapters.ons.retry",
-            return_value=_FAKE_ONS_RESPONSE,
+            "uk_data.adapters.ons.fetch_sdmx_series",
+            return_value=_FAKE_ONS_RESPONSE["quarters"],
         ):
             from uk_data.adapters.ons import fetch_gdp
 
@@ -385,8 +385,8 @@ class TestOnsHouseholdIncome:
 
         _http.clear_cache()
         with patch(
-            "uk_data.adapters.ons.retry",
-            return_value=_FAKE_ONS_RESPONSE,
+            "uk_data.adapters.ons.fetch_sdmx_series",
+            return_value=_FAKE_ONS_RESPONSE["quarters"],
         ):
             from uk_data.adapters.ons import fetch_household_income
 
@@ -400,8 +400,8 @@ class TestOnsSavingsRatio:
 
         _http.clear_cache()
         with patch(
-            "uk_data.adapters.ons.retry",
-            return_value=_FAKE_ONS_RESPONSE,
+            "uk_data.adapters.ons.fetch_sdmx_series",
+            return_value=_FAKE_ONS_RESPONSE["quarters"],
         ):
             from uk_data.adapters.ons import fetch_savings_ratio
 
@@ -415,8 +415,8 @@ class TestOnsLabourMarket:
 
         _http.clear_cache()
         with patch(
-            "uk_data.adapters.ons.retry",
-            return_value=_FAKE_ONS_MONTHLY_RESPONSE,
+            "uk_data.adapters.ons.fetch_sdmx_series",
+            return_value=_FAKE_ONS_MONTHLY_RESPONSE["months"],
         ):
             from uk_data.adapters.ons import fetch_labour_market
 
@@ -429,7 +429,7 @@ class TestOnsLabourMarket:
 
         _http.clear_cache()
         with patch(
-            "uk_data.adapters.ons.retry",
+            "uk_data.adapters.ons.fetch_sdmx_series",
             side_effect=Exception("api down"),
         ):
             from uk_data.adapters.ons import fetch_labour_market

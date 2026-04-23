@@ -5,22 +5,21 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
+from uk_data.adapters.ons_manifest import ONS_CONCEPT_MAP
+
 if TYPE_CHECKING:
     from uk_data.adapters.base import BaseAdapter
     from uk_data.models import TimeSeries
 
 CONCEPT_REGISTRY: dict[str, dict[str, str | None]] = {
-    "gdp": {"ons": "ABMI", "boe": None},
-    "household_income": {"ons": "RPHQ", "boe": None},
-    "savings_ratio": {"ons": "NRJS", "boe": None},
-    "unemployment": {"ons": "MGSX", "boe": None},
-    "average_earnings": {"ons": "KAB9", "boe": None},
+    **{
+        concept: {"ons": series_id, "boe": None}
+        for concept, series_id in ONS_CONCEPT_MAP.items()
+    },
     "bank_rate": {"boe": "IUMABEDR", "ons": None},
     "mortgage_rate": {"boe": "IUMTLMV", "ons": None},
     "business_rate": {"boe": "IUMZICQ", "ons": None},
     "house_price_uk": {"land_registry": "uk_hpi_average", "ons": None},
-    "affordability": {"ons": "HP7A", "boe": None},
-    "rental_growth": {"ons": "D7RA", "boe": None},
     "corp_tax_rate": {"hmrc": "corporation_tax_2024", "ons": None},
     "income_tax_basic": {"hmrc": "income_tax_basic_2024", "ons": None},
     "vat_standard": {"hmrc": "vat_standard_2024", "ons": None},

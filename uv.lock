@@ -2533,6 +2533,22 @@ wheels = [
 ]
 
 [[package]]
+name = "pandasdmx"
+version = "1.9.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "lxml" },
+    { name = "pandas", version = "2.3.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "pandas", version = "3.0.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "pydantic" },
+    { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a3/4e/0ca9480616516db269e48418514ef5fb5bec81663db847126b5a062e6d0d/pandaSDMX-1.9.0.tar.gz", hash = "sha256:003949fd166bf714e914cfdead899d7792e4c189f06f2437fd51bc496ab73948", size = 77335, upload-time = "2022-02-23T10:51:06.519Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/38/8e/d804f99309a918182469baa3e7a73adfc9de87432a5f905e4ef8473069fa/pandaSDMX-1.9.0-py3-none-any.whl", hash = "sha256:2ede12e27b86dec044c55b1433a5c993dd6fb7e760133343b8ebfaef4158a37b", size = 87898, upload-time = "2022-02-23T10:51:04.214Z" },
+]
+
+[[package]]
 name = "parso"
 version = "0.8.6"
 source = { registry = "https://pypi.org/simple" }
@@ -3901,16 +3917,20 @@ dependencies = [
 companies-house = [
     { name = "companies-house", extra = ["analysis", "xbrl"] },
 ]
+sdmx = [
+    { name = "pandasdmx" },
+]
 
 [package.metadata]
 requires-dist = [
     { name = "companies-house", extras = ["xbrl", "analysis"], marker = "extra == 'companies-house'", editable = "packages/companies-house" },
     { name = "duckdb", specifier = ">=1.0.0" },
     { name = "numpy", specifier = ">=1.26.0" },
+    { name = "pandasdmx", marker = "extra == 'sdmx'", specifier = ">=1.6.0,<2" },
     { name = "polars", specifier = ">=1.38.1" },
     { name = "pydantic", specifier = ">=2.0.0" },
 ]
-provides-extras = ["companies-house"]
+provides-extras = ["companies-house", "sdmx"]
 
 [[package]]
 name = "urllib3"

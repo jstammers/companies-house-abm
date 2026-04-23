@@ -30,6 +30,8 @@ from typing import Any
 
 from uk_data._http import retry
 from uk_data.adapters.base import BaseAdapter
+from uk_data.adapters.ons_manifest import ONS_SERIES_IDS, ONS_SERIES_MANIFEST
+from uk_data.adapters.ons_provider import fetch_sdmx_series
 from uk_data.models import point_timeseries, series_from_observations
 
 logger = logging.getLogger(__name__)
@@ -192,6 +194,31 @@ def _latest_float(series_id: str) -> float | None:
         return None
 
 
+def _fetch_manifest_observations(series_id: str, *, limit: int = 20) -> list[dict[str, str]]:
+    entry = ONS_SERIES_MANIFEST[series_id.upper()]
+    if entry.transport != "sdmx":
+        msg = f"ONS series {series_id} does not expose SDMX observations"
+        raise ValueError(msg)
+    observations = fetch_sdmx_series(entry, limit=limit)
+    return observations[-limit:] if len(observations) > limit else observations
+
+
+def _latest_manifest_float(series_id: str) -> float | None:
+    try:
+        observations = _fetch_manifest_observations(series_id, limit=1)
+    except ModuleNotFoundError:
+        raise
+    except Exception:
+        logger.warning("ONS SDMX API unavailable for series %s, returning None", series_id)
+        return None
+    if not observations:
+        return None
+    try:
+        return float(observations[-1]["value"])
+    except (KeyError, ValueError, TypeError):
+        return None
+
+
 # ---------------------------------------------------------------------------
 # Public fetch functions
 # ---------------------------------------------------------------------------
@@ -217,7 +244,14 @@ def fetch_gdp(limit: int = 20) -> list[dict[str, Any]]:
         >>> len(obs) <= 4
         True
     """
-    return _fetch_timeseries(_GDP_SERIES, limit=limit)
+    try:
+        return _fetch_manifest_observations(_GDP_SERIES, limit=limit)
+    except ModuleNotFoundError:
+        logger.info("pandasdmx unavailable; falling back to Zebedee for %s", _GDP_SERIES)
+        return _fetch_timeseries(_GDP_SERIES, limit=limit)
+    except Exception:
+        logger.warning("ONS SDMX API unavailable for series %s, returning []", _GDP_SERIES)
+        return []
 
 
 def fetch_household_income(limit: int = 20) -> list[dict[str, Any]]:
@@ -241,7 +275,20 @@ def fetch_household_income(limit: int = 20) -> list[dict[str, Any]]:
         >>> isinstance(obs, list)
         True
     """
-    return _fetch_timeseries(_HOUSEHOLD_INCOME_SERIES, limit=limit)
+    try:
+        return _fetch_manifest_observations(_HOUSEHOLD_INCOME_SERIES, limit=limit)
+    except ModuleNotFoundError:
+        logger.info(
+            "pandasdmx unavailable; falling back to Zebedee for %s",
+            _HOUSEHOLD_INCOME_SERIES,
+        )
+        return _fetch_timeseries(_HOUSEHOLD_INCOME_SERIES, limit=limit)
+    except Exception:
+        logger.warning(
+            "ONS SDMX API unavailable for series %s, returning []",
+            _HOUSEHOLD_INCOME_SERIES,
+        )
+        return []
 
 
 def fetch_savings_ratio(limit: int = 20) -> list[dict[str, Any]]:
@@ -264,7 +311,20 @@ def fetch_savings_ratio(limit: int = 20) -> list[dict[str, Any]]:
         >>> isinstance(obs, list)
         True
     """
-    return _fetch_timeseries(_SAVINGS_RATIO_SERIES, limit=limit)
+    try:
+        return _fetch_manifest_observations(_SAVINGS_RATIO_SERIES, limit=limit)
+    except ModuleNotFoundError:
+        logger.info(
+            "pandasdmx unavailable; falling back to Zebedee for %s",
+            _SAVINGS_RATIO_SERIES,
+        )
+        return _fetch_timeseries(_SAVINGS_RATIO_SERIES, limit=limit)
+    except Exception:
+        logger.warning(
+            "ONS SDMX API unavailable for series %s, returning []",
+            _SAVINGS_RATIO_SERIES,
+        )
+        return []
 
 
 def fetch_labour_market() -> dict[str, float | None]:
@@ -288,10 +348,17 @@ def fetch_labour_market() -> dict[str, float | None]:
         >>> "unemployment_rate" in data
         True
     """
-    return {
-        "unemployment_rate": _latest_float(_UNEMPLOYMENT_RATE_SERIES),
-        "average_weekly_earnings": _latest_float(_AVERAGE_EARNINGS_SERIES),
-    }
+    try:
+        return {
+            "unemployment_rate": _latest_manifest_float(_UNEMPLOYMENT_RATE_SERIES),
+            "average_weekly_earnings": _latest_manifest_float(_AVERAGE_EARNINGS_SERIES),
+        }
+    except ModuleNotFoundError:
+        logger.info("pandasdmx unavailable; falling back to Zebedee labour market data")
+        return {
+            "unemployment_rate": _latest_float(_UNEMPLOYMENT_RATE_SERIES),
+            "average_weekly_earnings": _latest_float(_AVERAGE_EARNINGS_SERIES),
+        }
 
 
 def fetch_input_output_table() -> dict[str, Any]:
@@ -593,94 +660,52 @@ class ONSAdapter(BaseAdapter):
 
     def available_series(self) -> list[str]:
         """Return the ONS series IDs supported by this adapter."""
-        return [
-            _GDP_SERIES,
-            _HOUSEHOLD_INCOME_SERIES,
-            _SAVINGS_RATIO_SERIES,
-            _UNEMPLOYMENT_RATE_SERIES,
-            _AVERAGE_EARNINGS_SERIES,
-            _AFFORDABILITY_SERIES,
-            _RENTAL_INDEX_SERIES,
-        ]
+        return list(ONS_SERIES_IDS)
 
     def fetch_series(self, series_id: str, **kwargs: object):
         """Fetch a canonical ONS time series."""
-        concept = str(kwargs.get("concept", series_id.lower()))
-        series_map = {
-            _GDP_SERIES: (
-                "UK GDP at market prices",
-                "Q",
-                "GBP_M",
-                "SA",
-                fetch_gdp,
-            ),
-            _HOUSEHOLD_INCOME_SERIES: (
-                "UK household disposable income",
-                "Q",
-                "GBP_M",
-                "SA",
-                fetch_household_income,
-            ),
-            _SAVINGS_RATIO_SERIES: (
-                "UK household savings ratio",
-                "Q",
-                "%",
-                "SA",
-                fetch_savings_ratio,
-            ),
-            _UNEMPLOYMENT_RATE_SERIES: (
-                "UK unemployment rate",
-                "M",
-                "%",
-                "SA",
-                lambda limit=20: _fetch_timeseries(_UNEMPLOYMENT_RATE_SERIES, limit),
-            ),
-            _AVERAGE_EARNINGS_SERIES: (
-                "Average weekly earnings",
-                "M",
-                "GBP",
-                "SA",
-                lambda limit=20: _fetch_timeseries(_AVERAGE_EARNINGS_SERIES, limit),
-            ),
-        }
+        series_id = series_id.upper()
+        entry = ONS_SERIES_MANIFEST.get(series_id)
+        if entry is None:
+            msg = f"Unsupported ONS series: {series_id}"
+            raise ValueError(msg)
 
-        if series_id in series_map:
-            name, frequency, units, seasonal_adjustment, fetcher = series_map[series_id]
-            observations = fetcher(limit=int(kwargs.get("limit", 20)))
+        concept = str(kwargs.get("concept", entry.concept))
+        limit = int(kwargs.get("limit", 20))
+
+        if entry.transport == "sdmx":
+            observations = fetch_sdmx_series(entry, limit=limit)
             return series_from_observations(
                 series_id=concept,
-                name=name,
-                frequency=frequency,
-                units=units,
-                seasonal_adjustment=seasonal_adjustment,
-                geography="UK",
+                name=entry.name,
+                frequency=entry.frequency,
+                units=entry.units,
+                seasonal_adjustment=entry.seasonal_adjustment,
+                geography=entry.geography,
                 observations=observations,
                 source="ons",
-                source_series_id=series_id,
+                source_series_id=entry.source_series_id,
             )
 
-        if series_id == _AFFORDABILITY_SERIES:
-            return point_timeseries(
-                series_id=concept,
-                name="House price affordability ratio",
-                value=fetch_affordability_ratio(),
-                units="ratio",
-                source="ons",
-                source_series_id=series_id,
-            )
-
-        if series_id == _RENTAL_INDEX_SERIES:
-            return point_timeseries(
-                series_id=concept,
-                name="Private rental growth",
-                value=fetch_rental_growth(),
-                units="fraction",
-                source="ons",
-                source_series_id=series_id,
-            )
-
-        msg = f"Unsupported ONS series: {series_id}"
-        raise ValueError(msg)
+        fallback_handlers = {
+            "affordability_ratio": fetch_affordability_ratio,
+            "rental_growth": fetch_rental_growth,
+        }
+        if entry.fallback_handler is None:
+            msg = f"ONS series {series_id} has no fallback handler"
+            raise ValueError(msg)
+        fetcher = fallback_handlers[entry.fallback_handler]
+        return point_timeseries(
+            series_id=concept,
+            name=entry.name,
+            value=fetcher(),
+            units=entry.units,
+            source="ons",
+            source_series_id=entry.source_series_id,
+            frequency=entry.frequency,
+            seasonal_adjustment=entry.seasonal_adjustment,
+            geography=entry.geography,
+        )
 
 
 def parse_ons_csv(text: str) -> list[dict[str, str]]:

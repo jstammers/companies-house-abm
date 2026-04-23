@@ -7,6 +7,7 @@ the period-by-period execution loop described in the design document.
 from __future__ import annotations
 
 from dataclasses import dataclass, field, fields
+from itertools import chain
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -104,7 +105,7 @@ class SimulationDataCollector(DataCollector):
 
     @staticmethod
     def _model_metric_reporter(name: str):
-        return lambda model, name=name: getattr(model.latest_record, name)
+        return lambda model: getattr(model.latest_record, name)
 
 
 class Simulation(Model):
@@ -158,22 +159,19 @@ class Simulation(Model):
         self.current_period: int = 0
 
     def _attach_model(self, agent: Any) -> Any:
-        """Attach the simulation model reference required by Mesa AgentSets."""
+        """Attach and register an economic agent with the Mesa model."""
         agent.model = self
         self.register_agent(agent)
         return agent
 
     def _clear_registered_agents(self) -> None:
         """Remove existing registered agents before re-initialisation."""
-        for agent in [*self.firms, *self.households, *self.banks]:
-            if getattr(agent, "model", None) is not self or not hasattr(
-                agent, "unique_id"
-            ):
-                continue
-            try:
-                self.deregister_agent(agent)
-            except KeyError:
-                continue
+        for agent in chain(self.firms, self.households, self.banks):
+            if getattr(agent, "model", None) is self and hasattr(agent, "unique_id"):
+                try:
+                    self.deregister_agent(agent)
+                except KeyError:
+                    continue
 
     def _agent_set(self, agents: list[Any]) -> AgentSet:
         """Create a Mesa AgentSet from the current agent list."""

@@ -6,11 +6,11 @@ the period-by-period execution loop described in the design document.
 
 from __future__ import annotations
 
+import random
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 import numpy as np
-from mesa import Model
 from mesa.agent import AgentSet
 
 from companies_house_abm.abm.agents.bank import Bank
@@ -28,6 +28,8 @@ from companies_house_abm.abm.markets.labor import LaborMarket
 if TYPE_CHECKING:
     from pathlib import Path
     from typing import Any
+
+    from numpy.random import Generator
 
 
 @dataclass
@@ -89,7 +91,7 @@ class SimulationResult:
         return [r.homeownership_rate for r in self.records]
 
 
-class Simulation(Model):
+class Simulation:
     """The top-level simulation orchestrator.
 
     Usage::
@@ -112,8 +114,11 @@ class Simulation(Model):
 
     def __init__(self, config: ModelConfig | None = None) -> None:
         self.config = config or ModelConfig()
-        super().__init__(seed=self.config.simulation.seed)
-        self._rng = np.random.default_rng(self.config.simulation.seed)
+        seed = self.config.simulation.seed
+        self._rng: Generator = np.random.default_rng(seed)
+        self.random = random.Random(seed)
+        self.steps = 0
+        self.time = 0.0
 
         # Agents
         self.firms: list[Firm] = []
@@ -205,14 +210,18 @@ class Simulation(Model):
             # making every firm immediately insolvent.
             n_hh = min(cfg.households.count, 5000)
             mean_firm_size = max(1, n_hh // n_firms)
-            sectors = [cfg.firms.sectors[i % len(cfg.firms.sectors)] for i in range(n_firms)]
+            sectors = [
+                cfg.firms.sectors[i % len(cfg.firms.sectors)] for i in range(n_firms)
+            ]
             employees = self._rng.integers(1, max(2, mean_firm_size * 2), size=n_firms)
             wage_rates = self._rng.lognormal(np.log(35_000 / 4), 0.3, size=n_firms)
             # Calibrate turnover so the wage share is 35-70 % (UK SME range).
             # Drawing turnover independently can produce wage_share > 200 %,
             # causing immediate equity collapse and mass bankruptcy in period 1.
             wage_bills = employees * wage_rates
-            wage_shares = np.clip(self._rng.normal(0.50, 0.10, size=n_firms), 0.35, 0.70)
+            wage_shares = np.clip(
+                self._rng.normal(0.50, 0.10, size=n_firms), 0.35, 0.70
+            )
             turnover = wage_bills / wage_shares
             # Capital set to ~2x quarterly turnover so the capacity constraint
             # (capital x utilisation_target) does not bind in period 1 and
@@ -223,17 +232,17 @@ class Simulation(Model):
             self.firms = [
                 self._attach_model(
                     Firm(
-                    agent_id=f"firm_{i:05d}",
-                    sector=sectors[i],
-                    employees=int(employees[i]),
-                    wage_bill=float(wage_bills[i]),
-                    turnover=float(turnover[i]),
-                    capital=float(capital[i]),
-                    cash=float(cash[i]),
-                    debt=0.0,
-                    equity=float(capital[i] + cash[i]),
-                    behavior=cfg.firm_behavior,
-                )
+                        agent_id=f"firm_{i:05d}",
+                        sector=sectors[i],
+                        employees=int(employees[i]),
+                        wage_bill=float(wage_bills[i]),
+                        turnover=float(turnover[i]),
+                        capital=float(capital[i]),
+                        cash=float(cash[i]),
+                        debt=0.0,
+                        equity=float(capital[i] + cash[i]),
+                        behavior=cfg.firm_behavior,
+                    )
                 )
                 for i in range(n_firms)
             ]
@@ -248,7 +257,9 @@ class Simulation(Model):
             )
             wealths = self._rng.pareto(cfg.households.wealth_shape, size=n_hh) * incomes
             mpcs = np.clip(
-                self._rng.normal(cfg.households.mpc_mean, cfg.households.mpc_std, size=n_hh),
+                self._rng.normal(
+                    cfg.households.mpc_mean, cfg.households.mpc_std, size=n_hh
+                ),
                 0.1,
                 0.99,
             )
@@ -271,13 +282,13 @@ class Simulation(Model):
             self.banks = [
                 self._attach_model(
                     Bank(
-                    agent_id=f"bank_{i:02d}",
-                    capital=float(bank_capital[i]),
-                    reserves=float(bank_capital[i] * 0.1),
-                    config=cfg.banks,
-                    behavior=cfg.bank_behavior,
-                    mortgage_config=cfg.mortgage,
-                )
+                        agent_id=f"bank_{i:02d}",
+                        capital=float(bank_capital[i]),
+                        reserves=float(bank_capital[i] * 0.1),
+                        config=cfg.banks,
+                        behavior=cfg.bank_behavior,
+                        mortgage_config=cfg.mortgage,
+                    )
                 )
                 for i in range(cfg.banks.count)
             ]
@@ -419,7 +430,9 @@ class Simulation(Model):
         """
         count = 0
         banks_by_id = {bank.agent_id: bank for bank in self.banks}
-        households_by_id = {household.agent_id: household for household in self.households}
+        households_by_id = {
+            household.agent_id: household for household in self.households
+        }
         properties_by_id = {prop.property_id: prop for prop in self.properties}
         for mortgage in list(self.mortgages):
             if not mortgage.in_arrears:
@@ -476,7 +489,7 @@ class Simulation(Model):
         result = SimulationResult()
 
         for _ in range(n):
-            record = self.step()
+            record = self._period_step()
             result.records.append(record)
 
             if collect_micro:
@@ -486,6 +499,10 @@ class Simulation(Model):
         return result
 
     def step(self) -> PeriodRecord:
+        """Execute a single simulation period."""
+        return self._period_step()
+
+    def _period_step(self) -> PeriodRecord:
         """Execute a single period of the simulation.
 
         The within-period sequence follows the design document:
@@ -510,6 +527,8 @@ class Simulation(Model):
         Returns:
             A :class:`PeriodRecord` for this period.
         """
+        self.steps += 1
+        self.time = float(self.steps)
         self.current_period += 1
         firms = self.firm_agents
         households = self.household_agents

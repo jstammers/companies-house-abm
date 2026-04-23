@@ -21,7 +21,12 @@ class BaseAgent(ABC):
         agent_type: Type of agent (e.g., 'firm', 'household', 'bank').
     """
 
-    def __init__(self, agent_id: str | None = None, *, model: Any | None = None) -> None:
+    def __init__(
+        self,
+        agent_id: str | None = None,
+        *,
+        model: Any | None = None,
+    ) -> None:
         """Initialize the base agent.
 
         Args:

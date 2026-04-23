@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import yaml
-from mesa import Model
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -66,7 +65,7 @@ class TestSimulationInit:
     def test_default_init(self):
         sim = Simulation()
         assert sim.config is not None
-        assert isinstance(sim, Model)
+        assert hasattr(sim, "random")
         assert sim.current_period == 0
         assert sim.firms == []
         assert sim.households == []

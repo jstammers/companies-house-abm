@@ -194,7 +194,11 @@ def _latest_float(series_id: str) -> float | None:
         return None
 
 
-def _fetch_manifest_observations(series_id: str, *, limit: int = 20) -> list[dict[str, str]]:
+def _fetch_manifest_observations(
+    series_id: str,
+    *,
+    limit: int = 20,
+) -> list[dict[str, str]]:
     entry = ONS_SERIES_MANIFEST[series_id.upper()]
     if entry.transport != "sdmx":
         msg = f"ONS series {series_id} does not expose SDMX observations"
@@ -209,7 +213,10 @@ def _latest_manifest_float(series_id: str) -> float | None:
     except ModuleNotFoundError:
         raise
     except Exception:
-        logger.warning("ONS SDMX API unavailable for series %s, returning None", series_id)
+        logger.warning(
+            "ONS SDMX API unavailable for series %s, returning None",
+            series_id,
+        )
         return None
     if not observations:
         return None
@@ -247,10 +254,16 @@ def fetch_gdp(limit: int = 20) -> list[dict[str, Any]]:
     try:
         return _fetch_manifest_observations(_GDP_SERIES, limit=limit)
     except ModuleNotFoundError:
-        logger.info("pandasdmx unavailable; falling back to Zebedee for %s", _GDP_SERIES)
+        logger.info(
+            "pandasdmx unavailable; falling back to Zebedee for %s",
+            _GDP_SERIES,
+        )
         return _fetch_timeseries(_GDP_SERIES, limit=limit)
     except Exception:
-        logger.warning("ONS SDMX API unavailable for series %s, returning []", _GDP_SERIES)
+        logger.warning(
+            "ONS SDMX API unavailable for series %s, returning []",
+            _GDP_SERIES,
+        )
         return []
 
 

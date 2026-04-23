@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from uk_data.adapters.ons_manifest import ONSSeriesManifestEntry
+if TYPE_CHECKING:
+    from uk_data.adapters.ons_manifest import ONSSeriesManifestEntry
 
 _ONS_PROVIDER_ID = "ONS"
 _ONS_PROVIDER_INFO = {
@@ -71,14 +72,15 @@ def fetch_sdmx_series(
 
 
 def _normalize_sdmx_payload(payload: Any, *, limit: int) -> list[dict[str, str]]:
+    if limit <= 0:
+        return []
+
     series_like = _unwrap_sdmx_payload(payload)
     rows = [
         {"date": _format_observation_label(label), "value": str(value)}
         for label, value in _iter_observations(series_like)
         if value not in (None, "")
     ]
-    if limit <= 0:
-        return []
     return rows[-limit:]
 
 

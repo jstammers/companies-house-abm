@@ -14,6 +14,8 @@ def test_registry_contains_manifest_defined_ons_concepts() -> None:
 def test_registry_and_ons_manifest_have_no_missing_or_duplicate_ons_concepts() -> None:
     manifest_concepts = {entry.concept for entry in ONS_SERIES_MANIFEST.values()}
     registry_concepts = {
-        concept for concept, mapping in CONCEPT_REGISTRY.items() if mapping.get("ons") is not None
+        concept
+        for concept, mapping in CONCEPT_REGISTRY.items()
+        if mapping.get("ons") is not None
     }
     assert registry_concepts == manifest_concepts

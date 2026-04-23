@@ -27,7 +27,7 @@ class FakeSeries:
     def __init__(self, observations: list[tuple[object, object]]) -> None:
         self._observations = observations
 
-    def squeeze(self) -> "FakeSeries":
+    def squeeze(self) -> FakeSeries:
         return self
 
     def items(self) -> list[tuple[object, object]]:
@@ -69,7 +69,7 @@ class FakePandasDMX:
         self.add_source_calls += 1
         self.source.sources[info["id"]] = info
 
-    def Request(self, source_id: str) -> FakeRequest:  # noqa: N802
+    def Request(self, source_id: str) -> FakeRequest:
         assert source_id == _ONS_PROVIDER_ID
         return self.request
 
@@ -83,9 +83,15 @@ class FakePandasDMX:
 
 
 class TestONSProvider:
-    def test_register_ons_provider_is_idempotent(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_register_ons_provider_is_idempotent(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         fake = FakePandasDMX()
-        monkeypatch.setattr("uk_data.adapters.ons_provider._load_pandasdmx", lambda: fake)
+        monkeypatch.setattr(
+            "uk_data.adapters.ons_provider._load_pandasdmx",
+            lambda: fake,
+        )
 
         register_ons_provider()
         register_ons_provider()
@@ -93,7 +99,19 @@ class TestONSProvider:
         assert fake.add_source_calls == 1
         assert _ONS_PROVIDER_ID in fake.source.sources
 
-    def test_build_request_raises_clear_error_when_pandasdmx_missing(self) -> None:
+    def test_build_request_raises_clear_error_when_pandasdmx_missing(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        def _missing_dependency() -> FakePandasDMX:
+            msg = "pandasdmx is required for ONS SDMX series; install uk-data[sdmx]"
+            raise ModuleNotFoundError(msg)
+
+        monkeypatch.setattr(
+            "uk_data.adapters.ons_provider._load_pandasdmx",
+            _missing_dependency,
+        )
+
         with pytest.raises(ModuleNotFoundError, match="install uk-data\\[sdmx\\]"):
             build_ons_request()
 
@@ -102,7 +120,10 @@ class TestONSProvider:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         fake = FakePandasDMX()
-        monkeypatch.setattr("uk_data.adapters.ons_provider._load_pandasdmx", lambda: fake)
+        monkeypatch.setattr(
+            "uk_data.adapters.ons_provider._load_pandasdmx",
+            lambda: fake,
+        )
 
         rows = fetch_sdmx_series(ONS_SERIES_MANIFEST["ABMI"], limit=2)
 
@@ -116,7 +137,10 @@ class TestONSProvider:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         fake = FakePandasDMX()
-        monkeypatch.setattr("uk_data.adapters.ons_provider._load_pandasdmx", lambda: fake)
+        monkeypatch.setattr(
+            "uk_data.adapters.ons_provider._load_pandasdmx",
+            lambda: fake,
+        )
 
         fetch_sdmx_series(ONS_SERIES_MANIFEST["MGSX"], limit=3)
 

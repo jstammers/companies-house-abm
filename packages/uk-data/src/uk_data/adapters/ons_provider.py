@@ -87,7 +87,7 @@ def _normalize_sdmx_payload(payload: Any, *, limit: int) -> list[dict[str, str]]
 def _unwrap_sdmx_payload(payload: Any) -> Any:
     if isinstance(payload, dict):
         if len(payload) != 1:
-            msg = "Expected a single series in pandasdmx payload"
+            msg = f"Expected a single series in pandasdmx payload, got {len(payload)}"
             raise ValueError(msg)
         payload = next(iter(payload.values()))
 

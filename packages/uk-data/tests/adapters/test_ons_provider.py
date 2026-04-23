@@ -23,6 +23,18 @@ class FakeScalar:
         return self._value
 
 
+class FakeBrokenScalar:
+    def __init__(self, value: float) -> None:
+        self._value = value
+
+    def item(self) -> float:
+        msg = "cannot coerce"
+        raise TypeError(msg)
+
+    def __str__(self) -> str:
+        return str(self._value)
+
+
 class FakeSeries:
     def __init__(self, observations: list[tuple[object, object]]) -> None:
         self._observations = observations
@@ -151,3 +163,20 @@ class TestONSProvider:
                 "params": {"lastNObservations": "3"},
             }
         ]
+
+    def test_fetch_sdmx_series_keeps_value_when_scalar_item_raises(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        fake = FakePandasDMX()
+        monkeypatch.setattr(
+            "uk_data.adapters.ons_provider._load_pandasdmx",
+            lambda: fake,
+        )
+        fake.to_pandas = lambda _: FakeSeries(  # type: ignore[method-assign]
+            [(FakePeriod("2024-01-01"), FakeBrokenScalar(7.25))]
+        )
+
+        rows = fetch_sdmx_series(ONS_SERIES_MANIFEST["ABMI"], limit=1)
+
+        assert rows == [{"date": "2024-01-01", "value": "7.25"}]

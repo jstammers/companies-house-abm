@@ -226,6 +226,20 @@ def _latest_manifest_float(series_id: str) -> float | None:
         return None
 
 
+def _fetch_sdmx_or_zebedee(series_id: str, *, limit: int = 20) -> list[dict[str, Any]]:
+    try:
+        return _fetch_manifest_observations(series_id, limit=limit)
+    except ModuleNotFoundError:
+        logger.info("pandasdmx unavailable; falling back to Zebedee for %s", series_id)
+        return _fetch_timeseries(series_id, limit=limit)
+    except Exception:
+        logger.warning(
+            "ONS SDMX API unavailable for series %s, returning []",
+            series_id,
+        )
+        return []
+
+
 # ---------------------------------------------------------------------------
 # Public fetch functions
 # ---------------------------------------------------------------------------
@@ -251,20 +265,7 @@ def fetch_gdp(limit: int = 20) -> list[dict[str, Any]]:
         >>> len(obs) <= 4
         True
     """
-    try:
-        return _fetch_manifest_observations(_GDP_SERIES, limit=limit)
-    except ModuleNotFoundError:
-        logger.info(
-            "pandasdmx unavailable; falling back to Zebedee for %s",
-            _GDP_SERIES,
-        )
-        return _fetch_timeseries(_GDP_SERIES, limit=limit)
-    except Exception:
-        logger.warning(
-            "ONS SDMX API unavailable for series %s, returning []",
-            _GDP_SERIES,
-        )
-        return []
+    return _fetch_sdmx_or_zebedee(_GDP_SERIES, limit=limit)
 
 
 def fetch_household_income(limit: int = 20) -> list[dict[str, Any]]:
@@ -288,20 +289,7 @@ def fetch_household_income(limit: int = 20) -> list[dict[str, Any]]:
         >>> isinstance(obs, list)
         True
     """
-    try:
-        return _fetch_manifest_observations(_HOUSEHOLD_INCOME_SERIES, limit=limit)
-    except ModuleNotFoundError:
-        logger.info(
-            "pandasdmx unavailable; falling back to Zebedee for %s",
-            _HOUSEHOLD_INCOME_SERIES,
-        )
-        return _fetch_timeseries(_HOUSEHOLD_INCOME_SERIES, limit=limit)
-    except Exception:
-        logger.warning(
-            "ONS SDMX API unavailable for series %s, returning []",
-            _HOUSEHOLD_INCOME_SERIES,
-        )
-        return []
+    return _fetch_sdmx_or_zebedee(_HOUSEHOLD_INCOME_SERIES, limit=limit)
 
 
 def fetch_savings_ratio(limit: int = 20) -> list[dict[str, Any]]:
@@ -324,20 +312,7 @@ def fetch_savings_ratio(limit: int = 20) -> list[dict[str, Any]]:
         >>> isinstance(obs, list)
         True
     """
-    try:
-        return _fetch_manifest_observations(_SAVINGS_RATIO_SERIES, limit=limit)
-    except ModuleNotFoundError:
-        logger.info(
-            "pandasdmx unavailable; falling back to Zebedee for %s",
-            _SAVINGS_RATIO_SERIES,
-        )
-        return _fetch_timeseries(_SAVINGS_RATIO_SERIES, limit=limit)
-    except Exception:
-        logger.warning(
-            "ONS SDMX API unavailable for series %s, returning []",
-            _SAVINGS_RATIO_SERIES,
-        )
-        return []
+    return _fetch_sdmx_or_zebedee(_SAVINGS_RATIO_SERIES, limit=limit)
 
 
 def fetch_labour_market() -> dict[str, float | None]:
@@ -707,7 +682,10 @@ class ONSAdapter(BaseAdapter):
         if entry.fallback_handler is None:
             msg = f"ONS series {series_id} has no fallback handler"
             raise ValueError(msg)
-        fetcher = fallback_handlers[entry.fallback_handler]
+        fetcher = fallback_handlers.get(entry.fallback_handler)
+        if fetcher is None:
+            msg = f"Unknown ONS fallback handler: {entry.fallback_handler}"
+            raise ValueError(msg)
         return point_timeseries(
             series_id=concept,
             name=entry.name,

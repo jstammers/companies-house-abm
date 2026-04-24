@@ -448,7 +448,9 @@ class TestOnsInputOutputTable:
             "uk_data.adapters.ons.retry",
             side_effect=Exception("api down"),
         ):
-            from uk_data.adapters.ons import fetch_input_output_table
+            from companies_house_abm.data_sources.input_output import (
+                fetch_input_output_table,
+            )
 
             io = fetch_input_output_table()
         assert "sectors" in io
@@ -463,7 +465,9 @@ class TestOnsInputOutputTable:
             "uk_data.adapters.ons.retry",
             side_effect=Exception("api down"),
         ):
-            from uk_data.adapters.ons import fetch_input_output_table
+            from companies_house_abm.data_sources.input_output import (
+                fetch_input_output_table,
+            )
 
             io = fetch_input_output_table()
         expected_sectors = {
@@ -491,7 +495,9 @@ class TestOnsInputOutputTable:
             "uk_data.adapters.ons.retry",
             side_effect=Exception("api down"),
         ):
-            from uk_data.adapters.ons import fetch_input_output_table
+            from companies_house_abm.data_sources.input_output import (
+                fetch_input_output_table,
+            )
 
             io = fetch_input_output_table()
         total = sum(io["final_demand_shares"].values())
@@ -505,7 +511,9 @@ class TestOnsInputOutputTable:
             "uk_data.adapters.ons.retry",
             side_effect=Exception("api down"),
         ):
-            from uk_data.adapters.ons import fetch_input_output_table
+            from companies_house_abm.data_sources.input_output import (
+                fetch_input_output_table,
+            )
 
             io = fetch_input_output_table()
         for sector, inputs in io["use_coefficients"].items():

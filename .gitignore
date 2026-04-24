@@ -147,4 +147,5 @@ Thumbs.db
 
 # Data files
 data/
+!packages/uk-data/src/uk_data/data/
 *.parquet

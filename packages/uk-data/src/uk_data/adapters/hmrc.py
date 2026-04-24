@@ -1,12 +1,8 @@
 """HMRC (His Majesty's Revenue and Customs) tax data.
 
 Provides UK tax parameters derived from HMRC published rates and
-thresholds.  Tax parameters change infrequently (typically at Budget
-or Autumn Statement) and are stored here as a versioned, documented
-reference rather than fetched from an API.
-
-Tax years run from 6 April to 5 April.  Rates shown are for the 2024/25
-tax year unless otherwise stated.
+thresholds.  Rates are loaded from ``data/hmrc_tax_years.json`` and
+keyed by tax year (``YYYY/YY``).  Tax years run from 6 April to 5 April.
 
 Sources:
 
@@ -24,7 +20,11 @@ All information is reproduced under the Open Government Licence v3.0.
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
+from functools import lru_cache
+from importlib import resources
+from typing import Any, ClassVar
 
 from uk_data.adapters.base import BaseAdapter
 from uk_data.models import point_timeseries
@@ -49,24 +49,7 @@ class IncomeTaxBand:
 
 @dataclass(frozen=True)
 class NationalInsuranceRates:
-    """National Insurance contribution rates for employees and employers.
-
-    All rates are expressed as fractions.
-
-    Attributes:
-        employee_main_rate: NI rate on earnings between the primary
-            threshold and the upper earnings limit.
-        employee_upper_rate: NI rate on earnings above the upper
-            earnings limit.
-        employer_rate: Employer secondary NI rate.
-        primary_threshold: Lower earnings threshold for employee NI
-            (GBP/year).
-        upper_earnings_limit: Upper threshold for employee main rate
-            (GBP/year).
-        secondary_threshold: Lower threshold for employer NI (GBP/year).
-        employment_allowance: Employer NI allowance deductible per year
-            (GBP).
-    """
+    """National Insurance contribution rates for employees and employers."""
 
     employee_main_rate: float
     employee_upper_rate: float
@@ -77,201 +60,109 @@ class NationalInsuranceRates:
     employment_allowance: float
 
 
-# ---------------------------------------------------------------------------
-# Income Tax (2024/25 tax year, England, Wales and Northern Ireland)
-# ---------------------------------------------------------------------------
-
-# Personal Allowance: 12,570 GBP (frozen until April 2028)
-_PERSONAL_ALLOWANCE_2024 = 12_570.0
-
-# Higher-rate threshold: 50,270 GBP (frozen until April 2028)
-_HIGHER_RATE_THRESHOLD_2024 = 50_270.0
-
-# Additional-rate threshold: 125,140 GBP (reduced from 150,000 in 2023/24)
-_ADDITIONAL_RATE_THRESHOLD_2024 = 125_140.0
-
-_INCOME_TAX_BANDS_2024: list[IncomeTaxBand] = [
-    IncomeTaxBand(
-        name="personal_allowance",
-        lower=0.0,
-        upper=_PERSONAL_ALLOWANCE_2024,
-        rate=0.0,
-    ),
-    IncomeTaxBand(
-        name="basic",
-        lower=_PERSONAL_ALLOWANCE_2024,
-        upper=_HIGHER_RATE_THRESHOLD_2024,
-        rate=0.20,
-    ),
-    IncomeTaxBand(
-        name="higher",
-        lower=_HIGHER_RATE_THRESHOLD_2024,
-        upper=_ADDITIONAL_RATE_THRESHOLD_2024,
-        rate=0.40,
-    ),
-    IncomeTaxBand(
-        name="additional",
-        lower=_ADDITIONAL_RATE_THRESHOLD_2024,
-        upper=None,
-        rate=0.45,
-    ),
-]
-
-# ---------------------------------------------------------------------------
-# Corporation Tax (2024/25)
-# ---------------------------------------------------------------------------
-
-# Main rate from 1 April 2023: 25% for profits > 250,000 GBP
-_CORPORATION_TAX_MAIN_RATE_2024 = 0.25
-
-# Small-profits rate: 19% for profits <= 50,000 GBP
-_CORPORATION_TAX_SMALL_PROFITS_RATE_2024 = 0.19
-
-# Small-profits threshold
-_CORPORATION_TAX_SMALL_PROFITS_THRESHOLD_2024 = 50_000.0
-
-# Marginal relief upper threshold
-_CORPORATION_TAX_MARGINAL_RELIEF_THRESHOLD_2024 = 250_000.0
-
-# ---------------------------------------------------------------------------
-# National Insurance (2024/25)
-# ---------------------------------------------------------------------------
-
-# From January 2024, employee main rate was reduced from 12% to 10%
-# (then 8% from April 2024)
-_NI_RATES_2024 = NationalInsuranceRates(
-    employee_main_rate=0.08,  # 8% between PT and UEL (from Apr 2024)
-    employee_upper_rate=0.02,  # 2% above UEL
-    employer_rate=0.138,  # 13.8% above secondary threshold
-    primary_threshold=12_570.0,  # Aligned with personal allowance (GBP/year)
-    upper_earnings_limit=50_270.0,  # Aligned with higher-rate threshold
-    secondary_threshold=9_100.0,  # 175 GBP/week x 52
-    employment_allowance=5_000.0,  # 5,000 GBP employment allowance (2024/25)
-)
-
-# ---------------------------------------------------------------------------
-# VAT rates for 2024/25 tax year
-# ---------------------------------------------------------------------------
-
-_VAT_STANDARD_RATE = 0.20  # 20% - most goods and services
-_VAT_REDUCED_RATE = 0.05  # 5%  - domestic fuel, children's car seats, etc.
-_VAT_ZERO_RATE = 0.00  # 0%  - food, children's clothing, books, etc.
-_VAT_REGISTRATION_THRESHOLD = 90_000.0  # Register if taxable turnover > 90k GBP
-
-# ---------------------------------------------------------------------------
-# Public functions
-# ---------------------------------------------------------------------------
+_DEFAULT_TAX_YEAR = "2024/25"
 
 
-def get_income_tax_bands(tax_year: str = "2024/25") -> list[IncomeTaxBand]:
-    """Return UK income tax bands and rates.
+@lru_cache(maxsize=1)
+def _tax_year_registry() -> dict[str, dict[str, Any]]:
+    """Load the HMRC tax-year data file (cached)."""
+    with resources.files("uk_data.data").joinpath("hmrc_tax_years.json").open() as fh:
+        return json.load(fh)
 
-    Only the 2024/25 tax year is currently supported.  The personal
-    allowance is tapered for incomes above 100,000 GBP (1 GBP reduction
-    for every 2 GBP of income) and removed entirely above 125,140 GBP.
 
-    Args:
-        tax_year: Tax year string in the form ``"YYYY/YY"``
-            (e.g. ``"2024/25"``).
+def _year_entry(tax_year: str) -> dict[str, Any]:
+    registry = _tax_year_registry()
+    if tax_year not in registry:
+        supported = ", ".join(sorted(registry))
+        msg = f"Tax year {tax_year!r} not supported; supported years: {supported}"
+        raise ValueError(msg)
+    return registry[tax_year]
 
-    Returns:
-        List of :class:`IncomeTaxBand` instances from lowest to highest
-        band.
 
-    Raises:
-        ValueError: If *tax_year* is not supported.
+def supported_tax_years() -> list[str]:
+    """Return the list of tax years with data available."""
+    return sorted(_tax_year_registry())
+
+
+def get_income_tax_bands(tax_year: str = _DEFAULT_TAX_YEAR) -> list[IncomeTaxBand]:
+    """Return UK income tax bands and rates for *tax_year*.
 
     Example::
 
         >>> from uk_data.adapters.hmrc import get_income_tax_bands
         >>> bands = get_income_tax_bands()
-        >>> len(bands)
-        4
         >>> bands[1].rate
         0.2
     """
-    if tax_year != "2024/25":
-        msg = f"Tax year {tax_year!r} not supported; use '2024/25'"
-        raise ValueError(msg)
-    return list(_INCOME_TAX_BANDS_2024)
+    entry = _year_entry(tax_year)
+    pa = float(entry["personal_allowance"])
+    higher = float(entry["higher_rate_threshold"])
+    additional = float(entry["additional_rate_threshold"])
+    rates = entry["income_tax_rates"]
+    return [
+        IncomeTaxBand(name="personal_allowance", lower=0.0, upper=pa, rate=0.0),
+        IncomeTaxBand(name="basic", lower=pa, upper=higher, rate=float(rates["basic"])),
+        IncomeTaxBand(
+            name="higher", lower=higher, upper=additional, rate=float(rates["higher"])
+        ),
+        IncomeTaxBand(
+            name="additional",
+            lower=additional,
+            upper=None,
+            rate=float(rates["additional"]),
+        ),
+    ]
 
 
-def get_corporation_tax_rate(profits: float | None = None) -> float:
+def get_corporation_tax_rate(
+    profits: float | None = None,
+    tax_year: str = _DEFAULT_TAX_YEAR,
+) -> float:
     """Return the UK corporation tax rate applicable to given profits.
 
-    The UK has a dual-rate corporation tax system from 1 April 2023:
-
-    - **19 %** on profits up to 50,000 GBP (small-profits rate).
-    - **25 %** on profits above 250,000 GBP (main rate).
-    - Marginal relief between 50,000 GBP and 250,000 GBP.
-
-    Args:
-        profits: Pre-tax profit level in pounds.  If ``None``, returns
-            the main rate (25 %).
-
-    Returns:
-        Effective marginal tax rate as a fraction.
-
-    Example::
-
-        >>> from uk_data.adapters.hmrc import get_corporation_tax_rate
-        >>> get_corporation_tax_rate(profits=30_000)
-        0.19
-        >>> get_corporation_tax_rate(profits=300_000)
-        0.25
-        >>> get_corporation_tax_rate(profits=150_000)  # doctest: +ELLIPSIS
-        0.2...
+    - ``main_rate`` on profits above the marginal relief upper threshold.
+    - ``small_profits_rate`` on profits up to the small-profits threshold.
+    - Linear marginal relief between the two thresholds.
     """
-    if profits is None or profits >= _CORPORATION_TAX_MARGINAL_RELIEF_THRESHOLD_2024:
-        return _CORPORATION_TAX_MAIN_RATE_2024
+    ct = _year_entry(tax_year)["corporation_tax"]
+    main = float(ct["main_rate"])
+    small = float(ct["small_profits_rate"])
+    small_threshold = float(ct["small_profits_threshold"])
+    upper_threshold = float(ct["marginal_relief_upper_threshold"])
+    if profits is None or profits >= upper_threshold:
+        return main
+    if profits <= small_threshold:
+        return small
+    span = upper_threshold - small_threshold
+    position = profits - small_threshold
+    return small + (main - small) * (position / span)
 
-    if profits <= _CORPORATION_TAX_SMALL_PROFITS_THRESHOLD_2024:
-        return _CORPORATION_TAX_SMALL_PROFITS_RATE_2024
 
-    # Marginal relief: linear interpolation between 19% and 25%
-    span = (
-        _CORPORATION_TAX_MARGINAL_RELIEF_THRESHOLD_2024
-        - _CORPORATION_TAX_SMALL_PROFITS_THRESHOLD_2024
-    )
-    position = profits - _CORPORATION_TAX_SMALL_PROFITS_THRESHOLD_2024
-    return _CORPORATION_TAX_SMALL_PROFITS_RATE_2024 + 0.06 * (position / span)
-
-
-def compute_income_tax(gross_income: float) -> float:
+def compute_income_tax(
+    gross_income: float,
+    tax_year: str = _DEFAULT_TAX_YEAR,
+) -> float:
     """Compute the annual income tax liability for a given gross income.
 
-    Applies the 2024/25 tax bands including the personal allowance
-    taper for incomes above 100,000 GBP.
-
-    Args:
-        gross_income: Annual gross income in pounds.
-
-    Returns:
-        Total income tax liability in pounds.
-
-    Example::
-
-        >>> from uk_data.adapters.hmrc import compute_income_tax
-        >>> compute_income_tax(0)
-        0.0
-        >>> compute_income_tax(12_570)
-        0.0
-        >>> round(compute_income_tax(30_000), 2)
-        3486.0
+    Applies the personal-allowance taper (1 GBP reduction per 2 GBP of
+    income above 100,000 GBP, removed entirely above 125,140 GBP).
     """
     if gross_income <= 0:
         return 0.0
 
-    # Personal allowance taper: reduce by 1 GBP for every 2 GBP above 100,000
+    entry = _year_entry(tax_year)
+    pa = float(entry["personal_allowance"])
+    bands = get_income_tax_bands(tax_year)
+
     taper_start = 100_000.0
-    allowance = _PERSONAL_ALLOWANCE_2024
+    allowance = pa
     if gross_income > taper_start:
         reduction = min((gross_income - taper_start) / 2.0, allowance)
         allowance = max(allowance - reduction, 0.0)
 
     taxable = max(gross_income - allowance, 0.0)
     tax = 0.0
-    for band in _INCOME_TAX_BANDS_2024:
+    for band in bands:
         if band.rate == 0.0:
             continue
         band_lower = max(band.lower - allowance, 0.0)
@@ -286,123 +177,53 @@ def compute_income_tax(gross_income: float) -> float:
 
 
 def get_national_insurance_rates(
-    tax_year: str = "2024/25",
+    tax_year: str = _DEFAULT_TAX_YEAR,
 ) -> NationalInsuranceRates:
-    """Return UK National Insurance contribution rates.
-
-    Args:
-        tax_year: Tax year string (only ``"2024/25"`` supported).
-
-    Returns:
-        :class:`NationalInsuranceRates` dataclass.
-
-    Raises:
-        ValueError: If *tax_year* is not supported.
-
-    Example::
-
-        >>> from uk_data.adapters.hmrc import (
-        ...     get_national_insurance_rates,
-        ... )
-        >>> ni = get_national_insurance_rates()
-        >>> ni.employee_main_rate
-        0.08
-        >>> ni.employer_rate
-        0.138
-    """
-    if tax_year != "2024/25":
-        msg = f"Tax year {tax_year!r} not supported; use '2024/25'"
-        raise ValueError(msg)
-    return _NI_RATES_2024
+    """Return UK National Insurance contribution rates for *tax_year*."""
+    ni = _year_entry(tax_year)["national_insurance"]
+    return NationalInsuranceRates(
+        employee_main_rate=float(ni["employee_main_rate"]),
+        employee_upper_rate=float(ni["employee_upper_rate"]),
+        employer_rate=float(ni["employer_rate"]),
+        primary_threshold=float(ni["primary_threshold"]),
+        upper_earnings_limit=float(ni["upper_earnings_limit"]),
+        secondary_threshold=float(ni["secondary_threshold"]),
+        employment_allowance=float(ni["employment_allowance"]),
+    )
 
 
-def compute_employer_ni(gross_salary: float) -> float:
-    """Compute employer National Insurance contributions on a gross salary.
-
-    Args:
-        gross_salary: Annual gross employee salary in pounds.
-
-    Returns:
-        Employer NI contribution in pounds per year.
-
-    Example::
-
-        >>> from uk_data.adapters.hmrc import compute_employer_ni
-        >>> round(compute_employer_ni(30_000), 2)
-        2882.7
-    """
-    ni = _NI_RATES_2024
+def compute_employer_ni(
+    gross_salary: float,
+    tax_year: str = _DEFAULT_TAX_YEAR,
+) -> float:
+    """Compute employer National Insurance contributions on a gross salary."""
+    ni = get_national_insurance_rates(tax_year)
     taxable = max(gross_salary - ni.secondary_threshold, 0.0)
     return taxable * ni.employer_rate
 
 
-def get_vat_rate(category: str = "standard") -> float:
-    """Return the UK VAT rate for a given category.
-
-    Args:
-        category: One of ``"standard"``, ``"reduced"``, or ``"zero"``.
-
-    Returns:
-        VAT rate as a fraction.
-
-    Raises:
-        ValueError: If *category* is unrecognised.
-
-    Example::
-
-        >>> from uk_data.adapters.hmrc import get_vat_rate
-        >>> get_vat_rate()
-        0.2
-        >>> get_vat_rate("reduced")
-        0.05
-        >>> get_vat_rate("zero")
-        0.0
-    """
-    rates = {
-        "standard": _VAT_STANDARD_RATE,
-        "reduced": _VAT_REDUCED_RATE,
-        "zero": _VAT_ZERO_RATE,
-    }
-    if category not in rates:
-        msg = f"Unknown VAT category {category!r}; choose from {list(rates)}"
+def get_vat_rate(
+    category: str = "standard",
+    tax_year: str = _DEFAULT_TAX_YEAR,
+) -> float:
+    """Return the UK VAT rate for a given category."""
+    rates = _year_entry(tax_year)["vat"]
+    if category not in rates or category == "registration_threshold":
+        valid = [k for k in rates if k != "registration_threshold"]
+        msg = f"Unknown VAT category {category!r}; choose from {valid}"
         raise ValueError(msg)
-    return rates[category]
+    return float(rates[category])
 
 
-def effective_tax_wedge(gross_salary: float) -> dict[str, float]:
-    """Compute the total tax wedge on labour income.
+def effective_tax_wedge(
+    gross_salary: float,
+    tax_year: str = _DEFAULT_TAX_YEAR,
+) -> dict[str, float]:
+    """Compute the total tax wedge on labour income."""
+    ni = get_national_insurance_rates(tax_year)
+    income_tax = compute_income_tax(gross_salary, tax_year)
+    employer_ni = compute_employer_ni(gross_salary, tax_year)
 
-    Returns the combined income tax, employee NI, and employer NI burden
-    as fractions of the total labour cost (gross salary + employer NI).
-
-    Args:
-        gross_salary: Annual gross salary in pounds.
-
-    Returns:
-        Dictionary with keys:
-
-        - ``"gross_salary"`` - the input salary.
-        - ``"income_tax"`` - income tax liability.
-        - ``"employee_ni"`` - employee NI contribution.
-        - ``"employer_ni"`` - employer NI contribution.
-        - ``"total_labour_cost"`` - gross salary plus employer NI.
-        - ``"effective_rate"`` - ratio of all taxes to total labour cost.
-        - ``"take_home"`` - net salary after income tax and employee NI.
-
-    Example::
-
-        >>> from uk_data.adapters.hmrc import effective_tax_wedge
-        >>> wedge = effective_tax_wedge(35_000)
-        >>> 0 < wedge["effective_rate"] < 1
-        True
-        >>> wedge["take_home"] < wedge["gross_salary"]
-        True
-    """
-    ni = _NI_RATES_2024
-    income_tax = compute_income_tax(gross_salary)
-    employer_ni = compute_employer_ni(gross_salary)
-
-    # Employee NI
     main_band = max(
         min(gross_salary, ni.upper_earnings_limit) - ni.primary_threshold, 0.0
     )
@@ -427,55 +248,72 @@ def effective_tax_wedge(gross_salary: float) -> dict[str, float]:
 
 
 class HMRCAdapter(BaseAdapter):
-    """Canonical adapter for static HMRC tax parameters."""
+    """Canonical adapter for static HMRC tax parameters.
+
+    Series IDs embed the tax year, e.g. ``"corporation_tax_2024"``,
+    ``"income_tax_basic_2024"``, ``"vat_standard_2024"``.  The adapter
+    parses the trailing year to choose which tax-year registry entry
+    to use, so years 2023, 2024, 2025 all work out of the box.
+    """
+
+    # Mapping of series-suffix to (name, fraction-fetcher).  The trailing
+    # year token is parsed dynamically.
+    _KIND_TO_SERIES: ClassVar[dict[str, tuple[str, str]]] = {
+        "corporation_tax": ("UK corporation tax main rate", "corp_tax_rate"),
+        "income_tax_basic": ("UK income tax basic rate", "basic_rate"),
+        "vat_standard": ("UK standard VAT rate", "vat_standard"),
+    }
+
+    def _starting_tax_year(self, series_id: str) -> tuple[str, str]:
+        """Extract the (kind, tax_year_string) from a series ID like
+        ``"corporation_tax_2024"``.  The year is expanded to ``"2024/25"``.
+        """
+        for kind in self._KIND_TO_SERIES:
+            prefix = f"{kind}_"
+            if series_id.startswith(prefix):
+                year_tok = series_id[len(prefix) :]
+                if year_tok.isdigit() and len(year_tok) == 4:
+                    y = int(year_tok)
+                    return kind, f"{y}/{(y + 1) % 100:02d}"
+                break
+        msg = f"Unsupported HMRC series: {series_id}"
+        raise ValueError(msg)
 
     def available_series(self) -> list[str]:
-        """Return the HMRC series IDs supported by this adapter."""
-        return [
-            "corporation_tax_2024",
-            "income_tax_basic_2024",
-            "vat_standard_2024",
-        ]
+        """Return the HMRC series IDs supported for every known tax year."""
+        years = supported_tax_years()
+        ids: list[str] = []
+        for tax_year in years:
+            start_year = tax_year.split("/", 1)[0]
+            for kind in self._KIND_TO_SERIES:
+                ids.append(f"{kind}_{start_year}")
+        return ids
 
     def fetch_series(self, series_id: str, **kwargs: object):
         """Fetch canonical one-point HMRC policy series."""
         concept = str(kwargs.get("concept", series_id.lower()))
+        kind, tax_year = self._starting_tax_year(series_id)
+        name, metric = self._KIND_TO_SERIES[kind]
 
-        if series_id == "corporation_tax_2024":
-            return point_timeseries(
-                series_id=concept,
-                name="UK corporation tax main rate",
-                value=get_corporation_tax_rate(profits=None),
-                units="fraction",
-                source="hmrc",
-                source_series_id=series_id,
-                metadata={"source_quality": "static"},
-            )
-
-        if series_id == "income_tax_basic_2024":
+        if metric == "corp_tax_rate":
+            value = get_corporation_tax_rate(profits=None, tax_year=tax_year)
+        elif metric == "basic_rate":
             basic_band = next(
-                band for band in get_income_tax_bands() if band.name == "basic"
+                band for band in get_income_tax_bands(tax_year) if band.name == "basic"
             )
-            return point_timeseries(
-                series_id=concept,
-                name="UK income tax basic rate",
-                value=basic_band.rate,
-                units="fraction",
-                source="hmrc",
-                source_series_id=series_id,
-                metadata={"source_quality": "static"},
-            )
+            value = basic_band.rate
+        elif metric == "vat_standard":
+            value = get_vat_rate("standard", tax_year=tax_year)
+        else:  # pragma: no cover - exhaustive by construction
+            msg = f"Unsupported HMRC series: {series_id}"
+            raise ValueError(msg)
 
-        if series_id == "vat_standard_2024":
-            return point_timeseries(
-                series_id=concept,
-                name="UK standard VAT rate",
-                value=get_vat_rate("standard"),
-                units="fraction",
-                source="hmrc",
-                source_series_id=series_id,
-                metadata={"source_quality": "static"},
-            )
-
-        msg = f"Unsupported HMRC series: {series_id}"
-        raise ValueError(msg)
+        return point_timeseries(
+            series_id=concept,
+            name=name,
+            value=value,
+            units="fraction",
+            source="hmrc",
+            source_series_id=series_id,
+            metadata={"source_quality": "static", "tax_year": tax_year},
+        )

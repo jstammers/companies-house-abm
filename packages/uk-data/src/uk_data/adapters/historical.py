@@ -2,8 +2,8 @@
 
 Provides quarterly-aligned data from 2013Q1 to 2024Q4 for driving a
 historical housing market simulation.  Each fetcher attempts a live API
-call and falls back to hardcoded values sourced from published
-government statistics.
+call and falls back to published values loaded from
+``data/historical_fallbacks.json``.
 
 Data sources:
 
@@ -14,7 +14,7 @@ Data sources:
 - **Average Weekly Earnings** (ONS series ``KAB9``): total pay index for
   income growth calibration.
 - **Residential transactions** (HMRC): quarterly property transaction
-  counts for England & Wales.
+  counts (fallback only).
 - **Mortgage approvals** (BoE IADB series ``LPQAUYN``): monthly mortgage
   approvals for house purchase, aggregated to quarters.
 
@@ -24,7 +24,11 @@ Open Data terms.
 
 from __future__ import annotations
 
+import json
 import logging
+from collections.abc import Callable
+from functools import lru_cache
+from importlib import resources
 from typing import Any
 
 from uk_data._http import get_json, get_text, retry
@@ -43,12 +47,9 @@ logger = logging.getLogger(__name__)
 # Shared helpers
 # ---------------------------------------------------------------------------
 
-# Quarter labels for the simulation window
-QUARTERS = [
-    f"{y}Q{q}" for y in range(2013, 2025) for q in range(1, 5)
-]  # 2013Q1 .. 2024Q4 = 48 entries
+# Quarter labels for the simulation window (2013Q1 .. 2024Q4)
+QUARTERS = [f"{y}Q{q}" for y in range(2013, 2025) for q in range(1, 5)]
 
-# Mapping from month number to quarter
 _MONTH_TO_QUARTER = {
     1: 1,
     2: 1,
@@ -64,7 +65,6 @@ _MONTH_TO_QUARTER = {
     12: 4,
 }
 
-# BoE month abbreviations used in IADB CSV dates
 _BOE_MONTHS = {
     "Jan": 1,
     "Feb": 2,
@@ -80,6 +80,8 @@ _BOE_MONTHS = {
     "Dec": 12,
 }
 
+_MORTGAGE_APPROVALS_SERIES = "LPQAUYN"
+
 
 def _parse_boe_date(date_str: str) -> tuple[int, int]:
     """Parse a BoE IADB date string like '01 Jan 2024' into (year, month)."""
@@ -92,9 +94,17 @@ def _parse_boe_date(date_str: str) -> tuple[int, int]:
 
 
 def _to_quarter_label(year: int, month: int) -> str:
-    """Convert year and month to a quarter label like '2024Q1'."""
+    """Convert (year, month) to ``'YYYYQn'``; empty string if month unknown."""
     q = _MONTH_TO_QUARTER.get(month, 0)
     return f"{year}Q{q}" if q else ""
+
+
+def _slice(by_quarter: dict[str, float], start: str, end: str) -> list[dict[str, Any]]:
+    return [
+        {"quarter": q, "value": by_quarter[q]}
+        for q in QUARTERS
+        if start <= q <= end and q in by_quarter
+    ]
 
 
 def _quarterly_last(
@@ -102,385 +112,54 @@ def _quarterly_last(
     start: str = "2013Q1",
     end: str = "2024Q4",
 ) -> list[dict[str, float]]:
-    """Aggregate BoE IADB rows to quarterly by taking the last value per quarter.
-
-    Args:
-        rows: Parsed IADB rows with ``date`` and ``value`` keys.
-        start: First quarter to include (inclusive).
-        end: Last quarter to include (inclusive).
-
-    Returns:
-        List of ``{"quarter": str, "value": float}`` dicts.
-    """
+    """Aggregate BoE IADB rows to quarterly by taking the last value per quarter."""
     by_quarter: dict[str, float] = {}
     for row in rows:
         year, month = _parse_boe_date(row["date"])
         label = _to_quarter_label(year, month)
-        if label:
-            try:
-                by_quarter[label] = float(row["value"])
-            except (ValueError, TypeError):
-                continue
-
-    result = []
-    for q in QUARTERS:
-        if q < start or q > end:
+        if not label:
             continue
-        if q in by_quarter:
-            result.append({"quarter": q, "value": by_quarter[q]})
-    return result
+        try:
+            by_quarter[label] = float(row["value"])
+        except (ValueError, TypeError):
+            continue
+    return _slice(by_quarter, start, end)
 
 
-_MORTGAGE_APPROVALS_SERIES = "LPQAUYN"
+@lru_cache(maxsize=1)
+def _fallbacks() -> dict[str, dict[str, float]]:
+    """Load published fallback values for every historical series (cached)."""
+    path = resources.files("uk_data.data").joinpath("historical_fallbacks.json")
+    with path.open() as fh:
+        return json.load(fh)
 
 
-# ---------------------------------------------------------------------------
-# Fallback data (hardcoded from published sources)
-# ---------------------------------------------------------------------------
-
-# UK average house price by quarter (ONS UK HPI, rounded to nearest £1k)
-# Source: ONS UK House Price Index Table 1a
-_FALLBACK_HPI: dict[str, float] = {
-    "2013Q1": 167_000,
-    "2013Q2": 170_000,
-    "2013Q3": 174_000,
-    "2013Q4": 178_000,
-    "2014Q1": 183_000,
-    "2014Q2": 189_000,
-    "2014Q3": 192_000,
-    "2014Q4": 193_000,
-    "2015Q1": 196_000,
-    "2015Q2": 201_000,
-    "2015Q3": 205_000,
-    "2015Q4": 207_000,
-    "2016Q1": 211_000,
-    "2016Q2": 216_000,
-    "2016Q3": 218_000,
-    "2016Q4": 220_000,
-    "2017Q1": 222_000,
-    "2017Q2": 226_000,
-    "2017Q3": 227_000,
-    "2017Q4": 228_000,
-    "2018Q1": 228_000,
-    "2018Q2": 231_000,
-    "2018Q3": 232_000,
-    "2018Q4": 231_000,
-    "2019Q1": 230_000,
-    "2019Q2": 233_000,
-    "2019Q3": 234_000,
-    "2019Q4": 234_000,
-    "2020Q1": 233_000,
-    "2020Q2": 231_000,
-    "2020Q3": 240_000,
-    "2020Q4": 250_000,
-    "2021Q1": 256_000,
-    "2021Q2": 264_000,
-    "2021Q3": 271_000,
-    "2021Q4": 276_000,
-    "2022Q1": 282_000,
-    "2022Q2": 289_000,
-    "2022Q3": 292_000,
-    "2022Q4": 289_000,
-    "2023Q1": 285_000,
-    "2023Q2": 286_000,
-    "2023Q3": 288_000,
-    "2023Q4": 285_000,
-    "2024Q1": 283_000,
-    "2024Q2": 285_000,
-    "2024Q3": 289_000,
-    "2024Q4": 290_000,
-}
-
-# End-of-quarter Bank Rate (%, BoE MPC decisions)
-# Source: Bank of England official Bank Rate history
-_FALLBACK_BANK_RATE: dict[str, float] = {
-    "2013Q1": 0.50,
-    "2013Q2": 0.50,
-    "2013Q3": 0.50,
-    "2013Q4": 0.50,
-    "2014Q1": 0.50,
-    "2014Q2": 0.50,
-    "2014Q3": 0.50,
-    "2014Q4": 0.50,
-    "2015Q1": 0.50,
-    "2015Q2": 0.50,
-    "2015Q3": 0.50,
-    "2015Q4": 0.50,
-    "2016Q1": 0.50,
-    "2016Q2": 0.50,
-    "2016Q3": 0.25,
-    "2016Q4": 0.25,
-    "2017Q1": 0.25,
-    "2017Q2": 0.25,
-    "2017Q3": 0.25,
-    "2017Q4": 0.50,
-    "2018Q1": 0.50,
-    "2018Q2": 0.50,
-    "2018Q3": 0.75,
-    "2018Q4": 0.75,
-    "2019Q1": 0.75,
-    "2019Q2": 0.75,
-    "2019Q3": 0.75,
-    "2019Q4": 0.75,
-    "2020Q1": 0.10,
-    "2020Q2": 0.10,
-    "2020Q3": 0.10,
-    "2020Q4": 0.10,
-    "2021Q1": 0.10,
-    "2021Q2": 0.10,
-    "2021Q3": 0.10,
-    "2021Q4": 0.25,
-    "2022Q1": 0.75,
-    "2022Q2": 1.25,
-    "2022Q3": 2.25,
-    "2022Q4": 3.50,
-    "2023Q1": 4.25,
-    "2023Q2": 5.00,
-    "2023Q3": 5.25,
-    "2023Q4": 5.25,
-    "2024Q1": 5.25,
-    "2024Q2": 5.25,
-    "2024Q3": 5.00,
-    "2024Q4": 4.75,
-}
-
-# Effective household lending rate by quarter (%, BoE IUMTLMV)
-# Source: BoE Statistical Interactive Database
-_FALLBACK_MORTGAGE_RATE: dict[str, float] = {
-    "2013Q1": 3.40,
-    "2013Q2": 3.30,
-    "2013Q3": 3.25,
-    "2013Q4": 3.20,
-    "2014Q1": 3.15,
-    "2014Q2": 3.10,
-    "2014Q3": 3.05,
-    "2014Q4": 3.00,
-    "2015Q1": 2.95,
-    "2015Q2": 2.90,
-    "2015Q3": 2.85,
-    "2015Q4": 2.85,
-    "2016Q1": 2.80,
-    "2016Q2": 2.75,
-    "2016Q3": 2.55,
-    "2016Q4": 2.50,
-    "2017Q1": 2.50,
-    "2017Q2": 2.50,
-    "2017Q3": 2.50,
-    "2017Q4": 2.55,
-    "2018Q1": 2.60,
-    "2018Q2": 2.60,
-    "2018Q3": 2.65,
-    "2018Q4": 2.70,
-    "2019Q1": 2.70,
-    "2019Q2": 2.65,
-    "2019Q3": 2.60,
-    "2019Q4": 2.55,
-    "2020Q1": 2.30,
-    "2020Q2": 2.15,
-    "2020Q3": 2.10,
-    "2020Q4": 2.05,
-    "2021Q1": 2.00,
-    "2021Q2": 2.00,
-    "2021Q3": 2.00,
-    "2021Q4": 2.10,
-    "2022Q1": 2.35,
-    "2022Q2": 2.65,
-    "2022Q3": 3.05,
-    "2022Q4": 3.65,
-    "2023Q1": 4.10,
-    "2023Q2": 4.50,
-    "2023Q3": 4.85,
-    "2023Q4": 5.10,
-    "2024Q1": 5.15,
-    "2024Q2": 5.10,
-    "2024Q3": 5.00,
-    "2024Q4": 4.85,
-}
-
-# ONS Average Weekly Earnings index (total pay, whole economy, 2015=100)
-# Source: ONS series KAB9 (AWE Total Pay)
-_FALLBACK_EARNINGS_INDEX: dict[str, float] = {
-    "2013Q1": 89.5,
-    "2013Q2": 90.0,
-    "2013Q3": 90.5,
-    "2013Q4": 91.0,
-    "2014Q1": 91.0,
-    "2014Q2": 91.5,
-    "2014Q3": 92.0,
-    "2014Q4": 92.5,
-    "2015Q1": 93.5,
-    "2015Q2": 94.5,
-    "2015Q3": 95.5,
-    "2015Q4": 96.5,
-    "2016Q1": 97.5,
-    "2016Q2": 98.5,
-    "2016Q3": 99.5,
-    "2016Q4": 100.5,
-    "2017Q1": 101.5,
-    "2017Q2": 102.5,
-    "2017Q3": 103.5,
-    "2017Q4": 104.5,
-    "2018Q1": 105.5,
-    "2018Q2": 107.0,
-    "2018Q3": 108.0,
-    "2018Q4": 109.5,
-    "2019Q1": 110.5,
-    "2019Q2": 112.0,
-    "2019Q3": 113.0,
-    "2019Q4": 113.5,
-    "2020Q1": 113.0,
-    "2020Q2": 107.0,
-    "2020Q3": 112.0,
-    "2020Q4": 114.0,
-    "2021Q1": 115.0,
-    "2021Q2": 119.0,
-    "2021Q3": 120.5,
-    "2021Q4": 122.0,
-    "2022Q1": 124.0,
-    "2022Q2": 126.0,
-    "2022Q3": 128.0,
-    "2022Q4": 130.0,
-    "2023Q1": 132.0,
-    "2023Q2": 134.5,
-    "2023Q3": 137.0,
-    "2023Q4": 138.5,
-    "2024Q1": 140.0,
-    "2024Q2": 141.5,
-    "2024Q3": 143.0,
-    "2024Q4": 144.5,
-}
-
-# Quarterly residential property transactions (thousands, seasonally adjusted)
-# Source: HMRC Monthly Property Transaction Statistics
-_FALLBACK_TRANSACTIONS: dict[str, int] = {
-    "2013Q1": 220_000,
-    "2013Q2": 240_000,
-    "2013Q3": 255_000,
-    "2013Q4": 265_000,
-    "2014Q1": 275_000,
-    "2014Q2": 290_000,
-    "2014Q3": 290_000,
-    "2014Q4": 280_000,
-    "2015Q1": 280_000,
-    "2015Q2": 290_000,
-    "2015Q3": 295_000,
-    "2015Q4": 300_000,
-    "2016Q1": 345_000,
-    "2016Q2": 255_000,
-    "2016Q3": 280_000,
-    "2016Q4": 280_000,
-    "2017Q1": 275_000,
-    "2017Q2": 285_000,
-    "2017Q3": 285_000,
-    "2017Q4": 290_000,
-    "2018Q1": 285_000,
-    "2018Q2": 290_000,
-    "2018Q3": 285_000,
-    "2018Q4": 280_000,
-    "2019Q1": 270_000,
-    "2019Q2": 280_000,
-    "2019Q3": 275_000,
-    "2019Q4": 275_000,
-    "2020Q1": 215_000,
-    "2020Q2": 125_000,
-    "2020Q3": 305_000,
-    "2020Q4": 340_000,
-    "2021Q1": 310_000,
-    "2021Q2": 355_000,
-    "2021Q3": 325_000,
-    "2021Q4": 315_000,
-    "2022Q1": 300_000,
-    "2022Q2": 305_000,
-    "2022Q3": 285_000,
-    "2022Q4": 255_000,
-    "2023Q1": 220_000,
-    "2023Q2": 235_000,
-    "2023Q3": 240_000,
-    "2023Q4": 235_000,
-    "2024Q1": 230_000,
-    "2024Q2": 245_000,
-    "2024Q3": 255_000,
-    "2024Q4": 260_000,
-}
-
-# Quarterly mortgage approvals for house purchase (thousands)
-# Source: BoE IADB series LPQAUYN
-_FALLBACK_APPROVALS: dict[str, int] = {
-    "2013Q1": 150_000,
-    "2013Q2": 165_000,
-    "2013Q3": 180_000,
-    "2013Q4": 195_000,
-    "2014Q1": 200_000,
-    "2014Q2": 180_000,
-    "2014Q3": 185_000,
-    "2014Q4": 175_000,
-    "2015Q1": 180_000,
-    "2015Q2": 185_000,
-    "2015Q3": 190_000,
-    "2015Q4": 195_000,
-    "2016Q1": 210_000,
-    "2016Q2": 170_000,
-    "2016Q3": 185_000,
-    "2016Q4": 190_000,
-    "2017Q1": 190_000,
-    "2017Q2": 195_000,
-    "2017Q3": 195_000,
-    "2017Q4": 195_000,
-    "2018Q1": 190_000,
-    "2018Q2": 195_000,
-    "2018Q3": 190_000,
-    "2018Q4": 185_000,
-    "2019Q1": 185_000,
-    "2019Q2": 190_000,
-    "2019Q3": 190_000,
-    "2019Q4": 185_000,
-    "2020Q1": 145_000,
-    "2020Q2": 85_000,
-    "2020Q3": 245_000,
-    "2020Q4": 270_000,
-    "2021Q1": 240_000,
-    "2021Q2": 250_000,
-    "2021Q3": 220_000,
-    "2021Q4": 205_000,
-    "2022Q1": 200_000,
-    "2022Q2": 195_000,
-    "2022Q3": 185_000,
-    "2022Q4": 135_000,
-    "2023Q1": 130_000,
-    "2023Q2": 145_000,
-    "2023Q3": 150_000,
-    "2023Q4": 145_000,
-    "2024Q1": 155_000,
-    "2024Q2": 165_000,
-    "2024Q3": 175_000,
-    "2024Q4": 180_000,
-}
+def _fallback_series(key: str, start: str, end: str) -> list[dict[str, Any]]:
+    return _slice(_fallbacks()[key], start, end)
 
 
 # ---------------------------------------------------------------------------
-# Public API
+# Live fetch helpers
 # ---------------------------------------------------------------------------
 
 
-def fetch_hpi_quarterly(
-    start: str = "2013Q1",
-    end: str = "2024Q4",
-) -> list[dict[str, Any]]:
-    """Fetch quarterly UK average house prices from the Land Registry UK HPI.
-
-    Attempts to query the UK HPI SPARQL endpoint for monthly average prices
-    and aggregates them to quarterly (last month of each quarter).  Falls
-    back to hardcoded ONS UK HPI values.
-
-    Args:
-        start: First quarter to include (inclusive).
-        end: Last quarter to include (inclusive).
-
-    Returns:
-        List of ``{"quarter": str, "value": float}`` dicts.
-    """
+def _iadb_quarterly_last(
+    series: str, start: str, end: str
+) -> list[dict[str, Any]] | None:
+    """Shared live-fetch for BoE IADB series that take the last value per quarter."""
     try:
-        sparql_endpoint = "https://landregistry.data.gov.uk/landregistry/query"
+        url = _build_iadb_url(series, from_year=2013)
+        text = retry(get_text, url)
+        rows = _parse_iadb_csv(text)
+        return _quarterly_last(rows, start, end) or None
+    except Exception:
+        return None
+
+
+def _fetch_hpi_live(start: str, end: str) -> list[dict[str, Any]] | None:
+    try:
+        import urllib.parse
+
         _uk = "http://landregistry.data.gov.uk/id/region/united-kingdom"
         query = f"""
         PREFIX ukhpi: <http://landregistry.data.gov.uk/def/ukhpi/>
@@ -495,344 +174,214 @@ def fetch_hpi_quarterly(
         }}
         ORDER BY ?period
         """
-        import urllib.parse
-
-        encoded = urllib.parse.quote(query.strip())
-        url = f"{sparql_endpoint}?query={encoded}&output=json"
+        url = (
+            "https://landregistry.data.gov.uk/landregistry/query"
+            f"?query={urllib.parse.quote(query.strip())}&output=json"
+        )
         data = retry(get_json, url)
         bindings = data.get("results", {}).get("bindings", [])
-
-        if bindings:
-            by_quarter: dict[str, float] = {}
-            for row in bindings:
-                period = row.get("period", {}).get("value", "")
-                price = float(row.get("price", {}).get("value", 0))
-                if period and price > 0:
-                    # Period is like "2024-03"
-                    parts = period.split("-")
-                    if len(parts) >= 2:
-                        year = int(parts[0])
-                        month = int(parts[1])
-                        label = _to_quarter_label(year, month)
-                        if label:
-                            by_quarter[label] = price  # last month wins
-
-            result = []
-            for q in QUARTERS:
-                if q < start or q > end:
-                    continue
-                if q in by_quarter:
-                    result.append({"quarter": q, "value": by_quarter[q]})
-            if result:
-                logger.info("Fetched %d quarters of UK HPI data", len(result))
-                return result
+        if not bindings:
+            return None
+        by_quarter: dict[str, float] = {}
+        for row in bindings:
+            period = row.get("period", {}).get("value", "")
+            price = float(row.get("price", {}).get("value", 0))
+            if not period or price <= 0:
+                continue
+            year_str, _, month_str = period.partition("-")
+            if not (year_str and month_str):
+                continue
+            label = _to_quarter_label(int(year_str), int(month_str))
+            if label:
+                by_quarter[label] = price  # last month wins within a quarter
+        return _slice(by_quarter, start, end) or None
     except Exception:
-        logger.warning("UK HPI SPARQL unavailable, using fallback data")
+        return None
 
-    return [
-        {"quarter": q, "value": v}
-        for q, v in _FALLBACK_HPI.items()
-        if start <= q <= end
-    ]
+
+def _fetch_earnings_index_live(start: str, end: str) -> list[dict[str, Any]] | None:
+    try:
+        url = "https://api.ons.gov.uk/v1/timeseries/KAB9/dataset/lms/data"
+        data = retry(get_json, url)
+        months = data.get("months", [])
+        if not months:
+            return None
+        month_map = {name.upper(): num for name, num in _BOE_MONTHS.items()}
+        by_quarter: dict[str, float] = {}
+        for obs in months:
+            date_str = obs.get("date", "")
+            value = obs.get("value", "")
+            if not date_str or not value:
+                continue
+            try:
+                val = float(value)
+            except (ValueError, TypeError):
+                continue
+            parts = date_str.strip().split()
+            if len(parts) != 2:
+                continue
+            month = month_map.get(parts[1].upper(), 0)
+            label = _to_quarter_label(int(parts[0]), month)
+            if label:
+                by_quarter[label] = val  # last month wins within a quarter
+        return _slice(by_quarter, start, end) or None
+    except Exception:
+        return None
+
+
+def _fetch_mortgage_approvals_live(start: str, end: str) -> list[dict[str, Any]] | None:
+    try:
+        url = _build_iadb_url(_MORTGAGE_APPROVALS_SERIES, from_year=2013)
+        text = retry(get_text, url)
+        rows = _parse_iadb_csv(text)
+        by_quarter: dict[str, float] = {}
+        for row in rows:
+            year, month = _parse_boe_date(row["date"])
+            label = _to_quarter_label(year, month)
+            if not label:
+                continue
+            try:
+                val = float(row["value"])
+            except (ValueError, TypeError):
+                continue
+            by_quarter[label] = by_quarter.get(label, 0.0) + val
+        return [
+            {"quarter": q, "value": int(by_quarter[q])}
+            for q in QUARTERS
+            if start <= q <= end and q in by_quarter
+        ] or None
+    except Exception:
+        return None
+
+
+# ---------------------------------------------------------------------------
+# Declarative registry: name → (display, units, live-fetcher or None)
+# ---------------------------------------------------------------------------
+
+_SeriesFetcher = Callable[[str, str], "list[dict[str, Any]] | None"]
+
+_REGISTRY: dict[str, tuple[str, str, _SeriesFetcher | None]] = {
+    "hpi": ("UK house price index", "GBP", _fetch_hpi_live),
+    "bank_rate": (
+        "Quarterly Bank Rate",
+        "%",
+        lambda s, e: _iadb_quarterly_last(_BANK_RATE_SERIES, s, e),
+    ),
+    "mortgage_rate": (
+        "Quarterly mortgage rate",
+        "%",
+        lambda s, e: _iadb_quarterly_last(_HOUSEHOLD_LENDING_SERIES, s, e),
+    ),
+    "earnings_index": (
+        "Quarterly earnings index",
+        "index",
+        _fetch_earnings_index_live,
+    ),
+    # HMRC transactions are published as spreadsheets without a clean JSON
+    # API — fallback data only.
+    "transactions": ("Quarterly property transactions", "count", None),
+    "mortgage_approvals": (
+        "Quarterly mortgage approvals",
+        "count",
+        _fetch_mortgage_approvals_live,
+    ),
+}
+
+_HISTORICAL_SERIES_IDS = list(_REGISTRY)
+
+
+def _observations(
+    key: str,
+    start: str,
+    end: str,
+) -> tuple[list[dict[str, Any]], str]:
+    """Fetch *key* for [start, end], returning (rows, quality)."""
+    _, _, live = _REGISTRY[key]
+    if live is not None:
+        rows = live(start, end)
+        if rows:
+            logger.info("Fetched %d quarters of %s data", len(rows), key)
+            return rows, "live"
+        logger.warning("Live fetch unavailable for %s, using fallback", key)
+    return _fallback_series(key, start, end), "fallback"
+
+
+# ---------------------------------------------------------------------------
+# Public API
+# ---------------------------------------------------------------------------
+
+
+def fetch_hpi_quarterly(
+    start: str = "2013Q1",
+    end: str = "2024Q4",
+) -> list[dict[str, Any]]:
+    """Fetch quarterly UK average house prices."""
+    return _observations("hpi", start, end)[0]
 
 
 def fetch_bank_rate_quarterly(
     start: str = "2013Q1",
     end: str = "2024Q4",
 ) -> list[dict[str, Any]]:
-    """Fetch end-of-quarter Bank Rate from the BoE IADB.
-
-    Returns values as percentages (e.g. 0.50 for 0.50%).
-
-    Args:
-        start: First quarter to include (inclusive).
-        end: Last quarter to include (inclusive).
-
-    Returns:
-        List of ``{"quarter": str, "value": float}`` dicts.
-    """
-    try:
-        url = _build_iadb_url(_BANK_RATE_SERIES, from_year=2013)
-        text = retry(get_text, url)
-        rows = _parse_iadb_csv(text)
-        result = _quarterly_last(rows, start, end)
-        if result:
-            logger.info("Fetched %d quarters of Bank Rate data", len(result))
-            return result
-    except Exception:
-        logger.warning("BoE IADB unavailable for Bank Rate, using fallback")
-
-    return [
-        {"quarter": q, "value": v}
-        for q, v in _FALLBACK_BANK_RATE.items()
-        if start <= q <= end
-    ]
+    """Fetch end-of-quarter Bank Rate (as a percentage)."""
+    return _observations("bank_rate", start, end)[0]
 
 
 def fetch_mortgage_rate_quarterly(
     start: str = "2013Q1",
     end: str = "2024Q4",
 ) -> list[dict[str, Any]]:
-    """Fetch quarterly effective household lending rate from the BoE IADB.
-
-    Uses series IUMTLMV (effective rate on outstanding household loans)
-    as a proxy for the prevailing mortgage rate.  Returns values as
-    percentages (e.g. 3.40 for 3.40%).
-
-    Args:
-        start: First quarter to include (inclusive).
-        end: Last quarter to include (inclusive).
-
-    Returns:
-        List of ``{"quarter": str, "value": float}`` dicts.
-    """
-    try:
-        url = _build_iadb_url(_HOUSEHOLD_LENDING_SERIES, from_year=2013)
-        text = retry(get_text, url)
-        rows = _parse_iadb_csv(text)
-        result = _quarterly_last(rows, start, end)
-        if result:
-            logger.info("Fetched %d quarters of mortgage rate data", len(result))
-            return result
-    except Exception:
-        logger.warning("BoE IADB unavailable for mortgage rates, using fallback")
-
-    return [
-        {"quarter": q, "value": v}
-        for q, v in _FALLBACK_MORTGAGE_RATE.items()
-        if start <= q <= end
-    ]
+    """Fetch quarterly effective household lending rate (as a percentage)."""
+    return _observations("mortgage_rate", start, end)[0]
 
 
 def fetch_earnings_index_quarterly(
     start: str = "2013Q1",
     end: str = "2024Q4",
 ) -> list[dict[str, Any]]:
-    """Fetch quarterly Average Weekly Earnings index from ONS.
-
-    Uses ONS series KAB9 (AWE total pay, whole economy, seasonally
-    adjusted, 2015=100).  Returns the index level per quarter.
-
-    Args:
-        start: First quarter to include (inclusive).
-        end: Last quarter to include (inclusive).
-
-    Returns:
-        List of ``{"quarter": str, "value": float}`` dicts.
-    """
-    try:
-        url = "https://api.ons.gov.uk/v1/timeseries/KAB9/dataset/lms/data"
-        data = retry(get_json, url)
-        months = data.get("months", [])
-        if months:
-            by_quarter: dict[str, float] = {}
-            for obs in months:
-                date_str = obs.get("date", "")
-                value = obs.get("value", "")
-                if not date_str or not value:
-                    continue
-                try:
-                    val = float(value)
-                except (ValueError, TypeError):
-                    continue
-                # ONS date format: "2024 JAN" or "2024 FEB"
-                parts = date_str.strip().split()
-                if len(parts) == 2:
-                    year = int(parts[0])
-                    month_map = {
-                        "JAN": 1,
-                        "FEB": 2,
-                        "MAR": 3,
-                        "APR": 4,
-                        "MAY": 5,
-                        "JUN": 6,
-                        "JUL": 7,
-                        "AUG": 8,
-                        "SEP": 9,
-                        "OCT": 10,
-                        "NOV": 11,
-                        "DEC": 12,
-                    }
-                    month = month_map.get(parts[1].upper(), 0)
-                    label = _to_quarter_label(year, month)
-                    if label:
-                        by_quarter[label] = val  # last month wins
-
-            result = [
-                {"quarter": q, "value": by_quarter[q]}
-                for q in QUARTERS
-                if start <= q <= end and q in by_quarter
-            ]
-            if result:
-                logger.info("Fetched %d quarters of AWE data", len(result))
-                return result
-    except Exception:
-        logger.warning("ONS API unavailable for AWE, using fallback")
-
-    return [
-        {"quarter": q, "value": v}
-        for q, v in _FALLBACK_EARNINGS_INDEX.items()
-        if start <= q <= end
-    ]
+    """Fetch quarterly Average Weekly Earnings index from ONS."""
+    return _observations("earnings_index", start, end)[0]
 
 
 def fetch_transactions_quarterly(
     start: str = "2013Q1",
     end: str = "2024Q4",
 ) -> list[dict[str, Any]]:
-    """Fetch quarterly residential property transactions.
-
-    Uses HMRC Monthly Property Transaction Statistics.  Falls back to
-    hardcoded quarterly totals.
-
-    Args:
-        start: First quarter to include (inclusive).
-        end: Last quarter to include (inclusive).
-
-    Returns:
-        List of ``{"quarter": str, "value": int}`` dicts.
-    """
-    # HMRC transaction data is published as spreadsheets without a clean
-    # JSON API, so we use fallback data directly.
-    logger.info("Using fallback residential transaction data (HMRC)")
-    return [
-        {"quarter": q, "value": v}
-        for q, v in _FALLBACK_TRANSACTIONS.items()
-        if start <= q <= end
-    ]
+    """Fetch quarterly residential property transactions (fallback data)."""
+    return _observations("transactions", start, end)[0]
 
 
 def fetch_mortgage_approvals_quarterly(
     start: str = "2013Q1",
     end: str = "2024Q4",
 ) -> list[dict[str, Any]]:
-    """Fetch quarterly mortgage approvals for house purchase from the BoE.
-
-    Uses BoE IADB series LPQAUYN (monthly mortgage approvals),
-    aggregated to quarterly sums.
-
-    Args:
-        start: First quarter to include (inclusive).
-        end: Last quarter to include (inclusive).
-
-    Returns:
-        List of ``{"quarter": str, "value": int}`` dicts.
-    """
-    try:
-        url = _build_iadb_url(_MORTGAGE_APPROVALS_SERIES, from_year=2013)
-        text = retry(get_text, url)
-        rows = _parse_iadb_csv(text)
-
-        # Sum monthly approvals into quarters
-        by_quarter: dict[str, float] = {}
-        for row in rows:
-            year, month = _parse_boe_date(row["date"])
-            label = _to_quarter_label(year, month)
-            if label:
-                try:
-                    val = float(row["value"])
-                    by_quarter[label] = by_quarter.get(label, 0) + val
-                except (ValueError, TypeError):
-                    continue
-
-        result = [
-            {"quarter": q, "value": int(by_quarter[q])}
-            for q in QUARTERS
-            if start <= q <= end and q in by_quarter
-        ]
-        if result:
-            logger.info(
-                "Fetched %d quarters of mortgage approval data",
-                len(result),
-            )
-            return result
-    except Exception:
-        logger.warning("BoE IADB unavailable for mortgage approvals, using fallback")
-
-    return [
-        {"quarter": q, "value": v}
-        for q, v in _FALLBACK_APPROVALS.items()
-        if start <= q <= end
-    ]
+    """Fetch quarterly mortgage approvals for house purchase from the BoE."""
+    return _observations("mortgage_approvals", start, end)[0]
 
 
 def fetch_all_historical(
     start: str = "2013Q1",
     end: str = "2024Q4",
 ) -> dict[str, list[dict[str, Any]]]:
-    """Fetch all historical time series for the simulation window.
-
-    Convenience function that calls all individual fetchers and returns
-    a dict keyed by series name.
-
-    Args:
-        start: First quarter to include.
-        end: Last quarter to include.
-
-    Returns:
-        Dictionary mapping series name to quarterly data lists.
-    """
-    return {
-        "hpi": fetch_hpi_quarterly(start, end),
-        "bank_rate": fetch_bank_rate_quarterly(start, end),
-        "mortgage_rate": fetch_mortgage_rate_quarterly(start, end),
-        "earnings_index": fetch_earnings_index_quarterly(start, end),
-        "transactions": fetch_transactions_quarterly(start, end),
-        "mortgage_approvals": fetch_mortgage_approvals_quarterly(start, end),
-    }
-
-
-_HISTORICAL_SERIES_IDS = [
-    "hpi",
-    "bank_rate",
-    "mortgage_rate",
-    "earnings_index",
-    "transactions",
-    "mortgage_approvals",
-]
+    """Fetch all historical time series for the simulation window."""
+    return {key: _observations(key, start, end)[0] for key in _REGISTRY}
 
 
 class HistoricalAdapter(BaseAdapter):
     """Canonical adapter for historical quarterly housing simulation data."""
 
     def available_series(self) -> list[str]:
-        """Return the quarterly historical series IDs supported by this adapter."""
         return list(_HISTORICAL_SERIES_IDS)
 
     def fetch_series(self, series_id: str, **kwargs: object):
-        """Fetch a canonical quarterly historical series."""
+        if series_id not in _REGISTRY:
+            msg = f"Unsupported historical series: {series_id}"
+            raise ValueError(msg)
         concept = str(kwargs.get("concept", series_id.lower()))
         start = str(kwargs.get("start", "2013Q1"))
         end = str(kwargs.get("end", "2024Q4"))
-        series_map = {
-            "hpi": ("UK house price index", "GBP", fetch_hpi_quarterly),
-            "bank_rate": ("Quarterly Bank Rate", "%", fetch_bank_rate_quarterly),
-            "mortgage_rate": (
-                "Quarterly mortgage rate",
-                "%",
-                fetch_mortgage_rate_quarterly,
-            ),
-            "earnings_index": (
-                "Quarterly earnings index",
-                "index",
-                fetch_earnings_index_quarterly,
-            ),
-            "transactions": (
-                "Quarterly property transactions",
-                "count",
-                fetch_transactions_quarterly,
-            ),
-            "mortgage_approvals": (
-                "Quarterly mortgage approvals",
-                "count",
-                fetch_mortgage_approvals_quarterly,
-            ),
-        }
-        if series_id not in series_map:
-            msg = f"Unsupported historical series: {series_id}"
-            raise ValueError(msg)
-        name, units, fetcher = series_map[series_id]
-        observations = fetcher(start, end)
+        name, units, _ = _REGISTRY[series_id]
+        observations, quality = _observations(series_id, start, end)
         return series_from_observations(
             series_id=concept,
             name=name,
@@ -844,4 +393,5 @@ class HistoricalAdapter(BaseAdapter):
             source="historical",
             source_series_id=series_id,
             date_key="quarter",
+            metadata={"source_quality": quality},
         )

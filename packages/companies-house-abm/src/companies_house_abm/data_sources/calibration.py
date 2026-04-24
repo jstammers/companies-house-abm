@@ -279,7 +279,9 @@ def calibrate_io_sectors() -> dict[str, Any]:
         >>> "sectors" in data and "use_coefficients" in data
         True
     """
-    from uk_data.adapters.ons import fetch_input_output_table
+    from companies_house_abm.data_sources.input_output import (
+        fetch_input_output_table,
+    )
 
     io_data = fetch_input_output_table()
     sectors = io_data["sectors"]

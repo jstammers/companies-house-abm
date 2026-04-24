@@ -23,8 +23,6 @@ See https://www.ons.gov.uk/methodology/geography/licences for details.
 
 from __future__ import annotations
 
-import csv
-import io
 import logging
 from typing import Any
 
@@ -204,6 +202,9 @@ def _fetch_manifest_observations(
         msg = f"ONS series {series_id} does not expose SDMX observations"
         raise ValueError(msg)
     observations = fetch_sdmx_series(entry, limit=limit)
+    # Defensive outer slice: fetch_sdmx_series honours *limit*, but a mocked
+    # or non-compliant provider could return more rows and we promise callers
+    # we will cap to *limit*.
     return observations[-limit:] if len(observations) > limit else observations
 
 
@@ -696,20 +697,5 @@ class ONSAdapter(BaseAdapter):
             frequency=entry.frequency,
             seasonal_adjustment=entry.seasonal_adjustment,
             geography=entry.geography,
+            metadata={"source_quality": "fallback"},
         )
-
-
-def parse_ons_csv(text: str) -> list[dict[str, str]]:
-    """Parse a simple two-column ONS CSV (date, value) string.
-
-    Args:
-        text: Raw CSV text with a header row.
-
-    Returns:
-        List of ``{"date": str, "value": str}`` dicts.
-    """
-    rows: list[dict[str, str]] = []
-    reader = csv.DictReader(io.StringIO(text))
-    for row in reader:
-        rows.append(dict(row))
-    return rows

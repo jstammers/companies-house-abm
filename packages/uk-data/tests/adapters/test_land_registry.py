@@ -96,7 +96,7 @@ def test_uk_hpi_history_from_local_file(tmp_path):
 
     assert series.series_id == "uk_hpi_monthly"
     assert series.source == "land_registry"
-    assert series.latest_value == 285000.0
+    assert series.latest_value == pytest.approx(285_000.0)
     assert len(series.values) == 2
 
 
@@ -117,4 +117,4 @@ def test_land_registry_adapter_events_and_series(tmp_path):
 
     assert len(events) == 1
     assert events[0].event_type == "property_transaction"
-    assert series.latest_value == 285000.0
+    assert series.latest_value == pytest.approx(285_000.0)

@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 import json
-import sys
-from pathlib import Path
+from pathlib import Path  # noqa: TC003 -- Typer inspects annotations at runtime
 from typing import Annotated
 
 import typer
@@ -16,18 +15,6 @@ app = typer.Typer(
     help="Fetch UK public economic and business data.",
     no_args_is_help=True,
 )
-
-
-def _default_cache_dir() -> Path:
-    """Return a platform-appropriate cache directory for downloaded data files."""
-    if sys.platform == "darwin":
-        base = Path.home() / "Library" / "Caches"
-    else:
-        import os
-
-        xdg = os.environ.get("XDG_CACHE_HOME", "")
-        base = Path(xdg) if xdg else Path.home() / ".cache"
-    return base / "uk-data"
 
 
 def _parse_params(params: list[str]) -> dict[str, str]:
@@ -79,8 +66,12 @@ def get_series_cmd(
 ) -> None:
     """Fetch a canonical time series by concept name."""
     client = UKDataClient()
-    resolved_data_path = data_path if data_path is not None else _default_cache_dir()
-    series_kwargs: dict[str, object] = {"filepath": str(resolved_data_path)}
+    series_kwargs: dict[str, object] = {}
+    # Only concepts backed by a local file require a filepath; e.g. land
+    # registry's full UK HPI CSV.  Injecting the cache directory for other
+    # concepts would just confuse their adapters.
+    if data_path is not None:
+        series_kwargs["filepath"] = str(data_path)
     ts = client.get_series(
         concept,
         source=source,
@@ -162,8 +153,7 @@ def get_entity(
     ),
 ) -> None:
     """Fetch a single entity by name or ID from the specified source."""
-    resolved_data_path = data_path if data_path is not None else _default_cache_dir()
-    del resolved_data_path  # available for future file-backed entity sources
+    del data_path  # reserved for future file-backed entity sources
     client = UKDataClient()
     entity = client.get_entity(name, source=source)
     if entity is None:
@@ -242,11 +232,12 @@ def get_events(
     kwargs: dict[str, object] = dict(extra)
     if limit is not None:
         kwargs["limit"] = limit
-    resolved_data_path: Path = (
-        data_path if data_path is not None else _default_cache_dir()
-    )
-    if source in ("land_registry", "epc") and "filepath" not in kwargs:
-        kwargs.setdefault("filepath", str(resolved_data_path))
+    if (
+        source in ("land_registry", "epc")
+        and "filepath" not in kwargs
+        and data_path is not None
+    ):
+        kwargs["filepath"] = str(data_path)
 
     client = UKDataClient()
     event_list = client.get_events(

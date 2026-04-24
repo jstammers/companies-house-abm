@@ -29,6 +29,12 @@ from typing import Any
 
 from uk_data._http import get_json, get_text, retry
 from uk_data.adapters.base import BaseAdapter
+from uk_data.adapters.boe import (
+    _BANK_RATE_SERIES,
+    _HOUSEHOLD_LENDING_SERIES,
+    _build_iadb_url,
+    _parse_iadb_csv,
+)
 from uk_data.models import series_from_observations
 
 logger = logging.getLogger(__name__)
@@ -125,52 +131,7 @@ def _quarterly_last(
     return result
 
 
-# ---------------------------------------------------------------------------
-# BoE IADB infrastructure (reuse patterns from boe.py)
-# ---------------------------------------------------------------------------
-
-_BOE_IADB = "https://www.bankofengland.co.uk/boeapps/database/_iadb-FromShowColumns.asp"
-
-_BANK_RATE_SERIES = "IUMABEDR"
-_HOUSEHOLD_LENDING_SERIES = "IUMTLMV"
 _MORTGAGE_APPROVALS_SERIES = "LPQAUYN"
-
-
-def _build_iadb_url(series: str, from_year: int = 2013) -> str:
-    """Build an IADB CSV download URL for a given series."""
-    from_date = f"01/Jan/{from_year}"
-    return (
-        f"{_BOE_IADB}"
-        f"?csv.x=yes"
-        f"&Datefrom={from_date}"
-        f"&SeriesCodes={series}"
-        f"&CSVF=TT"
-        f"&VPD=Y"
-        f"&VFD=N"
-    )
-
-
-def _parse_iadb_csv(text: str) -> list[dict[str, str]]:
-    """Parse a BoE IADB CSV response into date/value pairs."""
-    rows: list[dict[str, str]] = []
-    in_data = False
-    for line in text.splitlines():
-        stripped = line.strip()
-        if not stripped:
-            continue
-        parts = stripped.split(",")
-        if len(parts) >= 2:
-            date_part = parts[0].strip()
-            val_part = parts[1].strip()
-            if date_part and val_part:
-                try:
-                    float(val_part)
-                    rows.append({"date": date_part, "value": val_part})
-                    in_data = True
-                except ValueError:
-                    if in_data:
-                        break
-    return rows
 
 
 # ---------------------------------------------------------------------------
@@ -821,8 +782,22 @@ def fetch_all_historical(
     }
 
 
+_HISTORICAL_SERIES_IDS = [
+    "hpi",
+    "bank_rate",
+    "mortgage_rate",
+    "earnings_index",
+    "transactions",
+    "mortgage_approvals",
+]
+
+
 class HistoricalAdapter(BaseAdapter):
     """Canonical adapter for historical quarterly housing simulation data."""
+
+    def available_series(self) -> list[str]:
+        """Return the quarterly historical series IDs supported by this adapter."""
+        return list(_HISTORICAL_SERIES_IDS)
 
     def fetch_series(self, series_id: str, **kwargs: object):
         """Fetch a canonical quarterly historical series."""

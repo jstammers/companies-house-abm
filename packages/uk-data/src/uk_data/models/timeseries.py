@@ -11,7 +11,19 @@ import numpy as np
 
 @dataclass
 class TimeSeries:
-    """Canonical representation of a time series from any source."""
+    """Canonical representation of a time series from any source.
+
+    The ``metadata`` dict may include a ``source_quality`` key with one of:
+
+    - ``"live"`` - observations fetched from the upstream API.
+    - ``"fallback"`` - upstream was unreachable or incomplete; value comes
+      from a package-level fallback constant that may be stale.
+    - ``"static"`` - value is intentionally hand-curated (e.g. HMRC tax
+      rates) and is expected to change only on policy updates.
+
+    Consumers that cannot tolerate stale data should assert
+    ``ts.metadata.get("source_quality", "live") == "live"``.
+    """
 
     series_id: str
     name: str
@@ -32,6 +44,11 @@ class TimeSeries:
         if self.values.size == 0:
             return None
         return float(self.values[-1])
+
+    @property
+    def is_fallback(self) -> bool:
+        """Return True if this series came from a hardcoded fallback."""
+        return self.metadata.get("source_quality") in {"fallback", "static"}
 
 
 def _parse_timestamp(label: str) -> np.datetime64:
@@ -60,7 +77,13 @@ def _parse_timestamp(label: str) -> np.datetime64:
     if normalized.isdigit() and len(normalized) == 4:
         return np.datetime64(f"{normalized}-01-01")
 
-    return np.datetime64(normalized)
+    try:
+        return np.datetime64(normalized)
+    except ValueError:
+        # Upstream APIs occasionally return free-form labels ("Q3 2024", "—")
+        # that don't match any of the formats above.  Returning NaT lets the
+        # caller decide what to do rather than breaking the whole fetch.
+        return np.datetime64("NaT")
 
 
 def series_from_observations(
@@ -120,6 +143,9 @@ def point_timeseries(
 ) -> TimeSeries:
     """Build a one-point canonical time series."""
     point = timestamp or datetime.now(UTC)
+    # np.datetime64 can't carry a timezone; strip it explicitly after shifting
+    # to UTC to avoid the "no explicit representation of timezones" warning.
+    naive = point.astimezone(UTC).replace(tzinfo=None) if point.tzinfo else point
     return TimeSeries(
         series_id=series_id,
         name=name,
@@ -127,7 +153,7 @@ def point_timeseries(
         units=units,
         seasonal_adjustment=seasonal_adjustment,
         geography=geography,
-        timestamps=np.array([np.datetime64(point)], dtype="datetime64[ns]"),
+        timestamps=np.array([np.datetime64(naive)], dtype="datetime64[ns]"),
         values=np.array([float(value)], dtype=np.float64),
         metadata=metadata or {},
         source=source,

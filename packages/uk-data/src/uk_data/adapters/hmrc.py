@@ -449,6 +449,7 @@ class HMRCAdapter(BaseAdapter):
                 units="fraction",
                 source="hmrc",
                 source_series_id=series_id,
+                metadata={"source_quality": "static"},
             )
 
         if series_id == "income_tax_basic_2024":
@@ -462,6 +463,7 @@ class HMRCAdapter(BaseAdapter):
                 units="fraction",
                 source="hmrc",
                 source_series_id=series_id,
+                metadata={"source_quality": "static"},
             )
 
         if series_id == "vat_standard_2024":
@@ -472,6 +474,7 @@ class HMRCAdapter(BaseAdapter):
                 units="fraction",
                 source="hmrc",
                 source_series_id=series_id,
+                metadata={"source_quality": "static"},
             )
 
         msg = f"Unsupported HMRC series: {series_id}"

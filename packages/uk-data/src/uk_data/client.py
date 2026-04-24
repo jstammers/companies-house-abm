@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 from uk_data.adapters.boe import BoEAdapter
 from uk_data.adapters.companies_house import CompaniesHouseAdapter
 from uk_data.adapters.epc import EPCAdapter
+from uk_data.adapters.historical import HistoricalAdapter
 from uk_data.adapters.hmrc import HMRCAdapter
 from uk_data.adapters.land_registry import LandRegistryAdapter
 from uk_data.adapters.ons import ONSAdapter
@@ -29,6 +30,7 @@ class UKDataClient:
             "land_registry": LandRegistryAdapter(),
             "companies_house": CompaniesHouseAdapter(),
             "epc": EPCAdapter(),
+            "historical": HistoricalAdapter(),
         }
         self.resolver = ConceptResolver(self.adapters)
         self.canonical_store = canonical_store
@@ -43,9 +45,15 @@ class UKDataClient:
         """Resolve a canonical concept and fetch its time series."""
         return self.resolver.resolve_series(concept, source=source, limit=limit)
 
-    def get_entity(self, name: str, *, source: str = "companies_house") -> Entity:
+    def get_entity(
+        self,
+        name: str,
+        *,
+        source: str = "companies_house",
+        **kwargs: Any,
+    ) -> Entity:
         """Fetch an entity from a source adapter."""
-        return self.adapters[source].fetch_entity(name)
+        return self.adapters[source].fetch_entity(name, **kwargs)
 
     def get_events(
         self,

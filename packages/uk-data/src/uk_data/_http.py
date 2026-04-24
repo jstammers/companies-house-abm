@@ -8,18 +8,41 @@ redundant network calls within a single session.
 from __future__ import annotations
 
 import json
+import threading
 import time
 import urllib.error
 import urllib.request
+from collections import OrderedDict
 from typing import Any
 
-_CACHE: dict[str, Any] = {}
+_CACHE_MAX_ENTRIES = 256
+_CACHE: OrderedDict[str, Any] = OrderedDict()
+_CACHE_LOCK = threading.Lock()
 _DEFAULT_TIMEOUT = 30  # seconds
-# Browser-like User-Agent to avoid 403 blocks from government data APIs
+# Browser-like User-Agent to avoid 403 blocks from government data APIs that
+# reject default urllib clients.  Note: some government APIs require honest
+# identification — override via _USER_AGENT if your use case requires it.
 _USER_AGENT = (
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 )
+
+
+def _cache_get(key: str) -> Any | None:
+    with _CACHE_LOCK:
+        if key not in _CACHE:
+            return None
+        # LRU: mark most-recently used
+        _CACHE.move_to_end(key)
+        return _CACHE[key]
+
+
+def _cache_set(key: str, value: Any) -> None:
+    with _CACHE_LOCK:
+        _CACHE[key] = value
+        _CACHE.move_to_end(key)
+        while len(_CACHE) > _CACHE_MAX_ENTRIES:
+            _CACHE.popitem(last=False)
 
 
 def get_json(url: str, *, timeout: int = _DEFAULT_TIMEOUT) -> Any:
@@ -38,15 +61,16 @@ def get_json(url: str, *, timeout: int = _DEFAULT_TIMEOUT) -> Any:
         urllib.error.URLError: On network errors.
         ValueError: When the response body is not valid JSON.
     """
-    if url in _CACHE:
-        return _CACHE[url]
+    cached = _cache_get(url)
+    if cached is not None:
+        return cached
 
     req = urllib.request.Request(url, headers={"User-Agent": _USER_AGENT})
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         body = resp.read().decode("utf-8")
 
     data = json.loads(body)
-    _CACHE[url] = data
+    _cache_set(url, data)
     return data
 
 
@@ -66,14 +90,15 @@ def get_text(url: str, *, timeout: int = _DEFAULT_TIMEOUT) -> str:
         urllib.error.URLError: On network errors.
     """
     cache_key = f"text:{url}"
-    if cache_key in _CACHE:
-        return _CACHE[cache_key]
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
 
     req = urllib.request.Request(url, headers={"User-Agent": _USER_AGENT})
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         body = resp.read().decode("utf-8")
 
-    _CACHE[cache_key] = body
+    _cache_set(cache_key, body)
     return body
 
 
@@ -134,4 +159,5 @@ def retry(
 
 def clear_cache() -> None:
     """Clear the in-process response cache."""
-    _CACHE.clear()
+    with _CACHE_LOCK:
+        _CACHE.clear()

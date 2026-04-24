@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from unittest.mock import patch
+
 import pytest
 
 from uk_data.adapters.boe import BoEAdapter
@@ -61,3 +63,30 @@ class TestBoEAdapterFetchSeries:
         for series_id in adapter.available_series():
             ts = adapter.fetch_series(series_id)
             assert ts is not None
+
+    def test_bank_rate_falls_back_to_constant_when_feed_empty(self) -> None:
+        """When the IADB returns no rows, the adapter must still surface a value."""
+        with patch(
+            "uk_data.adapters.boe.fetch_bank_rate",
+            return_value=[],
+        ):
+            adapter = BoEAdapter()
+            ts = adapter.fetch_series("IUMABEDR")
+        assert ts.latest_value is not None
+        assert 0.0 <= ts.latest_value <= 0.25, (
+            "Bank Rate fallback should be in fraction convention"
+        )
+        assert ts.metadata.get("source_quality") == "fallback"
+
+    def test_bank_rate_returns_fraction_convention_when_live(self) -> None:
+        """Live IADB rows are percentages; adapter should convert to fractions."""
+        with patch(
+            "uk_data.adapters.boe.fetch_bank_rate",
+            return_value=[
+                {"date": "01 Oct 2024", "value": "5.00"},
+                {"date": "01 Nov 2024", "value": "4.75"},
+            ],
+        ):
+            adapter = BoEAdapter()
+            ts = adapter.fetch_series("IUMABEDR")
+        assert ts.latest_value == pytest.approx(0.0475)

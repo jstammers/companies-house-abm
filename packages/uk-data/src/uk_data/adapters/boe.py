@@ -28,7 +28,6 @@ See https://www.bankofengland.co.uk/legal for details.
 from __future__ import annotations
 
 import logging
-from datetime import date
 
 from uk_data._http import get_text, retry
 from uk_data.adapters.base import BaseAdapter
@@ -54,17 +53,36 @@ _FALLBACK_BUSINESS_RATE = 0.065  # Effective SME lending rate ~6.5%
 _FALLBACK_CAPITAL_RATIO = 0.148  # CET1 ratio ~14.8% (BoE FSR 2023)
 
 
-def _build_iadb_url(series: str, years_back: int = 10) -> str:
+_DEFAULT_IADB_FROM_YEAR = 2013
+
+
+def _build_iadb_url(
+    series: str,
+    *,
+    from_year: int | None = None,
+    years_back: int | None = None,
+) -> str:
     """Build an IADB CSV download URL for a given series.
 
     Args:
         series: BoE IADB series code.
-        years_back: Number of years of history to request.
+        from_year: First calendar year of history to request.  Defaults to
+            :data:`_DEFAULT_IADB_FROM_YEAR` so the generated URL (and cache
+            key) is deterministic.
+        years_back: Legacy alias for requesting N years before the current
+            calendar year.  Kept for back-compat with earlier helpers that
+            used ``date.today().year - years_back``.
 
     Returns:
         Full URL string.
     """
-    from_year = date.today().year - years_back
+    if from_year is None:
+        if years_back is not None:
+            from datetime import date
+
+            from_year = date.today().year - years_back
+        else:
+            from_year = _DEFAULT_IADB_FROM_YEAR
     from_date = f"01/Jan/{from_year}"
     return (
         f"{_BOE_IADB}"
@@ -112,7 +130,7 @@ def _parse_iadb_csv(text: str) -> list[dict[str, str]]:
     return rows
 
 
-def fetch_bank_rate(num_observations: int = 24) -> list[dict[str, str]]:
+def fetch_bank_rate(num_observations: int | None = None) -> list[dict[str, str]]:
     """Fetch recent Bank Rate observations from the BoE IADB.
 
     The Bank Rate (also known as the Base Rate) is the single most
@@ -120,7 +138,8 @@ def fetch_bank_rate(num_observations: int = 24) -> list[dict[str, str]]:
     Committee of the Bank of England.
 
     Args:
-        num_observations: Unused; kept for API compatibility.
+        num_observations: Optional cap on the number of most-recent
+            observations returned.  ``None`` returns the full response.
 
     Returns:
         List of ``{"date": str, "value": str}`` dicts (most-recent last),
@@ -133,14 +152,16 @@ def fetch_bank_rate(num_observations: int = 24) -> list[dict[str, str]]:
         >>> isinstance(obs, list)
         True
     """
-    del num_observations  # API paginates server-side; parameter kept for compat
     url = _build_iadb_url(_BANK_RATE_SERIES)
     try:
         text = retry(get_text, url)
-        return _parse_iadb_csv(text)
+        rows = _parse_iadb_csv(text)
     except Exception:
         logger.warning("BoE IADB unavailable for Bank Rate; returning []")
         return []
+    if num_observations is not None and num_observations >= 0:
+        return rows[-num_observations:]
+    return rows
 
 
 def fetch_bank_rate_current() -> float:
@@ -266,16 +287,36 @@ class BoEAdapter(BaseAdapter):
         limit = int(kwargs.get("limit", 20))
 
         if series_id == _BANK_RATE_SERIES:
-            return series_from_observations(
+            raw_obs = fetch_bank_rate(limit)
+            # Normalise to fraction convention to match the other BoE series
+            # and the Land Registry / HMRC adapters.
+            fraction_obs = [
+                {"date": row["date"], "value": str(float(row["value"]) / 100.0)}
+                for row in raw_obs
+                if row.get("value")
+            ]
+            if fraction_obs:
+                return series_from_observations(
+                    series_id=concept,
+                    name="Bank Rate",
+                    frequency="M",
+                    units="fraction",
+                    seasonal_adjustment="NSA",
+                    geography="UK",
+                    observations=fraction_obs,
+                    source="boe",
+                    source_series_id=series_id,
+                )
+            # Feed unavailable - surface the last published value instead of
+            # an empty series so downstream consumers always get a value.
+            return point_timeseries(
                 series_id=concept,
                 name="Bank Rate",
-                frequency="M",
-                units="%",
-                seasonal_adjustment="NSA",
-                geography="UK",
-                observations=fetch_bank_rate(limit),
+                value=_FALLBACK_BANK_RATE,
+                units="fraction",
                 source="boe",
                 source_series_id=series_id,
+                metadata={"source_quality": "fallback"},
             )
 
         if series_id in {_HOUSEHOLD_LENDING_SERIES, _BUSINESS_LENDING_SERIES}:
@@ -307,6 +348,7 @@ class BoEAdapter(BaseAdapter):
                 units="fraction",
                 source="boe",
                 source_series_id=series_id,
+                metadata={"source_quality": "fallback"},
             )
 
         msg = f"Unsupported Bank of England series: {series_id}"

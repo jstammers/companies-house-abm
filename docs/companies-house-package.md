@@ -9,11 +9,6 @@ src/companies_house/
 ├── __init__.py            # Public exports (CompanyFiling, schema, etc.)
 ├── schema.py              # Polars schema (39 cols) + CompanyFiling Pydantic model
 ├── cli.py                 # Typer CLI: ingest, search, filings, fetch, report, migrate, db-query
-├── api/                   # Companies House REST API client
-│   ├── client.py          # HTTP client with auth, rate limiting, retry
-│   ├── models.py          # Pydantic response models (Filing, CompanySearchResult)
-│   ├── filings.py         # Filing history + document download
-│   └── search.py          # Company search
 ├── ingest/                # Data ingestion pipelines
 │   ├── base.py            # IngestSource protocol
 │   ├── xbrl.py            # Bulk XBRL ingestion (ZIP/stream)
@@ -78,17 +73,8 @@ CLI: `companies-house fetch 01873499 --model gpt-4o`
 
 ## Companies House REST API
 
-The `api/` module provides a typed client for the [Companies House API](https://developer.company-information.service.gov.uk/):
-
-| Endpoint | Function | Returns |
-|----------|----------|---------|
-| `/search/companies` | `search_companies()` | `list[CompanySearchResult]` |
-| `/company/{number}/filing-history` | `get_filing_history()` | `list[Filing]` |
-| Document API | `download_document()` | `bytes` |
-
-Authentication uses HTTP Basic (API key as username). The client implements token-bucket rate limiting (600 requests / 5 minutes) and exponential backoff retry.
-
-CLI commands: `companies-house search "company name"`, `companies-house filings 01873499`
+Companies House API client modules now live in `uk-data` under `uk_data.api`.
+The `companies-house` CLI uses that client for `search`, `filings`, and `fetch` commands.
 
 ## Storage
 

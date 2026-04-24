@@ -306,10 +306,10 @@ class CompaniesHouseAdapter(BaseAdapter):
         or a specific prefixed identifier ``"companies_house:<number>"``.
         Pass ``query=True`` to force search-mode on ambiguous inputs.  The
         first matching company is returned; when you need full control,
-        use ``companies_house.api.search.search_companies`` directly.
+        use ``uk_data.api.search.search_companies`` directly.
         """
-        from companies_house.api.client import CompaniesHouseClient
-        from companies_house.api.search import search_companies
+        from uk_data.api.client import CompaniesHouseClient
+        from uk_data.api.search import search_companies
 
         query = entity_id
         if entity_id.startswith("companies_house:"):
@@ -347,8 +347,8 @@ class CompaniesHouseAdapter(BaseAdapter):
         **kwargs: object,
     ) -> list[Event]:
         """Fetch canonical filing events for a Companies House entity."""
-        from companies_house.api.client import CompaniesHouseClient
-        from companies_house.api.filings import get_filing_history
+        from uk_data.api.client import CompaniesHouseClient
+        from uk_data.api.filings import get_filing_history
 
         if entity_id is None:
             msg = "CompaniesHouseAdapter.fetch_events requires entity_id"

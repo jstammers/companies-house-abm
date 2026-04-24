@@ -31,6 +31,7 @@ dependencies = [
     "typer>=0.12.0",
     "pydantic>=2.0.0",
     "marimo>=0.23.0",
+    "uk-data>=0.1.0",
 ]
 
 [project.optional-dependencies]
@@ -44,3 +45,6 @@ companies-house = "companies_house.cli:app"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/companies_house"]
+
+[tool.uv.sources]
+uk-data = { workspace = true }

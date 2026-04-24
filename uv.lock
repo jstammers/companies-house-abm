@@ -463,6 +463,7 @@ dependencies = [
     { name = "pyarrow" },
     { name = "pydantic" },
     { name = "typer" },
+    { name = "uk-data" },
 ]
 
 [package.optional-dependencies]
@@ -500,6 +501,7 @@ requires-dist = [
     { name = "scipy", marker = "extra == 'analysis'", specifier = ">=1.11.0" },
     { name = "stream-read-xbrl", marker = "extra == 'xbrl'", specifier = ">=0.1.1" },
     { name = "typer", specifier = ">=0.12.0" },
+    { name = "uk-data", editable = "packages/uk-data" },
 ]
 provides-extras = ["xbrl", "pdf", "analysis", "all"]
 
@@ -3914,23 +3916,19 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
-companies-house = [
-    { name = "companies-house", extra = ["analysis", "xbrl"] },
-]
 sdmx = [
     { name = "pandasdmx" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "companies-house", extras = ["xbrl", "analysis"], marker = "extra == 'companies-house'", editable = "packages/companies-house" },
     { name = "duckdb", specifier = ">=1.0.0" },
     { name = "numpy", specifier = ">=1.26.0" },
     { name = "pandasdmx", marker = "extra == 'sdmx'", specifier = ">=1.6.0,<2" },
     { name = "polars", specifier = ">=1.38.1" },
     { name = "pydantic", specifier = ">=2.0.0" },
 ]
-provides-extras = ["companies-house", "sdmx"]
+provides-extras = ["sdmx"]
 
 [[package]]
 name = "urllib3"

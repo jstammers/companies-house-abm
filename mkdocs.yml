@@ -61,6 +61,9 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Companies House Package: companies-house-package.md
+  - UK Data Package: uk-data-package.md
+  - UK Data API Reference: uk-data-api.md
+  - UK Data Module Reference: uk-data-reference.md
   - ABM Design: abm-design.md
   - Modelling Approach: modelling-approach.md
   - Housing Market: housing-market.md

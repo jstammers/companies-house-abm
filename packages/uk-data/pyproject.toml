@@ -32,7 +32,6 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-companies-house = ["companies-house[xbrl,analysis]"]
 sdmx = ["pandasdmx>=1.6.0,<2"]
 
 [tool.hatch.build.targets.wheel]
@@ -43,6 +42,3 @@ packages = ["src/uk_data"]
 
 [project.scripts]
 ukd = "uk_data.cli:app"
-
-[tool.uv.sources]
-companies-house = { workspace = true }

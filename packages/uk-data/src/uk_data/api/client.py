@@ -31,7 +31,7 @@ class APIConfig:
     window_seconds: int = 300  # 5 minutes
     timeout: int = 30
     user_agent: str = (
-        "companies-house/api (+https://github.com/jstammers/companies-house-abm)"
+        "uk-data/companies-house (+https://github.com/jstammers/companies-house-abm)"
     )
 
     def __post_init__(self) -> None:
@@ -49,7 +49,7 @@ class CompaniesHouseClient:
     Parameters
     ----------
     config:
-        API configuration.  If omitted, reads the API key from the
+        API configuration. If omitted, reads the API key from the
         ``COMPANIES_HOUSE_API_KEY`` environment variable.
     """
 
@@ -83,14 +83,11 @@ class CompaniesHouseClient:
                 if len(self._request_times) < self.config.requests_per_window:
                     self._request_times.append(time.monotonic())
                     return
-                # Compute how long until the oldest request falls out of the window.
                 oldest = self._request_times[0]
                 sleep_time = oldest - window_start
-            # Sleep outside the lock so other threads are not blocked.
             if sleep_time > 0:
                 logger.debug("Rate limit: sleeping %.1fs", sleep_time)
                 time.sleep(sleep_time)
-            # Loop and re-check — another thread may have consumed quota.
 
     def request(
         self,
@@ -101,26 +98,7 @@ class CompaniesHouseClient:
         raw: bool = False,
         retries: int = 2,
     ) -> Any:
-        """Make an authenticated HTTP request.
-
-        Parameters
-        ----------
-        path:
-            URL path (appended to base_url).
-        base_url:
-            Override the default base URL.
-        accept:
-            Accept header value.
-        raw:
-            If True, return raw bytes instead of parsed JSON.
-        retries:
-            Number of retry attempts on transient failures.
-
-        Returns
-        -------
-        Any
-            Parsed JSON response (dict/list) or raw bytes if ``raw=True``.
-        """
+        """Make an authenticated HTTP request."""
         url = (base_url or self.config.base_url) + path
         delay = 1.0
         last_exc: Exception | None = None
@@ -143,13 +121,11 @@ class CompaniesHouseClient:
                     return json.loads(data.decode("utf-8"))
             except urllib.error.HTTPError as exc:
                 if exc.code == 429:
-                    # Rate limited — back off
                     logger.warning("Rate limited (429), backing off %.1fs", delay)
                     time.sleep(delay)
                     delay *= 2
                     last_exc = exc
                 elif exc.code >= 500:
-                    # Server error — retry
                     logger.warning(
                         "Server error %d on %s, retry %d/%d",
                         exc.code,

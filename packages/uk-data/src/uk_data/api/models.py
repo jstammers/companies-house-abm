@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
-import datetime
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict, Field
+
+if TYPE_CHECKING:
+    import datetime
 
 
 class CompanySearchResult(BaseModel):
@@ -42,8 +45,6 @@ class Filing(BaseModel):
     date: datetime.date | None = None
     description: str | None = None
     description_values: dict[str, str] | None = None
-
-    # Links to related resources
     links: dict[str, str] | None = None
 
     @property
@@ -53,7 +54,6 @@ class Filing(BaseModel):
             return None
         doc_link = self.links.get("document_metadata")
         if doc_link:
-            # Format: /document/{id}
             return doc_link.rstrip("/").split("/")[-1]
         return None
 

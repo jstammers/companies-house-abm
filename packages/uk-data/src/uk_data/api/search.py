@@ -5,10 +5,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from urllib.parse import quote
 
-from companies_house.api.models import CompanySearchResponse, CompanySearchResult
+from uk_data.api.models import CompanySearchResponse, CompanySearchResult
 
 if TYPE_CHECKING:
-    from companies_house.api.client import CompaniesHouseClient
+    from uk_data.api.client import CompaniesHouseClient
 
 
 def search_companies(
@@ -18,24 +18,7 @@ def search_companies(
     items_per_page: int = 20,
     start_index: int = 0,
 ) -> list[CompanySearchResult]:
-    """Search Companies House for companies matching *query*.
-
-    Parameters
-    ----------
-    client:
-        Authenticated API client.
-    query:
-        Search string (company name or number).
-    items_per_page:
-        Number of results per page (max 100).
-    start_index:
-        Pagination offset.
-
-    Returns
-    -------
-    list[CompanySearchResult]
-        Matching companies.
-    """
+    """Search Companies House for companies matching *query*."""
     encoded_query = quote(query)
     path = (
         f"/search/companies?q={encoded_query}"

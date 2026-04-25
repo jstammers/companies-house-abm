@@ -26,16 +26,17 @@ def pytest_sessionstart(session: pytest.Session) -> None:
     except ImportError:
         return
 
-    uk_models.__dict__.setdefault("datetime", datetime)
     for model_name in (
         "CompanySearchResult",
         "CompanySearchResponse",
         "Filing",
         "FilingHistoryResponse",
     ):
-        getattr(uk_models, model_name).model_rebuild(
-            _types_namespace={"datetime": datetime}
-        )
+        model = getattr(uk_models, model_name, None)
+        if model is None:
+            msg = f"Expected uk_data.api.models.{model_name} to exist for CI rebuild"
+            raise RuntimeError(msg)
+        model.model_rebuild(_types_namespace={"datetime": datetime})
 
 
 @pytest.fixture(autouse=True)

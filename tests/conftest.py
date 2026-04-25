@@ -1,10 +1,12 @@
 """Pytest configuration and fixtures."""
 
 import datetime
+import inspect
 import sys
 from collections.abc import Generator
 
 import pytest
+from pydantic import BaseModel
 
 
 def pytest_sessionstart(session: pytest.Session) -> None:
@@ -26,16 +28,9 @@ def pytest_sessionstart(session: pytest.Session) -> None:
     except ImportError:
         return
 
-    for model_name in (
-        "CompanySearchResult",
-        "CompanySearchResponse",
-        "Filing",
-        "FilingHistoryResponse",
-    ):
-        model = getattr(uk_models, model_name, None)
-        if model is None:
-            msg = f"Expected uk_data.api.models.{model_name} to exist for CI rebuild"
-            raise RuntimeError(msg)
+    for _, model in inspect.getmembers(uk_models, inspect.isclass):
+        if model.__module__ != uk_models.__name__ or not issubclass(model, BaseModel):
+            continue
         model.model_rebuild(_types_namespace={"datetime": datetime})
 
 

@@ -29,9 +29,8 @@ def pytest_sessionstart(session: pytest.Session) -> None:
         return
 
     for _, model in inspect.getmembers(uk_models, inspect.isclass):
-        if model.__module__ != uk_models.__name__ or not issubclass(model, BaseModel):
-            continue
-        model.model_rebuild(_types_namespace={"datetime": datetime})
+        if model.__module__ == uk_models.__name__ and issubclass(model, BaseModel):
+            model.model_rebuild(_types_namespace={"datetime": datetime})
 
 
 @pytest.fixture(autouse=True)

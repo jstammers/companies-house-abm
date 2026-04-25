@@ -32,6 +32,7 @@ from companies_house_abm.data_sources.calibration import (
 from companies_house_abm.data_sources.firm_distributions import (
     run_profile_pipeline,
 )
+from companies_house_abm.data_sources.input_output import fetch_input_output_table
 from uk_data.adapters.boe import (
     fetch_bank_rate,
     fetch_bank_rate_current,
@@ -61,7 +62,6 @@ from uk_data.adapters.ons import (
     fetch_affordability_ratio,
     fetch_gdp,
     fetch_household_income,
-    fetch_input_output_table,
     fetch_labour_market,
     fetch_rental_growth,
     fetch_savings_ratio,

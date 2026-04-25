@@ -23,13 +23,13 @@ See https://www.ons.gov.uk/methodology/geography/licences for details.
 
 from __future__ import annotations
 
-import csv
-import io
 import logging
 from typing import Any
 
 from uk_data._http import retry
 from uk_data.adapters.base import BaseAdapter
+from uk_data.adapters.ons_manifest import ONS_SERIES_IDS, ONS_SERIES_MANIFEST
+from uk_data.adapters.ons_provider import fetch_sdmx_series
 from uk_data.models import point_timeseries, series_from_observations
 
 logger = logging.getLogger(__name__)
@@ -112,8 +112,8 @@ _SERIES_URI: dict[str, str] = {
     # L2KL: Agriculture; L2N8: Construction; L2NC: Total Services;
     # L2NE: Wholesale & Retail Trade.  Other SIC-division series
     # (L2KP, L2ND, L2NF-L2NM) return 404 from the Zebedee API and are
-    # therefore omitted; fetch_input_output_table falls back to static
-    # Blue Book shares when fewer than 5 live series are returned.
+    # therefore omitted.  These are consumed by the ABM's input-output
+    # table builder (see companies_house_abm.data_sources.input_output).
     "L2KL": "/economy/grossdomesticproductgdp/timeseries/l2kl/ukea",
     "L2N8": "/economy/grossdomesticproductgdp/timeseries/l2n8/ukea",
     "L2NC": "/economy/grossdomesticproductgdp/timeseries/l2nc/ukea",
@@ -192,6 +192,55 @@ def _latest_float(series_id: str) -> float | None:
         return None
 
 
+def _fetch_manifest_observations(
+    series_id: str,
+    *,
+    limit: int = 20,
+) -> list[dict[str, str]]:
+    entry = ONS_SERIES_MANIFEST[series_id.upper()]
+    if entry.transport != "sdmx":
+        msg = f"ONS series {series_id} does not expose SDMX observations"
+        raise ValueError(msg)
+    observations = fetch_sdmx_series(entry, limit=limit)
+    # Defensive outer slice: fetch_sdmx_series honours *limit*, but a mocked
+    # or non-compliant provider could return more rows and we promise callers
+    # we will cap to *limit*.
+    return observations[-limit:] if len(observations) > limit else observations
+
+
+def _latest_manifest_float(series_id: str) -> float | None:
+    try:
+        observations = _fetch_manifest_observations(series_id, limit=1)
+    except ModuleNotFoundError:
+        raise
+    except Exception:
+        logger.warning(
+            "ONS SDMX API unavailable for series %s, returning None",
+            series_id,
+        )
+        return None
+    if not observations:
+        return None
+    try:
+        return float(observations[-1]["value"])
+    except (KeyError, ValueError, TypeError):
+        return None
+
+
+def _fetch_sdmx_or_zebedee(series_id: str, *, limit: int = 20) -> list[dict[str, Any]]:
+    try:
+        return _fetch_manifest_observations(series_id, limit=limit)
+    except ModuleNotFoundError:
+        logger.info("pandasdmx unavailable; falling back to Zebedee for %s", series_id)
+        return _fetch_timeseries(series_id, limit=limit)
+    except Exception:
+        logger.warning(
+            "ONS SDMX API unavailable for series %s, returning []",
+            series_id,
+        )
+        return []
+
+
 # ---------------------------------------------------------------------------
 # Public fetch functions
 # ---------------------------------------------------------------------------
@@ -217,7 +266,7 @@ def fetch_gdp(limit: int = 20) -> list[dict[str, Any]]:
         >>> len(obs) <= 4
         True
     """
-    return _fetch_timeseries(_GDP_SERIES, limit=limit)
+    return _fetch_sdmx_or_zebedee(_GDP_SERIES, limit=limit)
 
 
 def fetch_household_income(limit: int = 20) -> list[dict[str, Any]]:
@@ -241,7 +290,7 @@ def fetch_household_income(limit: int = 20) -> list[dict[str, Any]]:
         >>> isinstance(obs, list)
         True
     """
-    return _fetch_timeseries(_HOUSEHOLD_INCOME_SERIES, limit=limit)
+    return _fetch_sdmx_or_zebedee(_HOUSEHOLD_INCOME_SERIES, limit=limit)
 
 
 def fetch_savings_ratio(limit: int = 20) -> list[dict[str, Any]]:
@@ -264,7 +313,7 @@ def fetch_savings_ratio(limit: int = 20) -> list[dict[str, Any]]:
         >>> isinstance(obs, list)
         True
     """
-    return _fetch_timeseries(_SAVINGS_RATIO_SERIES, limit=limit)
+    return _fetch_sdmx_or_zebedee(_SAVINGS_RATIO_SERIES, limit=limit)
 
 
 def fetch_labour_market() -> dict[str, float | None]:
@@ -288,234 +337,17 @@ def fetch_labour_market() -> dict[str, float | None]:
         >>> "unemployment_rate" in data
         True
     """
-    return {
-        "unemployment_rate": _latest_float(_UNEMPLOYMENT_RATE_SERIES),
-        "average_weekly_earnings": _latest_float(_AVERAGE_EARNINGS_SERIES),
-    }
-
-
-def fetch_input_output_table() -> dict[str, Any]:
-    """Fetch and parse the ONS UK Input-Output Analytical Tables.
-
-    Provides the technical coefficient matrix (A-matrix) describing
-    inter-sector production dependencies, based on the ONS Symmetric
-    Input-Output Table (SIOT).
-
-    The 13 sectors used in the ABM are mapped from the full set of SIC-based
-    ONS industry groupings.
-
-    Returns:
-        Dictionary with keys:
-
-        - ``"sectors"`` - list of sector labels.
-        - ``"use_coefficients"`` - dict mapping each sector to a dict of
-          upstream sector to input coefficient (fraction of output value
-          sourced from upstream sector).
-        - ``"final_demand_shares"`` - dict mapping each sector to its share
-          of total final demand.
-
-        Returns best-effort static structures if live data cannot be fetched.
-
-    Note:
-        The ONS publishes annual Supply and Use tables, typically with a
-        2-3 year lag.  The most recent release is used.
-    """
-    # ONS time series for industry gross value added shares by broad sector.
-    # We build a representative coefficient matrix from published shares rather
-    # than parsing the full Excel table (which requires openpyxl).
-    #
-    # Source: ONS "Input-Output Analytical Tables, UK, 2019"
-    # https://www.ons.gov.uk/economy/nationalaccounts/supplyandusetables
-    # (released under Open Government Licence)
-
-    # ABM sectors and their mapping to ONS section letters (SIC 2007)
-    sector_to_sic = {
-        "agriculture": "A",
-        "manufacturing": "C",
-        "construction": "F",
-        "wholesale_retail": "G",
-        "transport": "H",
-        "hospitality": "I",
-        "information_communication": "J",
-        "financial": "K",
-        "professional_services": "M",
-        "public_admin": "O",
-        "education": "P",
-        "health": "Q",
-        "other_services": "R-S",
-    }
-
-    # Use coefficients from published ONS IO tables (2019 release, product x product).
-    # Each row is the purchasing sector; each column value is the fraction of
-    # output sourced from that supplying sector.  Values are approximate and
-    # represent the intermediate demand structure.
-    #
-    # Source: ONS Input-Output Analytical Tables, Table 2 (symmetric IO table).
-    # https://www.ons.gov.uk/economy/nationalaccounts/supplyandusetables/
-    # datasets/inputoutputsupplyandusetables
-    use_coefficients: dict[str, dict[str, float]] = {
-        "agriculture": {
-            "agriculture": 0.12,
-            "manufacturing": 0.18,
-            "transport": 0.05,
-            "wholesale_retail": 0.08,
-            "professional_services": 0.03,
-            "financial": 0.02,
-        },
-        "manufacturing": {
-            "agriculture": 0.04,
-            "manufacturing": 0.22,
-            "transport": 0.06,
-            "wholesale_retail": 0.07,
-            "information_communication": 0.02,
-            "professional_services": 0.04,
-            "financial": 0.02,
-            "construction": 0.01,
-        },
-        "construction": {
-            "manufacturing": 0.14,
-            "construction": 0.05,
-            "transport": 0.03,
-            "professional_services": 0.06,
-            "wholesale_retail": 0.04,
-            "financial": 0.03,
-        },
-        "wholesale_retail": {
-            "manufacturing": 0.08,
-            "transport": 0.10,
-            "wholesale_retail": 0.06,
-            "information_communication": 0.03,
-            "professional_services": 0.04,
-            "financial": 0.03,
-        },
-        "transport": {
-            "transport": 0.12,
-            "manufacturing": 0.09,
-            "wholesale_retail": 0.05,
-            "professional_services": 0.03,
-            "financial": 0.02,
-            "information_communication": 0.02,
-        },
-        "hospitality": {
-            "agriculture": 0.08,
-            "manufacturing": 0.10,
-            "transport": 0.04,
-            "wholesale_retail": 0.06,
-            "professional_services": 0.02,
-            "financial": 0.02,
-        },
-        "information_communication": {
-            "manufacturing": 0.05,
-            "information_communication": 0.14,
-            "professional_services": 0.06,
-            "financial": 0.03,
-            "transport": 0.02,
-        },
-        "financial": {
-            "information_communication": 0.06,
-            "professional_services": 0.07,
-            "financial": 0.08,
-            "transport": 0.02,
-            "wholesale_retail": 0.03,
-        },
-        "professional_services": {
-            "information_communication": 0.08,
-            "professional_services": 0.10,
-            "financial": 0.05,
-            "transport": 0.02,
-            "wholesale_retail": 0.03,
-        },
-        "public_admin": {
-            "information_communication": 0.05,
-            "professional_services": 0.08,
-            "transport": 0.03,
-            "financial": 0.02,
-            "wholesale_retail": 0.02,
-        },
-        "education": {
-            "information_communication": 0.04,
-            "professional_services": 0.05,
-            "transport": 0.02,
-            "wholesale_retail": 0.03,
-            "financial": 0.01,
-        },
-        "health": {
-            "manufacturing": 0.10,
-            "professional_services": 0.06,
-            "transport": 0.03,
-            "wholesale_retail": 0.04,
-            "information_communication": 0.03,
-            "financial": 0.01,
-        },
-        "other_services": {
-            "manufacturing": 0.06,
-            "professional_services": 0.05,
-            "transport": 0.03,
-            "wholesale_retail": 0.04,
-            "financial": 0.02,
-            "information_communication": 0.03,
-        },
-    }
-
-    # Final demand shares: fraction of UK final demand attributable to each
-    # sector (household consumption + government + investment + exports).
-    # Source: ONS Blue Book 2023, Table 2.4.
-    final_demand_shares: dict[str, float] = {
-        "agriculture": 0.007,
-        "manufacturing": 0.098,
-        "construction": 0.078,
-        "wholesale_retail": 0.095,
-        "transport": 0.043,
-        "hospitality": 0.035,
-        "information_communication": 0.065,
-        "financial": 0.072,
-        "professional_services": 0.085,
-        "public_admin": 0.058,
-        "education": 0.062,
-        "health": 0.078,
-        "other_services": 0.038,
-    }
-
-    # Attempt to enrich with live ONS industry output shares via the API.
-    # Only the four series below are accessible via the Zebedee API; the
-    # remainder (L2KP, L2ND, L2NF-L2NM) return 404 and are omitted.  The
-    # threshold for replacing static final_demand_shares is ≥ 5 live values,
-    # so with only 4 confirmed series the static Blue Book shares are always
-    # used — the live fetch still serves as a data-freshness check and will
-    # automatically enrich shares if ONS publish the missing series under a
-    # discoverable URI in future.
-    gva_series: dict[str, str] = {
-        "agriculture": "L2KL",
-        "construction": "L2N8",
-        "wholesale_retail": "L2NC",
-        "hospitality": "L2NE",
-    }
-
-    gva_values: dict[str, float] = {}
-    for sector, sid in gva_series.items():
-        val = _latest_float(sid)
-        if val is not None and val > 0:
-            gva_values[sector] = val
-
-    # Recompute final demand shares from live GVA if available
-    if len(gva_values) >= 5:
-        total_gva = sum(gva_values.values())
-        for sector, gva in gva_values.items():
-            final_demand_shares[sector] = gva / total_gva
-
-    # Normalise to ensure shares sum to 1.0 regardless of data source
-    total_share = sum(final_demand_shares.values())
-    if total_share > 0:
-        final_demand_shares = {
-            k: v / total_share for k, v in final_demand_shares.items()
+    try:
+        return {
+            "unemployment_rate": _latest_manifest_float(_UNEMPLOYMENT_RATE_SERIES),
+            "average_weekly_earnings": _latest_manifest_float(_AVERAGE_EARNINGS_SERIES),
         }
-
-    return {
-        "sectors": list(sector_to_sic.keys()),
-        "sector_sic_mapping": sector_to_sic,
-        "use_coefficients": use_coefficients,
-        "final_demand_shares": final_demand_shares,
-    }
+    except ModuleNotFoundError:
+        logger.info("pandasdmx unavailable; falling back to Zebedee labour market data")
+        return {
+            "unemployment_rate": _latest_float(_UNEMPLOYMENT_RATE_SERIES),
+            "average_weekly_earnings": _latest_float(_AVERAGE_EARNINGS_SERIES),
+        }
 
 
 # ---------------------------------------------------------------------------
@@ -593,107 +425,53 @@ class ONSAdapter(BaseAdapter):
 
     def available_series(self) -> list[str]:
         """Return the ONS series IDs supported by this adapter."""
-        return [
-            _GDP_SERIES,
-            _HOUSEHOLD_INCOME_SERIES,
-            _SAVINGS_RATIO_SERIES,
-            _UNEMPLOYMENT_RATE_SERIES,
-            _AVERAGE_EARNINGS_SERIES,
-            _AFFORDABILITY_SERIES,
-            _RENTAL_INDEX_SERIES,
-        ]
+        return list(ONS_SERIES_IDS)
 
     def fetch_series(self, series_id: str, **kwargs: object):
         """Fetch a canonical ONS time series."""
-        concept = str(kwargs.get("concept", series_id.lower()))
-        series_map = {
-            _GDP_SERIES: (
-                "UK GDP at market prices",
-                "Q",
-                "GBP_M",
-                "SA",
-                fetch_gdp,
-            ),
-            _HOUSEHOLD_INCOME_SERIES: (
-                "UK household disposable income",
-                "Q",
-                "GBP_M",
-                "SA",
-                fetch_household_income,
-            ),
-            _SAVINGS_RATIO_SERIES: (
-                "UK household savings ratio",
-                "Q",
-                "%",
-                "SA",
-                fetch_savings_ratio,
-            ),
-            _UNEMPLOYMENT_RATE_SERIES: (
-                "UK unemployment rate",
-                "M",
-                "%",
-                "SA",
-                lambda limit=20: _fetch_timeseries(_UNEMPLOYMENT_RATE_SERIES, limit),
-            ),
-            _AVERAGE_EARNINGS_SERIES: (
-                "Average weekly earnings",
-                "M",
-                "GBP",
-                "SA",
-                lambda limit=20: _fetch_timeseries(_AVERAGE_EARNINGS_SERIES, limit),
-            ),
-        }
+        series_id = series_id.upper()
+        entry = ONS_SERIES_MANIFEST.get(series_id)
+        if entry is None:
+            msg = f"Unsupported ONS series: {series_id}"
+            raise ValueError(msg)
 
-        if series_id in series_map:
-            name, frequency, units, seasonal_adjustment, fetcher = series_map[series_id]
-            observations = fetcher(limit=int(kwargs.get("limit", 20)))
+        concept = str(kwargs.get("concept", entry.concept))
+        limit = int(kwargs.get("limit", 20))
+
+        if entry.transport == "sdmx":
+            observations = fetch_sdmx_series(entry, limit=limit)
             return series_from_observations(
                 series_id=concept,
-                name=name,
-                frequency=frequency,
-                units=units,
-                seasonal_adjustment=seasonal_adjustment,
-                geography="UK",
+                name=entry.name,
+                frequency=entry.frequency,
+                units=entry.units,
+                seasonal_adjustment=entry.seasonal_adjustment,
+                geography=entry.geography,
                 observations=observations,
                 source="ons",
-                source_series_id=series_id,
+                source_series_id=entry.source_series_id,
             )
 
-        if series_id == _AFFORDABILITY_SERIES:
-            return point_timeseries(
-                series_id=concept,
-                name="House price affordability ratio",
-                value=fetch_affordability_ratio(),
-                units="ratio",
-                source="ons",
-                source_series_id=series_id,
-            )
-
-        if series_id == _RENTAL_INDEX_SERIES:
-            return point_timeseries(
-                series_id=concept,
-                name="Private rental growth",
-                value=fetch_rental_growth(),
-                units="fraction",
-                source="ons",
-                source_series_id=series_id,
-            )
-
-        msg = f"Unsupported ONS series: {series_id}"
-        raise ValueError(msg)
-
-
-def parse_ons_csv(text: str) -> list[dict[str, str]]:
-    """Parse a simple two-column ONS CSV (date, value) string.
-
-    Args:
-        text: Raw CSV text with a header row.
-
-    Returns:
-        List of ``{"date": str, "value": str}`` dicts.
-    """
-    rows: list[dict[str, str]] = []
-    reader = csv.DictReader(io.StringIO(text))
-    for row in reader:
-        rows.append(dict(row))
-    return rows
+        fallback_handlers = {
+            "affordability_ratio": fetch_affordability_ratio,
+            "rental_growth": fetch_rental_growth,
+        }
+        if entry.fallback_handler is None:
+            msg = f"ONS series {series_id} has no fallback handler"
+            raise ValueError(msg)
+        fetcher = fallback_handlers.get(entry.fallback_handler)
+        if fetcher is None:
+            msg = f"Unknown ONS fallback handler: {entry.fallback_handler}"
+            raise ValueError(msg)
+        return point_timeseries(
+            series_id=concept,
+            name=entry.name,
+            value=fetcher(),
+            units=entry.units,
+            source="ons",
+            source_series_id=entry.source_series_id,
+            frequency=entry.frequency,
+            seasonal_adjustment=entry.seasonal_adjustment,
+            geography=entry.geography,
+            metadata={"source_quality": "fallback"},
+        )

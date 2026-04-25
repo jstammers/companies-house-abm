@@ -242,7 +242,9 @@ class TestOnsInputOutputTableIntegration:
     """fetch_input_output_table() — static coefficients enriched by live GVA."""
 
     def test_returns_expected_keys(self) -> None:
-        from uk_data.adapters.ons import fetch_input_output_table
+        from companies_house_abm.data_sources.input_output import (
+            fetch_input_output_table,
+        )
 
         result = fetch_input_output_table()
         assert "sectors" in result
@@ -251,20 +253,26 @@ class TestOnsInputOutputTableIntegration:
         assert "sector_sic_mapping" in result
 
     def test_has_thirteen_sectors(self) -> None:
-        from uk_data.adapters.ons import fetch_input_output_table
+        from companies_house_abm.data_sources.input_output import (
+            fetch_input_output_table,
+        )
 
         result = fetch_input_output_table()
         assert len(result["sectors"]) == 13
 
     def test_final_demand_shares_sum_to_one(self) -> None:
-        from uk_data.adapters.ons import fetch_input_output_table
+        from companies_house_abm.data_sources.input_output import (
+            fetch_input_output_table,
+        )
 
         result = fetch_input_output_table()
         total = sum(result["final_demand_shares"].values())
         assert total == pytest.approx(1.0, abs=1e-6)
 
     def test_use_coefficients_between_zero_and_one(self) -> None:
-        from uk_data.adapters.ons import fetch_input_output_table
+        from companies_house_abm.data_sources.input_output import (
+            fetch_input_output_table,
+        )
 
         result = fetch_input_output_table()
         for sector, row in result["use_coefficients"].items():

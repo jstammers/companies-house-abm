@@ -1,4 +1,4 @@
-"""Tests for the companies_house.api module."""
+"""Tests for the uk_data.api module."""
 
 from __future__ import annotations
 
@@ -6,21 +6,14 @@ import base64
 import json
 from unittest.mock import MagicMock, patch
 
-from companies_house.api.client import APIConfig, CompaniesHouseClient
-from companies_house.api.filings import (
+from uk_data.api.client import APIConfig, CompaniesHouseClient
+from uk_data.api.filings import (
     download_document,
     get_account_filings,
     get_filing_history,
 )
-from companies_house.api.models import (
-    CompanySearchResult,
-    Filing,
-)
-from companies_house.api.search import search_companies
-
-# ---------------------------------------------------------------------------
-# Models
-# ---------------------------------------------------------------------------
+from uk_data.api.models import CompanySearchResult, Filing
+from uk_data.api.search import search_companies
 
 
 class TestModels:
@@ -48,11 +41,6 @@ class TestModels:
         assert f.is_accounts is False
 
 
-# ---------------------------------------------------------------------------
-# APIConfig
-# ---------------------------------------------------------------------------
-
-
 class TestAPIConfig:
     def test_default_config(self):
         config = APIConfig(api_key="test-key")
@@ -64,11 +52,6 @@ class TestAPIConfig:
         with patch.dict("os.environ", {"COMPANIES_HOUSE_API_KEY": "env-key"}):
             config = APIConfig()
             assert config.api_key == "env-key"
-
-
-# ---------------------------------------------------------------------------
-# CompaniesHouseClient
-# ---------------------------------------------------------------------------
 
 
 class TestClient:
@@ -105,11 +88,6 @@ class TestClient:
             assert result == b"%PDF-1.4 fake pdf content"
 
 
-# ---------------------------------------------------------------------------
-# Search
-# ---------------------------------------------------------------------------
-
-
 class TestSearch:
     def test_search_companies(self):
         config = APIConfig(api_key="test")
@@ -135,11 +113,6 @@ class TestSearch:
             results = search_companies(client, "Exel")
             assert len(results) == 1
             assert results[0].company_number == "01873499"
-
-
-# ---------------------------------------------------------------------------
-# Filings
-# ---------------------------------------------------------------------------
 
 
 class TestFilings:

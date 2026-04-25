@@ -24,25 +24,8 @@
 
 ### API Client
 
-::: companies_house.api.client
-    options:
-      show_root_heading: true
-      show_source: true
-
-::: companies_house.api.models
-    options:
-      show_root_heading: true
-      show_source: true
-
-::: companies_house.api.search
-    options:
-      show_root_heading: true
-      show_source: true
-
-::: companies_house.api.filings
-    options:
-      show_root_heading: true
-      show_source: true
+Companies House API client modules now live under `uk_data.api`.
+Reference docs are in `docs/uk-data-api.md`.
 
 ### Ingestion
 

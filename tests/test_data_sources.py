@@ -343,8 +343,8 @@ class TestOnsGdp:
 
         _http.clear_cache()
         with patch(
-            "uk_data.adapters.ons.retry",
-            return_value=_FAKE_ONS_RESPONSE,
+            "uk_data.adapters.ons.fetch_sdmx_series",
+            return_value=_FAKE_ONS_RESPONSE["quarters"],
         ):
             from uk_data.adapters.ons import fetch_gdp
 
@@ -357,7 +357,7 @@ class TestOnsGdp:
 
         _http.clear_cache()
         with patch(
-            "uk_data.adapters.ons.retry",
+            "uk_data.adapters.ons.fetch_sdmx_series",
             side_effect=Exception("api down"),
         ):
             from uk_data.adapters.ons import fetch_gdp
@@ -370,8 +370,8 @@ class TestOnsGdp:
 
         _http.clear_cache()
         with patch(
-            "uk_data.adapters.ons.retry",
-            return_value=_FAKE_ONS_RESPONSE,
+            "uk_data.adapters.ons.fetch_sdmx_series",
+            return_value=_FAKE_ONS_RESPONSE["quarters"],
         ):
             from uk_data.adapters.ons import fetch_gdp
 
@@ -385,8 +385,8 @@ class TestOnsHouseholdIncome:
 
         _http.clear_cache()
         with patch(
-            "uk_data.adapters.ons.retry",
-            return_value=_FAKE_ONS_RESPONSE,
+            "uk_data.adapters.ons.fetch_sdmx_series",
+            return_value=_FAKE_ONS_RESPONSE["quarters"],
         ):
             from uk_data.adapters.ons import fetch_household_income
 
@@ -400,8 +400,8 @@ class TestOnsSavingsRatio:
 
         _http.clear_cache()
         with patch(
-            "uk_data.adapters.ons.retry",
-            return_value=_FAKE_ONS_RESPONSE,
+            "uk_data.adapters.ons.fetch_sdmx_series",
+            return_value=_FAKE_ONS_RESPONSE["quarters"],
         ):
             from uk_data.adapters.ons import fetch_savings_ratio
 
@@ -415,8 +415,8 @@ class TestOnsLabourMarket:
 
         _http.clear_cache()
         with patch(
-            "uk_data.adapters.ons.retry",
-            return_value=_FAKE_ONS_MONTHLY_RESPONSE,
+            "uk_data.adapters.ons.fetch_sdmx_series",
+            return_value=_FAKE_ONS_MONTHLY_RESPONSE["months"],
         ):
             from uk_data.adapters.ons import fetch_labour_market
 
@@ -429,7 +429,7 @@ class TestOnsLabourMarket:
 
         _http.clear_cache()
         with patch(
-            "uk_data.adapters.ons.retry",
+            "uk_data.adapters.ons.fetch_sdmx_series",
             side_effect=Exception("api down"),
         ):
             from uk_data.adapters.ons import fetch_labour_market
@@ -448,7 +448,9 @@ class TestOnsInputOutputTable:
             "uk_data.adapters.ons.retry",
             side_effect=Exception("api down"),
         ):
-            from uk_data.adapters.ons import fetch_input_output_table
+            from companies_house_abm.data_sources.input_output import (
+                fetch_input_output_table,
+            )
 
             io = fetch_input_output_table()
         assert "sectors" in io
@@ -463,7 +465,9 @@ class TestOnsInputOutputTable:
             "uk_data.adapters.ons.retry",
             side_effect=Exception("api down"),
         ):
-            from uk_data.adapters.ons import fetch_input_output_table
+            from companies_house_abm.data_sources.input_output import (
+                fetch_input_output_table,
+            )
 
             io = fetch_input_output_table()
         expected_sectors = {
@@ -491,7 +495,9 @@ class TestOnsInputOutputTable:
             "uk_data.adapters.ons.retry",
             side_effect=Exception("api down"),
         ):
-            from uk_data.adapters.ons import fetch_input_output_table
+            from companies_house_abm.data_sources.input_output import (
+                fetch_input_output_table,
+            )
 
             io = fetch_input_output_table()
         total = sum(io["final_demand_shares"].values())
@@ -505,7 +511,9 @@ class TestOnsInputOutputTable:
             "uk_data.adapters.ons.retry",
             side_effect=Exception("api down"),
         ):
-            from uk_data.adapters.ons import fetch_input_output_table
+            from companies_house_abm.data_sources.input_output import (
+                fetch_input_output_table,
+            )
 
             io = fetch_input_output_table()
         for sector, inputs in io["use_coefficients"].items():

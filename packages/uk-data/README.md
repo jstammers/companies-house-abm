@@ -157,3 +157,17 @@ from the default `make test` / CI run. Run them explicitly with
 |---|---|
 | `COMPANIES_HOUSE_API_KEY` | API key for Companies House REST API (entity + event fetch) |
 | `EPC_API_USER` / `EPC_API_PASS` | Credentials for EPC Open Data API download |
+
+## Data quality
+
+`TimeSeries.metadata["source_quality"]` indicates whether a series came
+from a live feed or a hardcoded fallback:
+
+- ``"live"`` (default, implicit) — observations fetched from the upstream API.
+- ``"fallback"`` — the upstream API was unreachable or did not return data and
+  the package substituted a stale published value.
+- ``"static"`` — the value is intentionally hand-curated (e.g. HMRC tax
+  rates) and expected to change only on policy updates.
+
+Use `ts.is_fallback` or `ts.metadata.get("source_quality")` to guard against
+accepting stale data silently.

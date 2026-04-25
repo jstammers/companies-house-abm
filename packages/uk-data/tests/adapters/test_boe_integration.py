@@ -35,8 +35,10 @@ class TestBoEAdapterIntegration:
         ts = adapter.fetch_series("IUMABEDR")
         assert ts.source == "boe"
         assert ts.latest_value is not None
-        # Bank Rate has been between 0.1% and 20% in modern history
-        assert 0 <= ts.latest_value <= 0.25, "Bank Rate should be 0-25%"
+        # Bank Rate is returned as a fraction (0.0-0.25 covers all modern history).
+        assert 0 <= ts.latest_value <= 0.25, (
+            "Bank Rate should be 0-25% (fraction convention)"
+        )
 
     def test_household_lending_rate_live(self) -> None:
         _skip_if_cannot_reach(_BOE_URL)

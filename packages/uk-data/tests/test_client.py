@@ -17,7 +17,15 @@ class TestUKDataClientListSources:
     def test_all_registered_adapters_present(self) -> None:
         client = UKDataClient()
         names = {s.name for s in client.list_sources()}
-        expected = {"ons", "boe", "hmrc", "land_registry", "companies_house", "epc"}
+        expected = {
+            "ons",
+            "boe",
+            "hmrc",
+            "land_registry",
+            "companies_house",
+            "epc",
+            "historical",
+        }
         assert names == expected
 
     def test_source_info_has_correct_structure(self) -> None:

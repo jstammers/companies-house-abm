@@ -8,20 +8,28 @@ from uk_data.adapters.hmrc import HMRCAdapter
 
 
 class TestHMRCAdapterAvailableSeries:
-    def test_returns_three_series(self) -> None:
+    def test_includes_three_kinds_per_tax_year(self) -> None:
         adapter = HMRCAdapter()
         series = adapter.available_series()
-        assert len(series) == 3
-
-    def test_contains_all_expected_ids(self) -> None:
-        adapter = HMRCAdapter()
-        series = adapter.available_series()
-        expected = {
+        # Three kinds (corporation_tax, income_tax_basic, vat_standard)
+        # times N supported tax years.
+        assert len(series) % 3 == 0
+        expected_2024 = {
             "corporation_tax_2024",
             "income_tax_basic_2024",
             "vat_standard_2024",
         }
-        assert expected == set(series)
+        assert expected_2024 <= set(series)
+
+    def test_advertises_multiple_tax_years(self) -> None:
+        from uk_data.adapters.hmrc import supported_tax_years
+
+        adapter = HMRCAdapter()
+        series = adapter.available_series()
+        years = supported_tax_years()
+        for year in years:
+            start = year.split("/", 1)[0]
+            assert f"corporation_tax_{start}" in series
 
 
 class TestHMRCAdapterFetchSeries:

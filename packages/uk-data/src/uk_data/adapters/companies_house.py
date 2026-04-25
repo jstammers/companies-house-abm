@@ -299,15 +299,27 @@ class CompaniesHouseAdapter(BaseAdapter):
         """Return the event types supported by this adapter."""
         return ["filing"]
 
-    def fetch_entity(self, entity_id: str, **_kwargs: object) -> Entity:
-        """Search for and return a canonical company entity."""
-        from companies_house.api.client import CompaniesHouseClient
-        from companies_house.api.search import search_companies
+    def fetch_entity(self, entity_id: str, **kwargs: object) -> Entity:
+        """Return a canonical company entity.
 
+        ``entity_id`` may be either a free-text search query (the default)
+        or a specific prefixed identifier ``"companies_house:<number>"``.
+        Pass ``query=True`` to force search-mode on ambiguous inputs.  The
+        first matching company is returned; when you need full control,
+        use ``uk_data.api.search.search_companies`` directly.
+        """
+        from uk_data.api.client import CompaniesHouseClient
+        from uk_data.api.search import search_companies
+
+        query = entity_id
+        if entity_id.startswith("companies_house:"):
+            query = entity_id.split(":", 1)[1]
+
+        items_per_page = int(kwargs.get("items_per_page", 1))
         results = search_companies(
             CompaniesHouseClient(),
-            entity_id,
-            items_per_page=1,
+            query,
+            items_per_page=items_per_page,
         )
         if not results:
             msg = f"No Companies House entity found for {entity_id!r}"
@@ -335,18 +347,22 @@ class CompaniesHouseAdapter(BaseAdapter):
         **kwargs: object,
     ) -> list[Event]:
         """Fetch canonical filing events for a Companies House entity."""
-        from companies_house.api.client import CompaniesHouseClient
-        from companies_house.api.filings import get_filing_history
+        from uk_data.api.client import CompaniesHouseClient
+        from uk_data.api.filings import get_filing_history
 
         if entity_id is None:
             msg = "CompaniesHouseAdapter.fetch_events requires entity_id"
             raise ValueError(msg)
 
         company_number = entity_id.split(":", maxsplit=1)[-1]
+        # The canonical event_type is always "filing"; pass through any other
+        # value as the upstream CH `category` filter (e.g. "accounts",
+        # "officers") so callers can narrow by filing category.
+        category = None if event_type in (None, "filing") else event_type
         filings = get_filing_history(
             CompaniesHouseClient(),
             company_number,
-            category=None if event_type in (None, "filing") else event_type,
+            category=category,
             items_per_page=int(kwargs.get("items_per_page", 25)),
         )
         return [

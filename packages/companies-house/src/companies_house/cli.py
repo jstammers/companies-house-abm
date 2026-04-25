@@ -234,8 +234,8 @@ def search(
     ] = None,
 ) -> None:
     """Search Companies House for companies by name or number."""
-    from companies_house.api.client import APIConfig, CompaniesHouseClient
-    from companies_house.api.search import (
+    from uk_data.api.client import APIConfig, CompaniesHouseClient
+    from uk_data.api.search import (
         search_companies as api_search,
     )
 
@@ -276,8 +276,8 @@ def filings(
     ] = None,
 ) -> None:
     """List filing history for a company."""
-    from companies_house.api.client import APIConfig, CompaniesHouseClient
-    from companies_house.api.filings import get_filing_history
+    from uk_data.api.client import APIConfig, CompaniesHouseClient
+    from uk_data.api.filings import get_filing_history
 
     config = APIConfig(api_key=api_key or "")
     if not config.api_key:
@@ -326,13 +326,13 @@ def fetch(
 
     Downloads XBRL or PDF filings and upserts into DuckDB.
     """
-    from companies_house.api.client import APIConfig, CompaniesHouseClient
-    from companies_house.api.filings import (
+    from companies_house.ingest.pdf import ingest_pdf_bytes
+    from companies_house.storage.db import CompaniesHouseDB
+    from uk_data.api.client import APIConfig, CompaniesHouseClient
+    from uk_data.api.filings import (
         download_document,
         get_account_filings,
     )
-    from companies_house.ingest.pdf import ingest_pdf_bytes
-    from companies_house.storage.db import CompaniesHouseDB
 
     config = APIConfig(api_key=api_key or "")
     if not config.api_key:

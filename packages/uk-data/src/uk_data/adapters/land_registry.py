@@ -11,6 +11,7 @@ The Price Paid / UK HPI ingestion helpers are adapted from the public
 from __future__ import annotations
 
 import logging
+import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import UTC, date, datetime, time
@@ -41,9 +42,11 @@ _PRICE_PAID_BASE_URL = (
 )
 _PRICE_PAID_COMPLETE_CSV_URL = f"{_PRICE_PAID_BASE_URL}/pp-complete.csv"
 _PRICE_PAID_YEARLY_CSV_URL = f"{_PRICE_PAID_BASE_URL}/pp-{{year}}.csv"
-_UK_HPI_DOWNLOAD_URL = (
-    "https://publicdata.landregistry.gov.uk/market-trend-data/"
-    "house-price-index-data/UK-HPI-full-file-2025-04.csv"
+_UK_HPI_BASE_URL = (
+    "https://publicdata.landregistry.gov.uk/market-trend-data/house-price-index-data"
+)
+_UK_HPI_URL_TEMPLATE = (
+    f"{_UK_HPI_BASE_URL}/UK-HPI-full-file-{{year:04d}}-{{month:02d}}.csv"
 )
 
 _PRICE_PAID_COLUMNS = [
@@ -241,12 +244,15 @@ def fetch_property_transaction_events(
     limit: int = 100,
 ) -> list[Event]:
     """Convert cleaned Price Paid records into canonical transaction events."""
-    data = clean_price_paid_data(load_price_paid_data(filepath)).collect()
+    # Push filter + head into the lazy plan so we never materialise the full
+    # Price Paid file (which can be multi-GB) into memory.
+    lazy = clean_price_paid_data(load_price_paid_data(filepath))
     if postcode is not None:
         normalized = postcode.upper().strip()
-        data = data.filter(pl.col("postcode") == normalized)
+        lazy = lazy.filter(pl.col("postcode") == normalized)
     if limit >= 0:
-        data = data.head(limit)
+        lazy = lazy.head(limit)
+    data = lazy.collect()
 
     events: list[Event] = []
     for row in data.to_dicts():
@@ -269,14 +275,51 @@ def fetch_property_transaction_events(
     return events
 
 
+def _candidate_uk_hpi_urls() -> list[str]:
+    """Return UK HPI download URLs to try, most recent first.
+
+    The Land Registry publishes a new ``UK-HPI-full-file-YYYY-MM.csv`` every
+    month and the previous month's file typically remains addressable for a
+    few weeks.  We try the current and previous five months so the helper
+    keeps working without a manual code change each release.
+    """
+    today = date.today()
+    urls: list[str] = []
+    year, month = today.year, today.month
+    for _ in range(6):
+        urls.append(_UK_HPI_URL_TEMPLATE.format(year=year, month=month))
+        month -= 1
+        if month == 0:
+            month = 12
+            year -= 1
+    return urls
+
+
 def download_uk_hpi_data(
     output_path: str | Path,
     *,
-    url: str = _UK_HPI_DOWNLOAD_URL,
+    url: str | None = None,
     timeout: int = 600,
 ) -> Path:
-    """Download the full UK HPI CSV file."""
-    return _download_file(url, Path(output_path), timeout=timeout)
+    """Download the full UK HPI CSV file.
+
+    When *url* is not provided, tries the latest few monthly URLs and saves
+    the first one that downloads successfully.
+    """
+    destination = Path(output_path)
+    if url is not None:
+        return _download_file(url, destination, timeout=timeout)
+
+    last_exc: Exception | None = None
+    for candidate in _candidate_uk_hpi_urls():
+        try:
+            return _download_file(candidate, destination, timeout=timeout)
+        except (urllib.error.URLError, OSError, TimeoutError) as exc:
+            last_exc = exc
+            logger.info("UK HPI not available at %s: %s", candidate, exc)
+    raise RuntimeError("Could not download UK HPI data from any candidate URL") from (
+        last_exc
+    )
 
 
 def load_uk_hpi_data(filepath: str | Path) -> pl.LazyFrame:
@@ -357,8 +400,8 @@ def fetch_uk_hpi_history(
     limit: int = 20,
 ):
     """Convert UK HPI rows for an area into a canonical time series."""
-    data = clean_uk_hpi_data(load_uk_hpi_data(filepath)).collect()
-    schema_names = data.columns
+    lazy = clean_uk_hpi_data(load_uk_hpi_data(filepath))
+    schema_names = lazy.collect_schema().names()
     area_column = next(
         (column for column in ("regionname", "region_name") if column in schema_names),
         None,
@@ -372,7 +415,7 @@ def fetch_uk_hpi_history(
             "UK HPI data requires region name, average_price, and date columns"
         )
 
-    filtered = data.filter(
+    filtered = lazy.filter(
         pl.col(area_column).str.to_lowercase() == area_name.lower()
     ).sort("date")
     if limit >= 0:
@@ -380,7 +423,7 @@ def fetch_uk_hpi_history(
 
     observations = [
         {"date": row["date"].isoformat(), "value": row["average_price"]}
-        for row in filtered.to_dicts()
+        for row in filtered.collect().to_dicts()
     ]
     return series_from_observations(
         series_id="uk_hpi_monthly",

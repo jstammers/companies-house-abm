@@ -13,14 +13,6 @@ Data sourced from:
 - **Aggregate capital ratio** (series ``LNMVNZL``): core equity Tier 1
   ratio for UK major banks, sourced from the Financial Stability Report.
 
-.. note::
-
-    The BoE IADB CSV endpoint (``_iadb-FromShowColumns.asp``) currently
-    returns HTTP 403 for non-browser clients.  All fetch functions
-    gracefully fall back to hardcoded published values when the live
-    endpoint is unavailable.  The URL-building and CSV-parsing helpers
-    are retained for forward compatibility and testability.
-
 All data is published under the Bank of England's Open Data terms.
 See https://www.bankofengland.co.uk/legal for details.
 """
@@ -45,8 +37,8 @@ _BANK_RATE_SERIES = "IUMABEDR"  # Official Bank Rate (%)
 _HOUSEHOLD_LENDING_SERIES = "IUMTLMV"  # Effective HH lending rate (%)
 _BUSINESS_LENDING_SERIES = "IUMZICQ"  # Effective business lending rate (%)
 
-# Hardcoded fallback values sourced from published BoE data (as of 2025 Q1)
-_FALLBACK_BANK_RATE = 0.0475  # Bank Rate 4.75% (Nov 2024)
+# Hardcoded fallback values sourced from published BoE data (as of 2024)
+_FALLBACK_BANK_RATE = 0.0525  # Bank Rate 5.25% (Aug 2023 - Aug 2024)
 _FALLBACK_HOUSEHOLD_RATE = 0.057  # Effective HH mortgage rate ~5.7%
 _FALLBACK_BUSINESS_RATE = 0.065  # Effective SME lending rate ~6.5%
 _FALLBACK_CAPITAL_RATIO = 0.148  # CET1 ratio ~14.8% (BoE FSR 2023)

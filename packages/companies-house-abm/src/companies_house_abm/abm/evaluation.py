@@ -6,10 +6,6 @@ against empirical calibration targets for the UK economy.  The targets are
 taken from the ``validation`` section of ``config/model_parameters.yml`` and
 from the macroeconomics literature.
 
-For historical simulations, :func:`evaluate_historical` compares the
-simulated time series against actual UK data and produces a
-:class:`HistoricalEvaluationReport` with fit metrics.
-
 Usage::
 
     from companies_house_abm.abm.evaluation import evaluate_simulation
@@ -28,7 +24,6 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from companies_house_abm.abm.historical import HistoricalResult
     from companies_house_abm.abm.model import SimulationResult
 
 
@@ -391,111 +386,3 @@ def evaluate_simulation(
         )
 
     return EvaluationReport(results=stat_results)
-
-
-# ---------------------------------------------------------------------------
-# Historical simulation evaluation
-# ---------------------------------------------------------------------------
-
-
-@dataclass
-class HistoricalEvaluationReport:
-    """Evaluation report for a historical simulation run.
-
-    Compares the simulated time series against actual UK data and
-    computes goodness-of-fit metrics.
-
-    Attributes:
-        scenario_name: Name of the scenario evaluated.
-        n_periods: Number of periods in the comparison.
-        price_correlation: Pearson correlation of simulated vs actual prices.
-        price_rmse: Root mean squared error (GBP).
-        price_rmse_pct: RMSE as percentage of mean actual price.
-        directional_accuracy: Fraction of quarters with matching direction.
-        mean_homeownership: Mean simulated homeownership rate.
-        cross_sectional: Standard evaluation report for steady-state targets.
-    """
-
-    scenario_name: str = ""
-    n_periods: int = 0
-    price_correlation: float = float("nan")
-    price_rmse: float = float("nan")
-    price_rmse_pct: float = float("nan")
-    directional_accuracy: float = float("nan")
-    mean_homeownership: float = float("nan")
-    cross_sectional: EvaluationReport | None = None
-
-    def summary(self) -> str:
-        """Return a human-readable summary."""
-        lines = [
-            f"Historical Evaluation: {self.scenario_name}",
-            f"  Periods evaluated:       {self.n_periods}",
-            f"  Price correlation:       {self.price_correlation:+.3f}",
-            f"  Price RMSE:              £{self.price_rmse:,.0f}",
-            f"  Price RMSE (%):          {self.price_rmse_pct:.1%}",
-            f"  Directional accuracy:    {self.directional_accuracy:.1%}",
-            f"  Mean homeownership:      {self.mean_homeownership:.1%}",
-        ]
-        if self.cross_sectional:
-            lines.append("")
-            lines.append(self.cross_sectional.summary())
-        return "\n".join(lines)
-
-    def as_dict(self) -> dict[str, object]:
-        """Serialise to a plain dictionary."""
-        d: dict[str, object] = {
-            "scenario_name": self.scenario_name,
-            "n_periods": self.n_periods,
-            "price_correlation": self.price_correlation,
-            "price_rmse": self.price_rmse,
-            "price_rmse_pct": self.price_rmse_pct,
-            "directional_accuracy": self.directional_accuracy,
-            "mean_homeownership": self.mean_homeownership,
-        }
-        if self.cross_sectional:
-            d["cross_sectional"] = self.cross_sectional.as_dict()
-        return d
-
-
-def evaluate_historical(
-    result: HistoricalResult,
-    warm_up: int = 0,
-) -> HistoricalEvaluationReport:
-    """Evaluate a historical simulation result against actual UK data.
-
-    Computes time-series fit metrics (correlation, RMSE, directional
-    accuracy) and optionally a cross-sectional evaluation against
-    standard calibration targets.
-
-    Args:
-        result: Output from
-            :meth:`~companies_house_abm.abm.historical.HistoricalSimulation.run`.
-        warm_up: Number of leading periods to discard for the
-            cross-sectional evaluation.
-
-    Returns:
-        A :class:`HistoricalEvaluationReport`.
-    """
-    from companies_house_abm.abm.model import SimulationResult
-
-    records = result.records
-    n = len(records)
-
-    # Homeownership
-    ownership_rates = [r.homeownership_rate for r in records]
-    mean_ownership = sum(ownership_rates) / n if n > 0 else float("nan")
-
-    # Cross-sectional evaluation using the standard targets
-    sim_result = SimulationResult(records=records)
-    cross = evaluate_simulation(sim_result, warm_up=warm_up)
-
-    return HistoricalEvaluationReport(
-        scenario_name=result.scenario_name,
-        n_periods=n,
-        price_correlation=result.price_correlation(),
-        price_rmse=result.price_rmse(),
-        price_rmse_pct=result.price_rmse_pct(),
-        directional_accuracy=result.directional_accuracy(),
-        mean_homeownership=mean_ownership,
-        cross_sectional=cross,
-    )

@@ -1,86 +1,120 @@
 # Technology Stack
 
-**Analysis Date:** Sat Apr 25 2026
+**Analysis Date:** 2026-04-26
 
 ## Languages
 
 **Primary:**
-- Python >=3.10 - Core implementation in `packages/companies-house/src/companies_house/` and `packages/companies-house-abm/src/companies_house_abm/`
+- Python >=3.10 — all application code across all packages
 
 **Secondary:**
-- TOML - Project and package configuration in `pyproject.toml`, `packages/companies-house/pyproject.toml`, `packages/companies-house-abm/pyproject.toml`, and `packages/rust-abm/pyproject.toml`
-- YAML - CI/docs config in `.github/workflows/*.yml` and `mkdocs.yml`
-- Rust (edition 2021) - Optional performance extension in `packages/rust-abm/src/` with config in `packages/rust-abm/Cargo.toml`
+- Rust (2021 edition) — optional high-performance ABM extension (`packages/rust-abm/`)
+- YAML — ABM model configuration (`config/model_parameters.yml`, `config/sector_representative_model.yml`)
+- HTML/CSS/JS — static frontend for deprecated FastAPI webapp (`packages/companies-house-abm/src/companies_house_abm/webapp/static/`)
 
 ## Runtime
 
 **Environment:**
-- Python runtime >=3.10 (`packages/companies-house/pyproject.toml`, `packages/companies-house-abm/pyproject.toml`)
-- CI/dev standard runtime Python 3.13 (`.github/workflows/ci.yml`, `.github/workflows/docs.yml`)
-- Container runtime uses `python:3.13-slim` (`Dockerfile`)
+- CPython >=3.10 (CI matrix: 3.12, 3.13, 3.14)
+- Container: `python:3.13-slim` (`Dockerfile`)
 
 **Package Manager:**
-- uv workspace (`pyproject.toml` `[tool.uv]` + `[tool.uv.workspace]`)
-- Lockfile: present (`uv.lock`)
+- uv (Astral) — workspace-aware, lockfile-based
+- Lockfile: `uv.lock` present and committed
+
+## Workspace Layout
+
+uv monorepo — root is a virtual package (`package = false`):
+
+| Package | Version | Path |
+|---|---|---|
+| `companies-house` | 0.2.1 | `packages/companies-house/` |
+| `companies_house_abm` | 0.4.1 | `packages/companies-house-abm/` |
+| `uk-data` | 0.1.0 | `packages/uk-data/` |
+| `companies_house_abm_rust` | 0.1.0 | `packages/rust-abm/` (not a uv member; maturin build) |
+
+Build backend for all Python packages: **hatchling**
 
 ## Frameworks
 
 **Core:**
-- Typer >=0.12.0 - CLI apps (`packages/companies-house/src/companies_house/cli.py`, `packages/companies-house-abm/src/companies_house_abm/cli.py`)
-- FastAPI >=0.115.0 - Economy simulator API/web app (`packages/companies-house-abm/src/companies_house_abm/webapp/app.py`)
-- Pydantic >=2.0.0 - Data models/validation (`packages/companies-house/src/companies_house/schema.py`, `packages/companies-house-abm/src/companies_house_abm/webapp/models.py`)
+- `polars >=1.38.1` — primary DataFrame/Parquet I/O across all packages
+- `pydantic >=2.0.0` — schema validation, API models, LLM extraction targets
+- `duckdb >=1.0.0` — local OLAP storage for filings and UK data
+- `fastapi >=0.115.0` — deprecated economy simulator webapp (`packages/companies-house-abm/src/companies_house_abm/webapp/app.py`)
+- `uvicorn[standard] >=0.30.0` — ASGI server for FastAPI app
+- `mesa >=3.0.0` — agent-based modelling framework
+- `typer >=0.12.0` — CLI for `companies-house`, `companies_house_abm`, and `uk-data` (`ukd`)
+- `marimo >=0.10.0` — interactive notebooks (runtime dep in `companies-house`)
 
-**Testing:**
-- pytest >=9.0.0 - Test runner (`pyproject.toml` `[dependency-groups].dev`, `[tool.pytest.ini_options]`)
-- pytest-cov >=7.0.0 - Coverage reporting (`pyproject.toml` `[dependency-groups].dev`, `Makefile` `test-cov` target)
+**Simulation / Science:**
+- `numpy >=1.26.0` — numerical computation
+- `scipy >=1.11.0` — statistical distribution fitting for ABM calibration
+- `networkx >=3.2` — graph structures for agent relationships
+- `matplotlib >=3.8.0` — simulation output plots
+- `pyzmq >=27.1.0` — ZeroMQ bindings (Mesa server comms)
+- `pyyaml >=6.0.0` — model config loading in `companies_house_abm`
 
-**Build/Dev:**
-- Ruff >=0.14.14 - Lint + formatting (`pyproject.toml` `[tool.ruff]`)
-- ty >=0.0.14 - Static type checking (`pyproject.toml` `[tool.ty.rules]`)
-- Hatch >=1.16.3 - Python matrix testing (`pyproject.toml` `[tool.hatch.envs.test]`)
-- MkDocs + Material - Documentation build (`mkdocs.yml`, `pyproject.toml` `[dependency-groups].docs`)
-- maturin >=1.0,<2.0 - Rust extension build backend (`packages/rust-abm/pyproject.toml`)
+**Rust Extension:**
+- `pyo3 >=0.23` — Python↔Rust bindings
+- `krabmaga 0.5.3` — Rust ABM framework (no default features)
+- `rand 0.8`, `rand_distr 0.4` — random number generation in Rust
 
-## Key Dependencies
+## Optional Dependencies
 
-**Critical:**
-- polars >=1.38.1 - Tabular transform and schema-backed data handling (`packages/companies-house/pyproject.toml`, `packages/companies-house/src/companies_house/storage/db.py`)
-- duckdb >=1.0.0 - Primary local OLAP storage engine (`packages/companies-house/pyproject.toml`, `packages/companies-house/src/companies_house/storage/db.py`)
-- pyarrow >=14.0.0 - Arrow/Parquet interoperability (`packages/companies-house/pyproject.toml`)
-- mesa >=3.0.0 - ABM engine dependency (`packages/companies-house-abm/pyproject.toml`)
-- numpy/scipy - Numeric modeling and calibration (`packages/companies-house-abm/pyproject.toml`, `packages/companies-house/pyproject.toml` optional `analysis`)
+| Extra | Package | Dep |
+|---|---|---|
+| `xbrl` | `companies-house` | `stream-read-xbrl >=0.1.1` |
+| `pdf` | `companies-house` | `kreuzberg >=0.5.0` |
+| `analysis` | `companies-house` | `numpy >=1.26.0`, `scipy >=1.11.0` |
+| `sdmx` | `uk-data` | `pandasdmx >=1.6.0,<2` |
 
-**Infrastructure:**
-- uvicorn[standard] >=0.30.0 - ASGI serving for FastAPI app (`packages/companies-house-abm/pyproject.toml`)
-- pyyaml >=6.0.0 - Model config loading (`packages/companies-house-abm/pyproject.toml`, `packages/companies-house-abm/src/companies_house_abm/abm/config.py`)
-- stream-read-xbrl >=0.1.1 (optional) - XBRL ingestion (`packages/companies-house/pyproject.toml`)
-- kreuzberg >=0.5.0 (optional) - PDF text extraction (`packages/companies-house/pyproject.toml`, `packages/companies-house/src/companies_house/ingest/pdf.py`)
-- litellm (dynamic import) - LLM extraction bridge in PDF pipeline (`packages/companies-house/src/companies_house/ingest/pdf.py`)
+## Testing
+
+- `pytest >=9.0.0` — test runner; config in root `pyproject.toml`
+- `pytest-cov >=7.0.0` — branch coverage; sources: `companies_house`, `companies_house_abm`, `uk_data`
+- Hatch matrix: Python 3.12, 3.13, 3.14 via `make test-matrix`
+- Coverage upload: Codecov via `CODECOV_TOKEN` secret
+
+## Build / Dev Tools
+
+| Tool | Purpose | Config |
+|---|---|---|
+| `ruff >=0.14.14` | Lint + format (line-length 88) | `[tool.ruff]` in root `pyproject.toml` |
+| `ty >=0.0.14` | Type checking (Astral) | `[tool.ty]` in root `pyproject.toml` |
+| `hatch >=1.16.3` | Cross-Python matrix testing | `[tool.hatch.envs.test]` |
+| `prek >=0.1.0` | Pre-commit hook runner | `.pre-commit-config.yaml` |
+| `pysentry-rs >=0.1.0` | Dependency vulnerability scan | `make pysentry` |
+| `maturin >=1.0,<2.0` | Rust extension build | `packages/rust-abm/pyproject.toml` |
+| `mkdocs >=1.6.0` + `mkdocs-material >=9.7.0` | Documentation | `mkdocs.yml`, `[dependency-groups.docs]` |
+| `git-cliff` | Changelog generation (Conventional Commits) | `cliff.toml` |
 
 ## Configuration
 
 **Environment:**
-- Runtime API auth is environment-driven via `COMPANIES_HOUSE_API_KEY` (`packages/companies-house/src/companies_house/api/client.py`)
-- `.env` file present for local environment configuration (`.env`)
-- CI secrets are injected by GitHub Actions (e.g., `CODECOV_TOKEN` in `.github/workflows/ci.yml`)
+- `.env` file present (contents not read)
+- Key env var: `COMPANIES_HOUSE_API_KEY` — HTTP Basic auth for Companies House REST API
+- Key env vars: `EPC_API_USER`, `EPC_API_PASS` — EPC Open Data Communities API (`packages/uk-data/src/uk_data/adapters/epc.py`)
 
 **Build:**
-- Workspace/tooling config: `pyproject.toml`
-- Package builds: `packages/companies-house/pyproject.toml`, `packages/companies-house-abm/pyproject.toml`, `packages/rust-abm/pyproject.toml`
-- Container image: `Dockerfile`
-- Rust extension profile/deps: `packages/rust-abm/Cargo.toml`
-- Automation commands: `Makefile`
+- Root config: `pyproject.toml` (workspace, tooling, dev/docs groups)
+- Package configs: `packages/*/pyproject.toml`
+- Container: `Dockerfile`
+- Rust: `packages/rust-abm/Cargo.toml`
+- Automation: `Makefile`
 
 ## Platform Requirements
 
 **Development:**
-- Python >=3.10 and uv (`README.md`, `pyproject.toml`)
-- Optional Rust toolchain + maturin for extension builds (`packages/rust-abm/pyproject.toml`, `Makefile` `build-rust`)
+- Python >=3.10, uv
+- Cargo + maturin (only for Rust extension)
+- Pre-commit hooks: `uv run prek install`
 
 **Production:**
-- CLI/service execution on Python 3.13-compatible environment (`Dockerfile`)
-- Optional ASGI hosting through Uvicorn/FastAPI path (`packages/companies-house-abm/src/companies_house_abm/webapp/app.py`)
+- Docker multi-stage build (Python 3.13-slim)
+- Entrypoint: `companies_house_abm` CLI
+- Default DuckDB storage: `~/.companies_house/data.duckdb`
 
 ---
 
-*Stack analysis: Sat Apr 25 2026*
+*Stack analysis: 2026-04-26*

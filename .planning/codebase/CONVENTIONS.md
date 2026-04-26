@@ -1,88 +1,150 @@
 # Coding Conventions
 
-**Analysis Date:** Sat Apr 25 2026
+**Analysis Date:** 2026-04-26
 
 ## Naming Patterns
 
 **Files:**
-- Use `snake_case.py` for modules in `packages/companies-house/src/companies_house/` and `packages/companies-house-abm/src/companies_house_abm/` (examples: `schema.py`, `model.py`, `firm_distributions.py`, `test_abm_model.py`).
-- Use `test_*.py` naming for tests in `tests/` (examples: `tests/test_ingest.py`, `tests/test_data_sources.py`, `tests/test_webapp.py`).
+- `snake_case.py` throughout — e.g., `firm_distributions.py`, `storage/db.py`
+- Private helpers prefixed with `_`: `_make_row`, `_find_default_parquet`, `_PL_COLS`
+- Test files: `test_<module_or_domain>.py` — e.g., `test_abm_agents.py`, `test_companies_house_storage.py`
 
-**Functions:**
-- Use `snake_case` for functions and methods in implementation and tests (examples: `load_config()` in `packages/companies-house-abm/src/companies_house_abm/abm/config.py`, `search_companies()` in `packages/companies-house/src/companies_house/api/search.py`, `_mock_stream_read_xbrl_zip()` in `tests/test_ingest.py`).
+**Classes:**
+- `PascalCase` — e.g., `CompaniesHouseDB`, `CompanyFiling`, `SimulationResult`, `BaseAgent`
+- Test classes: `Test<Subject>` — e.g., `TestFirm`, `TestPolarsSchema`, `TestCompaniesHouseDB`
 
-**Variables:**
-- Use `snake_case` for local variables and attributes (examples: `parsed_start_date` in `packages/companies-house/src/companies_house/cli.py`, `household_behavior` in `packages/companies-house-abm/src/companies_house_abm/abm/config.py`).
-- Use `UPPER_SNAKE_CASE` for constants (examples: `COMPANIES_HOUSE_SCHEMA` in `packages/companies-house/src/companies_house/schema.py`, `SCENARIOS` in `tests/test_abm_performance.py`).
+**Functions/Methods:**
+- `snake_case` — e.g., `ingest_from_zips`, `compute_income_tax`, `build_peer_group`
+- Private helpers: `_snake_case` prefix — e.g., `_ensure_schema`, `_make_filing_row`, `_load_sic_sector_ids`
 
-**Types:**
-- Use `PascalCase` for dataclasses/Pydantic models/classes (examples: `APIConfig` in `packages/companies-house/src/companies_house/api/client.py`, `ModelConfig` in `packages/companies-house-abm/src/companies_house_abm/abm/config.py`, `SimulationParams` in `packages/companies-house-abm/src/companies_house_abm/webapp/models.py`).
+**Variables/Constants:**
+- Module constants: `UPPER_SNAKE_CASE` — e.g., `COMPANIES_HOUSE_SCHEMA`, `DEDUP_COLUMNS`, `SIC_TO_SECTOR`
+- Module-level loggers: `logger = logging.getLogger(__name__)` (never `LOG` or `LOGGER`)
+- Private column lists: `_UPPER_SNAKE_CASE` — e.g., `_PL_COLS`, `_BS_COLS`
+
+**Type Annotations:**
+- `from __future__ import annotations` in every source and test file (81 occurrences in packages, 27 in tests)
+- Runtime-only imports inside `if TYPE_CHECKING:` blocks (33 occurrences in packages)
+- Full return type annotations on all public methods; `-> None` explicit on `__init__`
 
 ## Code Style
 
 **Formatting:**
-- Tool used: Ruff formatter configured at `pyproject.toml` (`[tool.ruff]` and `make format`/`make format-check` in `Makefile`).
-- Key settings: `line-length = 88`, `target-version = "py311"` in `pyproject.toml`.
+- Tool: **Ruff** (`ruff format`)
+- Line length: **88** characters
+- Config: `[tool.ruff]` in root `pyproject.toml`
 
 **Linting:**
-- Tool used: Ruff lint configured in `pyproject.toml` (`[tool.ruff.lint]`) and run via `make lint` in `Makefile`.
-- Key rules: enabled families include `E/W/F/I/B/C4/UP/ARG/SIM/TCH/PTH/ERA/RUF` in `pyproject.toml`; test-specific ignore `ARG001` for `tests/**/*.py` in `pyproject.toml`.
+- Tool: **Ruff** with rule sets: `E`, `W`, `F`, `I`, `B`, `C4`, `UP`, `ARG`, `SIM`, `TCH`, `PTH`, `ERA`, `RUF`
+- Per-file ignores:
+  - `tests/**/*.py` → `ARG001` (unused fixture args in test params)
+  - `packages/companies-house/src/companies_house/schema.py` → `TCH003`
+  - `packages/companies-house/src/companies_house/api/models.py` → `TCH003`
+  - `notebooks/**/*.py` → `B018`, `E501`
+
+**Type checker:** **ty** (Astral) — see `[tool.ty.rules]` in root `pyproject.toml`
 
 ## Import Organization
 
-**Order:**
-1. `__future__` imports first (examples: `from __future__ import annotations` in `packages/companies-house/src/companies_house/cli.py`, `tests/test_ingest.py`).
-2. Standard library imports next (examples: `datetime`, `pathlib`, `typing` in `packages/companies-house/src/companies_house/cli.py`).
-3. Third-party imports after stdlib (examples: `typer` in `packages/companies-house/src/companies_house/cli.py`, `pytest`/`polars` in `tests/test_ingest.py`).
-4. First-party imports last (examples: `from companies_house...` in `packages/companies-house/src/companies_house/cli.py`, `from companies_house_abm...` in `packages/companies-house-abm/src/companies_house_abm/abm/model.py`).
+**Order (enforced by Ruff/isort):**
+1. Standard library imports
+2. Third-party imports
+3. First-party imports (`companies_house`, `companies_house_abm`, `uk_data`)
 
-**Path Aliases:**
-- Not detected. Imports use package-qualified module paths rooted at `companies_house` and `companies_house_abm` (examples in `packages/companies-house/src/companies_house/storage/db.py` and `packages/companies-house-abm/src/companies_house_abm/webapp/app.py`).
+**Deferred imports:**
+- `if TYPE_CHECKING:` guards placed after all runtime imports for heavy/circular types
+- Example from `packages/companies-house/src/companies_house/ingest/xbrl.py`:
+  ```python
+  from __future__ import annotations
+  from typing import TYPE_CHECKING
+  if TYPE_CHECKING:
+      from pathlib import Path
+  ```
+
+**Path aliases:** `known-first-party = ["companies_house_abm", "companies_house", "uk_data"]`
+
+## Canonical Module-Level Structure
+
+1. Module docstring
+2. `from __future__ import annotations`
+3. Standard library imports
+4. Third-party imports
+5. First-party imports (TYPE_CHECKING-guarded for heavy types)
+6. `logger = logging.getLogger(__name__)`
+7. Private constants (`_UPPER_SNAKE_CASE`)
+8. Private helper functions (`_snake_case`)
+9. Public classes and functions
+
+## Docstrings
+
+**Format:** NumPy-style with `----------` separators for public API; single-line summary for private helpers.
+
+**Placement:** Module docstring on line 1 of every `.py` file; class docstring immediately after `class`; method docstring after `def`.
+
+**Example (from `packages/companies-house/src/companies_house/storage/db.py`):**
+```python
+def upsert(self, df: pl.DataFrame) -> int:
+    """Insert or update rows from a Polars DataFrame.
+
+    Parameters
+    ----------
+    df:
+        DataFrame conforming to ``COMPANIES_HOUSE_SCHEMA``.
+
+    Returns
+    -------
+    int
+        Number of rows upserted.
+    """
+```
 
 ## Error Handling
 
-**Patterns:**
-- CLI commands validate inputs and terminate with explicit `typer.Exit(code=...)` in `packages/companies-house/src/companies_house/cli.py`.
-- Network/client code retries transient failures and re-raises hard failures in `packages/companies-house/src/companies_house/api/client.py` and `packages/companies-house-abm/src/companies_house_abm/data_sources/_http.py`.
-- Transaction-like operations wrap critical sections in `try/except/finally` with rollback/cleanup in `packages/companies-house/src/companies_house/storage/db.py`.
+- Use `msg = "..."` then `raise SomeError(msg)` (consistent pattern codebase-wide)
+- `ValueError` for invalid arguments (e.g., unsupported tax year in HMRC functions)
+- Context managers (`with ... as db`) for DuckDB connections and resource management
+- Optional dependencies: `try/except ImportError` at module level; caller gets a clear `ImportError` at call-site
 
 ## Logging
 
-**Framework:**
-- Use `logging` module loggers (`logger = logging.getLogger(__name__)`) in `packages/companies-house/src/companies_house/api/client.py` and `packages/companies-house/src/companies_house/storage/db.py`.
+**Framework:** stdlib `logging`
 
-**Patterns:**
-- Prefer structured logger calls for operational events (`logger.info/warning/debug`) in `packages/companies-house/src/companies_house/api/client.py` and `packages/companies-house/src/companies_house/storage/db.py`.
-- CLI user-facing output uses `typer.echo(...)` instead of logger output in `packages/companies-house/src/companies_house/cli.py`.
+**Pattern:**
+```python
+logger = logging.getLogger(__name__)  # module-level, every file that logs
+logger.debug("Ensured filings table exists")  # diagnostic tracing
+```
+- `logger.debug` for tracing/diagnostic; `logger.info` for significant state changes
+- No f-strings in log calls; use `%`-style lazy formatting
 
-## Comments
+## Data Modelling (Three Patterns)
 
-**When to Comment:**
-- Use block comments to explain economic/calibration rationale and non-obvious thresholds (examples in `packages/companies-house-abm/src/companies_house_abm/abm/model.py` and `packages/companies-house-abm/src/companies_house_abm/abm/config.py`).
-- Use concise inline comments to clarify guards and fallback behavior (examples in `packages/companies-house/src/companies_house/api/client.py` and `packages/companies-house/src/companies_house/storage/db.py`).
+| Pattern | Use Case | Example |
+|---|---|---|
+| `@dataclass(frozen=True)` | Immutable value objects, config structs | `HmrcBand`, `NationalInsurance`, `ScenarioConfig` |
+| Pydantic `BaseModel` | API responses, LLM extraction, validation | `CompanyFiling`, `SimulationParams`, `Filing` |
+| `@dataclass` (mutable) | Registry, client config | `APIConfig`, `DataSource` |
 
-**JSDoc/TSDoc:**
-- Not applicable (Python codebase). Use docstrings instead in `packages/companies-house/src/companies_house/schema.py`, `packages/companies-house-abm/src/companies_house_abm/webapp/app.py`, and tests like `tests/test_xbrl_schema_integration.py`.
+**Pydantic config idiom:**
+```python
+model_config = ConfigDict(populate_by_name=True, extra="forbid")
+```
 
-## Function Design
+## Function / Module Design
 
-**Size:**
-- Keep functions/methods cohesive around a single concern; decompose large flows into private helpers (pattern in `packages/companies-house-abm/src/companies_house_abm/abm/model.py` with `_initial_employment()`, `_initial_housing()`, `_process_foreclosures()`).
+**Parameters:** Keyword-only args (`*`) used for optional modifier parameters on agent `__init__`:
+```python
+def __init__(self, agent_id: str | None = None, *, sector: str = "other_services", employees: int = 0) -> None:
+```
 
-**Parameters:**
-- Use type hints throughout and keyword-only arguments where clarity matters (examples: `request(..., *, base_url, accept, raw, retries)` in `packages/companies-house/src/companies_house/api/client.py`, `run(..., periods, collect_micro)` in `packages/companies-house-abm/src/companies_house_abm/abm/model.py`).
+**Exports / Barrel files:** `__init__.py` re-exports public surface; internal helpers stay in sub-modules.
 
-**Return Values:**
-- Return typed domain objects or data containers, not untyped tuples, for main APIs (examples: `ModelConfig` from `load_config()` in `packages/companies-house-abm/src/companies_house_abm/abm/config.py`, `pl.DataFrame` from `execute_query()` in `packages/companies-house/src/companies_house/storage/db.py`).
-
-## Module Design
-
-**Exports:**
-- Use package module boundaries by domain (`api`, `ingest`, `storage`, `analysis`, `abm`, `data_sources`, `webapp`) as seen under `packages/companies-house/src/companies_house/` and `packages/companies-house-abm/src/companies_house_abm/`.
-
-**Barrel Files:**
-- Minimal `__init__.py` barrels are used for package markers/exports (examples: `packages/companies-house/src/companies_house/__init__.py`, `packages/companies-house-abm/src/companies_house_abm/abm/__init__.py`); most modules are imported directly by full path.
+**Wildcard adapter shims:** `data_sources/*.py` files re-export from `uk_data.adapters.*` with `# noqa: F403`:
+```python
+# packages/companies-house-abm/src/companies_house_abm/data_sources/ons.py
+from uk_data.adapters.ons import *  # noqa: F403
+```
 
 ---
 
-*Convention analysis: Sat Apr 25 2026*
+*Convention analysis: 2026-04-26*

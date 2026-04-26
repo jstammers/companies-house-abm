@@ -17,7 +17,11 @@ from __future__ import annotations
 from companies_house_abm.abm.calibration import SweepSummary, parameter_sweep
 from companies_house_abm.abm.config import ModelConfig, load_config
 from companies_house_abm.abm.evaluation import EvaluationReport, evaluate_simulation
-from companies_house_abm.abm.model import Simulation, SimulationResult
+from companies_house_abm.abm.model import (
+    Simulation,
+    SimulationDataCollector,
+    SimulationResult,
+)
 from companies_house_abm.abm.sector_model import (
     SECTOR_PROFILES,
     SectorProfile,
@@ -30,6 +34,7 @@ __all__ = [
     "ModelConfig",
     "SectorProfile",
     "Simulation",
+    "SimulationDataCollector",
     "SimulationResult",
     "SweepSummary",
     "agents",

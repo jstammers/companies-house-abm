@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import yaml
+from mesa.model import Model
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -64,7 +65,10 @@ class TestSimulationResult:
 class TestSimulationInit:
     def test_default_init(self):
         sim = Simulation()
+        assert isinstance(sim, Model)
         assert sim.config is not None
+        assert hasattr(sim, "random")
+        assert hasattr(sim, "datacollector")
         assert sim.current_period == 0
         assert sim.firms == []
         assert sim.households == []
@@ -82,6 +86,9 @@ class TestSimulationInit:
         assert len(sim.firms) > 0
         assert len(sim.households) > 0
         assert len(sim.banks) > 0
+        assert len(sim.firm_agents) == len(sim.firms)
+        assert len(sim.household_agents) == len(sim.households)
+        assert len(sim.bank_agents) == len(sim.banks)
 
     def test_from_config_default(self):
         sim = Simulation.from_config()
@@ -120,13 +127,14 @@ class TestSimulationStep:
         sim.firms = sim.firms[:n_firms]
         sim.households = sim.households[:n_hh]
         sim.goods_market.set_agents(sim.firms, sim.households, sim.government)
-        sim.labor_market.set_agents(sim.firms, sim.households, sim._rng)
+        sim.labor_market.set_agents(sim.firms, sim.households, sim.rng)
         sim.credit_market.set_agents(sim.firms, sim.banks)
         return sim
 
     def test_single_step(self):
         sim = self._make_sim()
-        record = sim.step()
+        assert sim.step() is None
+        record = sim.latest_record
         assert isinstance(record, PeriodRecord)
         assert record.period == 1
         assert record.gdp >= 0
@@ -134,7 +142,8 @@ class TestSimulationStep:
     def test_multiple_steps(self):
         sim = self._make_sim()
         for i in range(5):
-            record = sim.step()
+            sim.step()
+            record = sim.latest_record
             assert record.period == i + 1
 
     def test_run(self):
@@ -156,10 +165,20 @@ class TestSimulationStep:
         # Run a few steps and check that policy rate is not static
         rates = []
         for _ in range(5):
-            record = sim.step()
+            sim.step()
+            record = sim.latest_record
             rates.append(record.policy_rate)
         # Rate should be set (may or may not change in 5 periods)
         assert all(r > 0 for r in rates)
+
+    def test_datacollector_collects_period_metrics(self):
+        sim = self._make_sim()
+        sim.run(periods=3)
+        frame = sim.datacollector.get_model_vars_dataframe()
+        assert list(frame["period"]) == [1, 2, 3]
+        assert "gdp" in frame.columns
+        assert "average_house_price" in frame.columns
+        assert len(frame) == 3
 
     def test_no_negative_gdp(self):
         sim = self._make_sim()
@@ -184,10 +203,10 @@ class TestHousingIntegration:
         sim.properties = sim.properties[:100]
         # Re-wire markets with trimmed populations
         sim.goods_market.set_agents(sim.firms, sim.households, sim.government)
-        sim.labor_market.set_agents(sim.firms, sim.households, sim._rng)
+        sim.labor_market.set_agents(sim.firms, sim.households, sim.rng)
         sim.credit_market.set_agents(sim.firms, sim.banks)
         sim.housing_market.set_agents(
-            sim.properties, sim.households, sim.banks, sim.mortgages, rng=sim._rng
+            sim.properties, sim.households, sim.banks, sim.mortgages, rng=sim.rng
         )
         return sim
 
@@ -207,7 +226,8 @@ class TestHousingIntegration:
 
     def test_step_returns_housing_stats(self):
         sim = self._make_sim()
-        record = sim.step()
+        sim.step()
+        record = sim.latest_record
         assert record.average_house_price > 0
         assert record.homeownership_rate >= 0
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-run_benchmark.py — Full ABM performance comparison: Python vs Rust.
+run_benchmark.py — Full ABM performance comparison: Mesa-backed Python vs Rust.
 
 Usage::
 
@@ -40,7 +40,7 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(
-        description="Run ABM Python vs Rust performance benchmarks",
+        description="Run ABM Mesa-backed Python vs Rust performance benchmarks",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )
@@ -54,7 +54,10 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    print(f"ABM Performance Benchmark: {args.periods} periods x {args.reps} reps")
+    print(
+        f"ABM Performance Benchmark (Mesa-backed Python): "
+        f"{args.periods} periods x {args.reps} reps"
+    )
     print(f"Scenarios: {len(SCENARIOS)} scaling points")
 
     rust_available = False

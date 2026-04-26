@@ -1,5 +1,8 @@
 """Tests for companies_house_abm."""
 
+import sys
+import types
+
 from typer.testing import CliRunner
 
 from companies_house_abm import __version__
@@ -38,3 +41,24 @@ def test_cli_hello_with_name() -> None:
     result = runner.invoke(app, ["hello", "Test"])
     assert result.exit_code == 0
     assert "Hello, Test!" in result.stdout
+
+
+def test_cli_serve_deprecated(monkeypatch) -> None:
+    """Test CLI serve command emits a deprecation notice."""
+    calls: list[tuple[str, dict[str, object]]] = []
+
+    def fake_run(target: str, **kwargs: object) -> None:
+        calls.append((target, kwargs))
+
+    monkeypatch.setitem(sys.modules, "uvicorn", types.SimpleNamespace(run=fake_run))
+
+    result = runner.invoke(app, ["serve", "--host", "127.0.0.1", "--port", "8123"])
+
+    assert result.exit_code == 0
+    assert "deprecated" in result.stdout.lower()
+    assert calls == [
+        (
+            "companies_house_abm.webapp.app:app",
+            {"host": "127.0.0.1", "port": 8123, "reload": False},
+        )
+    ]

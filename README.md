@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/jstammers/companies-house-abm/actions/workflows/ci.yml/badge.svg)](https://github.com/jstammers/companies-house-abm/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/jstammers/companies-house-abm/branch/main/graph/badge.svg)](https://codecov.io/gh/jstammers/companies-house-abm)
-[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![ty](https://img.shields.io/badge/type--checked-ty-blue?labelColor=orange)](https://github.com/astral-sh/ty)
@@ -101,12 +101,15 @@ companies_house_abm fetch-data --source ons --source boe
 # Fetch data and write a calibrated model config
 companies_house_abm fetch-data --calibrate --output ./calibrated/
 
-# Launch the economy simulator web application
+# Launch the deprecated FastAPI economy simulator web application
 companies_house_abm serve
 
 # Launch with custom host and port
 companies_house_abm serve --host 0.0.0.0 --port 8080
 ```
+
+The `serve` command remains available as a legacy interface, but it is now
+deprecated while the project transitions toward Mesa-native simulation tooling.
 
 ### ABM Usage
 

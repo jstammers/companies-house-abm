@@ -1,6 +1,7 @@
 """Command-line interface for companies_house_abm."""
 
 import datetime
+import warnings
 from pathlib import Path
 from typing import Annotated
 
@@ -928,7 +929,13 @@ def serve(
         False, "--reload", help="Enable auto-reload for development."
     ),
 ) -> None:
-    """Launch the economy simulator web application."""
+    """Launch the deprecated FastAPI economy simulator web application."""
+    message = (
+        "The FastAPI `serve` command is deprecated and will be removed in a future "
+        "release as the project moves toward Mesa-native simulation tooling."
+    )
+    warnings.warn(message, DeprecationWarning, stacklevel=2)
+    typer.echo(f"Deprecation warning: {message}")
     try:
         import uvicorn
     except ImportError:

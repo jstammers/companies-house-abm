@@ -181,12 +181,15 @@ for max_ltv in [0.75, 0.85, 0.95]:
 
 ### Web Application
 
-The economy simulator webapp includes housing parameters:
+The deprecated FastAPI economy simulator webapp includes housing parameters:
 
 ```bash
 uv run companies-house-abm serve
 # Open http://localhost:8000
 ```
+
+This UI remains available as a legacy interface, but it is deprecated while the
+project transitions toward Mesa-native tooling.
 
 Housing-specific parameters in the UI:
 

@@ -130,6 +130,35 @@ class TestUKDataClientGetSeries:
 
         assert calls == [{"concept": "gdp", "source": "ons", "limit": 7}]
 
+    def test_get_series_window_and_limit_together_forwarded(self) -> None:
+        client = UKDataClient()
+        calls: list[dict[str, object]] = []
+
+        class _ResolverStub:
+            def resolve_series(self, concept: str, **kwargs: object) -> object:
+                calls.append({"concept": concept, **kwargs})
+                return object()
+
+        client.resolver = _ResolverStub()  # type: ignore[assignment]
+
+        client.get_series(
+            "gdp",
+            source="ons",
+            start_date="2024-01-01",
+            end_date="2024-03-31",
+            limit=3,
+        )
+
+        assert calls == [
+            {
+                "concept": "gdp",
+                "source": "ons",
+                "limit": 3,
+                "start_date": "2024-01-01",
+                "end_date": "2024-03-31",
+            }
+        ]
+
 
 class TestCliGetSeriesCommand:
     def test_get_series_cmd_forwards_start_and_end_dates(self, monkeypatch) -> None:

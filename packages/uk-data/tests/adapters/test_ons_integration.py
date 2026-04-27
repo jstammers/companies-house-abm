@@ -115,3 +115,6 @@ class TestONSAdapterIntegration:
             ts = adapter.fetch_series(series_id)
             assert ts is not None, f"ONS series {series_id!r} returned None"
             assert ts.source == "ons"
+            assert ts.latest_value is not None, (
+                f"ONS series {series_id!r} returned null latest_value"
+            )

@@ -48,6 +48,22 @@ def get_series_cmd(
     limit: int | None = typer.Option(
         None, "--limit", "-n", help="Maximum number of observations to return."
     ),
+    start_date: str | None = typer.Option(
+        None,
+        "--start-date",
+        help=(
+            "Inclusive start date (ISO). Limit-only remains supported for "
+            "backward compatibility, but explicit date windows are preferred."
+        ),
+    ),
+    end_date: str | None = typer.Option(
+        None,
+        "--end-date",
+        help=(
+            "Inclusive end date (ISO). When used with --limit, filtering occurs "
+            "before limit slicing."
+        ),
+    ),
     data_path: Annotated[
         Path | None,
         typer.Option(
@@ -64,7 +80,13 @@ def get_series_cmd(
         None, "--output", "-o", help="Output format: 'json' or 'text' (default)."
     ),
 ) -> None:
-    """Fetch a canonical time series by concept name."""
+    """Fetch a canonical time series by concept name.
+
+    Migration semantics: limit-only calls are still supported for backward
+    compatibility; explicit ``--start-date``/``--end-date`` windows are the
+    preferred bounded API. When both window and limit are provided, filtering
+    occurs before limit slicing.
+    """
     client = UKDataClient()
     series_kwargs: dict[str, object] = {}
     # Only concepts backed by a local file require a filepath; e.g. land
@@ -72,6 +94,10 @@ def get_series_cmd(
     # concepts would just confuse their adapters.
     if data_path is not None:
         series_kwargs["filepath"] = str(data_path)
+    if isinstance(start_date, str) and start_date.strip():
+        series_kwargs["start_date"] = start_date
+    if isinstance(end_date, str) and end_date.strip():
+        series_kwargs["end_date"] = end_date
     ts = client.get_series(
         concept,
         source=source,

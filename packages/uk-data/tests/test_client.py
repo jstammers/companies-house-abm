@@ -86,6 +86,49 @@ class TestUKDataClientGetSeries:
         with pytest.raises(ValueError):
             client.get_series("gdp", source="hmrc")
 
+    def test_get_series_forwards_start_and_end_dates(self) -> None:
+        client = UKDataClient()
+        calls: list[dict[str, object]] = []
+
+        class _ResolverStub:
+            def resolve_series(self, concept: str, **kwargs: object) -> object:
+                calls.append({"concept": concept, **kwargs})
+                return object()
+
+        client.resolver = _ResolverStub()  # type: ignore[assignment]
+
+        client.get_series(
+            "gdp",
+            source="ons",
+            start_date="2024-01-01",
+            end_date="2024-03-31",
+        )
+
+        assert calls == [
+            {
+                "concept": "gdp",
+                "source": "ons",
+                "limit": 20,
+                "start_date": "2024-01-01",
+                "end_date": "2024-03-31",
+            }
+        ]
+
+    def test_get_series_limit_only_behavior_unchanged(self) -> None:
+        client = UKDataClient()
+        calls: list[dict[str, object]] = []
+
+        class _ResolverStub:
+            def resolve_series(self, concept: str, **kwargs: object) -> object:
+                calls.append({"concept": concept, **kwargs})
+                return object()
+
+        client.resolver = _ResolverStub()  # type: ignore[assignment]
+
+        client.get_series("gdp", source="ons", limit=7)
+
+        assert calls == [{"concept": "gdp", "source": "ons", "limit": 7}]
+
 
 class TestUKDataClientListEntities:
     def test_returns_list_of_entity_type_info(self) -> None:

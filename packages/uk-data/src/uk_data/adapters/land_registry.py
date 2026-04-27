@@ -22,7 +22,10 @@ import polars as pl
 
 from uk_data._http import _USER_AGENT, retry
 from uk_data.models import Event, point_timeseries, series_from_observations
-from uk_data.utils.timeseries import date_to_utc_datetime
+from uk_data.utils.timeseries import (
+    date_to_utc_datetime,
+    filter_observations_by_date_window,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -396,6 +399,8 @@ def fetch_uk_hpi_history(
     *,
     area_name: str = "United Kingdom",
     limit: int = 20,
+    start_date: str | date | datetime | None = None,
+    end_date: str | date | datetime | None = None,
 ):
     """Convert UK HPI rows for an area into a canonical time series."""
     lazy = clean_uk_hpi_data(load_uk_hpi_data(filepath))
@@ -416,13 +421,17 @@ def fetch_uk_hpi_history(
     filtered = lazy.filter(
         pl.col(area_column).str.to_lowercase() == area_name.lower()
     ).sort("date")
-    if limit >= 0:
-        filtered = filtered.tail(limit)
-
     observations = [
         {"date": row["date"].isoformat(), "value": row["average_price"]}
         for row in filtered.collect().to_dicts()
     ]
+    observations = filter_observations_by_date_window(
+        observations,
+        start_date=start_date,
+        end_date=end_date,
+    )
+    if limit >= 0:
+        observations = observations[-limit:]
     return series_from_observations(
         series_id="uk_hpi_monthly",
         name=f"UK HPI average price ({area_name})",
@@ -533,6 +542,8 @@ class LandRegistryAdapter:
                 filepath,
                 area_name=str(kwargs.get("area_name", "United Kingdom")),
                 limit=int(kwargs.get("limit", 20)),
+                start_date=kwargs.get("start_date"),
+                end_date=kwargs.get("end_date"),
             )
         msg = f"Unsupported Land Registry series: {series_id}"
         raise ValueError(msg)

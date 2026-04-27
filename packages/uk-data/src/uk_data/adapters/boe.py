@@ -30,7 +30,6 @@ from __future__ import annotations
 import logging
 
 from uk_data._http import get_text, retry
-from uk_data.adapters.base import BaseAdapter
 from uk_data.models import point_timeseries, series_from_observations
 
 logger = logging.getLogger(__name__)
@@ -269,7 +268,7 @@ def get_aggregate_capital_ratio() -> float:
     return _FALLBACK_CAPITAL_RATIO
 
 
-class BoEAdapter(BaseAdapter):
+class BoEAdapter:
     """Canonical adapter for Bank of England data."""
 
     def available_series(self) -> list[str]:
@@ -353,3 +352,24 @@ class BoEAdapter(BaseAdapter):
 
         msg = f"Unsupported Bank of England series: {series_id}"
         raise ValueError(msg)
+
+    def available_entity_types(self) -> list[str]:
+        """BoE adapter does not support entity lookup."""
+        return []
+
+    def available_event_types(self) -> list[str]:
+        """BoE adapter does not support event fetching."""
+        return []
+
+    def fetch_entity(self, entity_id: str, **kwargs: object) -> object:
+        """Not supported by BoE adapter."""
+        raise NotImplementedError
+
+    def fetch_events(
+        self,
+        entity_id: str | None = None,
+        event_type: str | None = None,
+        **kwargs: object,
+    ) -> list[object]:
+        """Not supported by BoE adapter."""
+        raise NotImplementedError

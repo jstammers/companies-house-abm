@@ -26,7 +26,6 @@ from functools import lru_cache
 from importlib import resources
 from typing import Any, ClassVar
 
-from uk_data.adapters.base import BaseAdapter
 from uk_data.models import point_timeseries
 
 
@@ -247,7 +246,7 @@ def effective_tax_wedge(
     }
 
 
-class HMRCAdapter(BaseAdapter):
+class HMRCAdapter:
     """Canonical adapter for static HMRC tax parameters.
 
     Series IDs embed the tax year, e.g. ``"corporation_tax_2024"``,
@@ -317,3 +316,24 @@ class HMRCAdapter(BaseAdapter):
             source_series_id=series_id,
             metadata={"source_quality": "static", "tax_year": tax_year},
         )
+
+    def available_entity_types(self) -> list[str]:
+        """HMRC adapter does not support entity lookup."""
+        return []
+
+    def available_event_types(self) -> list[str]:
+        """HMRC adapter does not support event fetching."""
+        return []
+
+    def fetch_entity(self, entity_id: str, **kwargs: object) -> object:
+        """Not supported by HMRC adapter."""
+        raise NotImplementedError
+
+    def fetch_events(
+        self,
+        entity_id: str | None = None,
+        event_type: str | None = None,
+        **kwargs: object,
+    ) -> list[object]:
+        """Not supported by HMRC adapter."""
+        raise NotImplementedError

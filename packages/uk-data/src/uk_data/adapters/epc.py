@@ -20,7 +20,6 @@ from zipfile import ZipFile
 import polars as pl
 
 from uk_data._http import _USER_AGENT
-from uk_data.adapters.base import BaseAdapter
 from uk_data.models import Event
 
 logger = logging.getLogger(__name__)
@@ -291,12 +290,20 @@ def fetch_epc_lodgement_events(
     return events
 
 
-class EPCAdapter(BaseAdapter):
+class EPCAdapter:
     """Canonical adapter for EPC certificate data."""
 
     def fetch_series(self, _series_id: str, **_kwargs: object):
         """EPC integration does not expose canonical series yet."""
         raise NotImplementedError("EPCAdapter currently supports event ingestion only.")
+
+    def available_series(self) -> list[str]:
+        """EPC adapter does not expose time series."""
+        return []
+
+    def available_entity_types(self) -> list[str]:
+        """EPC adapter does not support entity lookup."""
+        return []
 
     def available_event_types(self) -> list[str]:
         """Return the event types supported by this adapter."""
@@ -355,3 +362,7 @@ class EPCAdapter(BaseAdapter):
             postcode=str(postcode) if postcode else None,
             limit=int(kwargs.get("limit", 100)),
         )
+
+    def fetch_entity(self, entity_id: str, **kwargs: object) -> object:
+        """Not supported by EPC adapter."""
+        raise NotImplementedError

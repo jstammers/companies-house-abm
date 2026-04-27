@@ -27,7 +27,6 @@ import logging
 from typing import Any
 
 from uk_data._http import retry
-from uk_data.adapters.base import BaseAdapter
 from uk_data.adapters.ons_manifest import ONS_SERIES_IDS, ONS_SERIES_MANIFEST
 from uk_data.adapters.ons_provider import fetch_sdmx_series
 from uk_data.models import point_timeseries, series_from_observations
@@ -420,7 +419,7 @@ def fetch_rental_growth() -> float:
     return _FALLBACK_RENTAL_GROWTH
 
 
-class ONSAdapter(BaseAdapter):
+class ONSAdapter:
     """Canonical adapter for Office for National Statistics data."""
 
     def available_series(self) -> list[str]:
@@ -475,3 +474,24 @@ class ONSAdapter(BaseAdapter):
             geography=entry.geography,
             metadata={"source_quality": "fallback"},
         )
+
+    def available_entity_types(self) -> list[str]:
+        """ONS adapter does not support entity lookup."""
+        return []
+
+    def available_event_types(self) -> list[str]:
+        """ONS adapter does not support event fetching."""
+        return []
+
+    def fetch_entity(self, entity_id: str, **kwargs: object) -> object:
+        """Not supported by ONS adapter."""
+        raise NotImplementedError
+
+    def fetch_events(
+        self,
+        entity_id: str | None = None,
+        event_type: str | None = None,
+        **kwargs: object,
+    ) -> list[object]:
+        """Not supported by ONS adapter."""
+        raise NotImplementedError

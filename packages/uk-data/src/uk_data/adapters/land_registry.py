@@ -21,7 +21,6 @@ from typing import Any
 import polars as pl
 
 from uk_data._http import _USER_AGENT, retry
-from uk_data.adapters.base import BaseAdapter
 from uk_data.models import Event, point_timeseries, series_from_observations
 
 logger = logging.getLogger(__name__)
@@ -503,7 +502,7 @@ def _encode_query(query: str) -> str:
     return urllib.parse.quote(query.strip())
 
 
-class LandRegistryAdapter(BaseAdapter):
+class LandRegistryAdapter:
     """Canonical adapter for Land Registry house-price and transaction data."""
 
     def available_series(self) -> list[str]:
@@ -561,3 +560,11 @@ class LandRegistryAdapter(BaseAdapter):
             postcode=str(postcode) if postcode else None,
             limit=int(kwargs.get("limit", 100)),
         )
+
+    def available_entity_types(self) -> list[str]:
+        """Land Registry adapter does not support entity lookup."""
+        return []
+
+    def fetch_entity(self, entity_id: str, **kwargs: object) -> object:
+        """Not supported by Land Registry adapter."""
+        raise NotImplementedError

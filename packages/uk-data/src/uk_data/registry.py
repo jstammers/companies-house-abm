@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from uk_data.adapters.ons_manifest import ONS_CONCEPT_MAP
 
 if TYPE_CHECKING:
-    from uk_data.adapters.base import BaseAdapter
+    from uk_data.adapters.base import AdapterProtocol
     from uk_data.models import TimeSeries
 
 CONCEPT_REGISTRY: dict[str, dict[str, str | None]] = {
@@ -30,7 +30,7 @@ CONCEPT_REGISTRY: dict[str, dict[str, str | None]] = {
 class ConceptResolver:
     """Resolve canonical concepts to source-specific series identifiers."""
 
-    adapters: dict[str, BaseAdapter]
+    adapters: dict[str, AdapterProtocol]
     registry: dict[str, dict[str, str | None]] = field(
         default_factory=lambda: CONCEPT_REGISTRY.copy()
     )

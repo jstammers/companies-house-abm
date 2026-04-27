@@ -57,9 +57,9 @@ Goal: Replace implicit limit-only behavior with explicit date windows.
 **Plans:** 3 plans
 
 Plans:
-- [ ] 03-01-PLAN.md — Add shared date-window helpers and wire `start_date`/`end_date` through client/resolver
-- [ ] 03-02-PLAN.md — Apply inclusive date-window semantics across ONS/BoE/Land Registry adapters
-- [ ] 03-03-PLAN.md — Finalize limit migration/deprecation path in CLI/docs/tests
+- [x] 03-01-PLAN.md — Add shared date-window helpers and wire `start_date`/`end_date` through client/resolver
+- [x] 03-02-PLAN.md — Apply inclusive date-window semantics across ONS/BoE/Land Registry adapters
+- [x] 03-03-PLAN.md — Finalize limit migration/deprecation path in CLI/docs/tests
 
 Success criteria:
 1. Time-series APIs accept `start_date` and `end_date` parameters.

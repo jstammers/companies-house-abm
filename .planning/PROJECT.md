@@ -21,12 +21,16 @@ Give ABM and analytics callers a stable, explicit, date-bounded data interface t
 - [x] Canonical public data access exists in `uk-data` with multiple adapters and a `UKDataClient` facade.
 - [x] `companies_house_abm` consumes public data and already contains domain-level calibration/historical logic.
 - [x] Time-series retrieval is a core cross-package dependency and must remain backward compatible where reasonable.
+- [x] Support explicit `start_date` and `end_date` parameters for time-series interfaces. *(Validated in Phase 03: Date-Bounded Series)*
 
 ### Active
 
 - [ ] Split `uk-data` into a low-level generic adapter layer and a high-level utility layer.
-- [ ] Support explicit `start_date` and `end_date` parameters for time-series interfaces.
 - [ ] Move very high-level historical helper functions from `uk-data` back into `companies_house_abm`.
+
+## Current State
+
+Phase 03 complete — explicit date-window semantics are now implemented end-to-end across client, resolver, adapters, and CLI migration surface.
 
 ### Out of Scope
 
@@ -61,4 +65,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-27 after initialization*
+*Last updated: 2026-04-27 after Phase 03 completion*

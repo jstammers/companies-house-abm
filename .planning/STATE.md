@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: unknown
-last_updated: "2026-04-27T13:14:25.835Z"
+status: ready_to_plan
+last_updated: "2026-04-27T16:49:18.927Z"
 progress:
   total_phases: 4
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 9
   completed_plans: 3
-  percent: 33
+  percent: 50
 ---
 
 # State
@@ -18,7 +18,8 @@ progress:
 
 - Phase 01-layer-contracts: ✅ Complete (all 3 plans done).
 - Phase 02-utility-surface: ✅ Complete (all 3 plans done).
-- Phase 03-date-bounded-series: 🔜 Next — TS-01, TS-02, TS-03.
+- Phase 03-date-bounded-series: ✅ Complete (all 3 plans done).
+- Phase 04-historical-relocation: 🔜 Next — HIST-01, HIST-02.
 
 ## Active Milestone
 
@@ -26,8 +27,8 @@ progress:
 
 ## Current Position
 
-- Phase: 03-date-bounded-series (not yet planned)
-- Next action: discuss-phase 3 → plan-phase 3 → execute-phase 3
+- Phase: 04-historical-relocation (not yet planned)
+- Next action: discuss-phase 4 → plan-phase 4 → execute-phase 4
 
 ## Decisions
 
@@ -44,6 +45,10 @@ progress:
 | DuckDB in-memory DELETE+INSERT on composite key for upsert | 02-02 | Avoids full Parquet read-merge-write; clean semantics |
 | query_typed() with typed filters + raw sql= escape hatch | 02-03 | Usable without SQL knowledge; power users not blocked |
 | Utilities are standalone functions, not UKDataClient methods | 02-01 | Usable without client instantiation; simpler import surface |
+| Shared filter_observations_by_date_window utility enforces inclusive bounds and validation | 03-01 | Single source of truth for TS-02 semantics and threat mitigation |
+| Optional date kwargs are only forwarded when explicitly set | 03-01 | Preserves legacy limit-only behavior without adding None kwargs |
+| Adapters apply window filtering before limit slicing | 03-02 | Enforces TS-03 migration precedence consistently |
+| CLI exposes --start-date/--end-date with migration guidance | 03-03 | User-facing migration path from implicit limit-only behavior |
 
 ## Performance Metrics
 
@@ -55,11 +60,14 @@ progress:
 | 02-utility-surface | 01 | ~20 min | 4/4 | 7 |
 | 02-utility-surface | 02 | ~10 min | 1/1 | 1 |
 | 02-utility-surface | 03 | ~5 min | 1/1 | 1 |
+| 03-date-bounded-series | 01 | ~55 min | 2/2 | 5 |
+| 03-date-bounded-series | 02 | ~48 min | 2/2 | 6 |
+| 03-date-bounded-series | 03 | ~31 min | 2/2 | 3 |
 
 ## Notes
 
-- Pre-existing test failures in test_abm_evaluation.py, test_historical_simulation.py, test_companies_house_api.py — unrelated to adapter refactor.
-- All uk-data adapter/client/storage/utils tests pass.
-- ty exits 0 on new files; pre-existing epc.py/land_registry.py warnings unchanged.
+- Pre-existing broader-repo test failures remain out of scope; phase-specific uk-data checks passed.
+- Code review command unavailable in runtime (`gsd-code-review` not installed); treated as non-blocking.
+- Phase 03 verification passed with no human-verification gaps.
 
-**Planned Phase:** 3 (Date-Bounded Series) — 3 plans — 2026-04-27T13:14:25.828Z
+**Planned Phase:** 4 (Historical Relocation) — 2 requirements pending

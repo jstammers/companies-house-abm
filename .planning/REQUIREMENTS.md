@@ -15,9 +15,9 @@
 
 ### Time-Series API
 
-- [ ] **TS-01**: Caller can request time-series data with explicit `start_date` and `end_date` parameters.
-- [ ] **TS-02**: Date-range semantics are documented and consistently applied across utilities and adapters.
-- [ ] **TS-03**: Existing limit-based call paths have migration behavior defined (compatibility shim or explicit deprecation).
+- [x] **TS-01**: Caller can request time-series data with explicit `start_date` and `end_date` parameters.
+- [x] **TS-02**: Date-range semantics are documented and consistently applied across utilities and adapters.
+- [x] **TS-03**: Existing limit-based call paths have migration behavior defined (compatibility shim or explicit deprecation).
 
 ### Historical Ownership
 

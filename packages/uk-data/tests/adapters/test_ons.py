@@ -108,3 +108,38 @@ class TestONSAdapterFetchSeriesOffline:
         adapter = ONSAdapter()
         with pytest.raises(ValueError, match="Unsupported ONS series"):
             adapter.fetch_series("NOTREAL_SERIES_ID")
+
+    def test_sdmx_series_applies_inclusive_date_window(self) -> None:
+        observations = [
+            {"date": "2023-12-31", "value": "1.0"},
+            {"date": "2024-01-01", "value": "2.0"},
+            {"date": "2024-03-31", "value": "3.0"},
+            {"date": "2024-04-01", "value": "4.0"},
+        ]
+        with self._patch_ons_sdmx(observations):
+            adapter = ONSAdapter()
+            ts = adapter.fetch_series(
+                "ABMI",
+                start_date="2024-01-01",
+                end_date="2024-03-31",
+            )
+
+        assert ts.values.tolist() == pytest.approx([2.0, 3.0])
+
+    def test_sdmx_series_filters_before_limit(self) -> None:
+        observations = [
+            {"date": "2024-01-01", "value": "1.0"},
+            {"date": "2024-02-01", "value": "2.0"},
+            {"date": "2024-03-01", "value": "3.0"},
+            {"date": "2024-04-01", "value": "4.0"},
+        ]
+        with self._patch_ons_sdmx(observations):
+            adapter = ONSAdapter()
+            ts = adapter.fetch_series(
+                "ABMI",
+                start_date="2024-01-01",
+                end_date="2024-03-01",
+                limit=2,
+            )
+
+        assert ts.values.tolist() == pytest.approx([2.0, 3.0])

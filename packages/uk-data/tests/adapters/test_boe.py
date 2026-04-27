@@ -90,3 +90,42 @@ class TestBoEAdapterFetchSeries:
             adapter = BoEAdapter()
             ts = adapter.fetch_series("IUMABEDR")
         assert ts.latest_value == pytest.approx(0.0475)
+
+    def test_bank_rate_applies_inclusive_date_window(self) -> None:
+        with patch(
+            "uk_data.adapters.boe.fetch_bank_rate",
+            return_value=[
+                {"date": "31 Dec 2023", "value": "5.50"},
+                {"date": "01 Jan 2024", "value": "5.25"},
+                {"date": "31 Mar 2024", "value": "5.00"},
+                {"date": "01 Apr 2024", "value": "4.75"},
+            ],
+        ):
+            adapter = BoEAdapter()
+            ts = adapter.fetch_series(
+                "IUMABEDR",
+                start_date="2024-01-01",
+                end_date="2024-03-31",
+            )
+
+        assert ts.values.tolist() == pytest.approx([0.0525, 0.05])
+
+    def test_bank_rate_filters_before_limit(self) -> None:
+        with patch(
+            "uk_data.adapters.boe.fetch_bank_rate",
+            return_value=[
+                {"date": "01 Jan 2024", "value": "5.50"},
+                {"date": "01 Feb 2024", "value": "5.25"},
+                {"date": "01 Mar 2024", "value": "5.00"},
+                {"date": "01 Apr 2024", "value": "4.75"},
+            ],
+        ):
+            adapter = BoEAdapter()
+            ts = adapter.fetch_series(
+                "IUMABEDR",
+                start_date="2024-01-01",
+                end_date="2024-03-31",
+                limit=2,
+            )
+
+        assert ts.values.tolist() == pytest.approx([0.0525, 0.05])

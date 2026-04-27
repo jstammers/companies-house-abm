@@ -4,8 +4,8 @@
 
 ### Adapter Layer
 
-- [ ] **ADAPT-01**: Developer can use a low-level adapter interface in `uk-data` that is source-agnostic and focused on fetch/translate primitives.
-- [ ] **ADAPT-02**: Developer can add a new source adapter without modifying high-level utility business logic.
+- [x] **ADAPT-01**: Developer can use a low-level adapter interface in `uk-data` that is source-agnostic and focused on fetch/translate primitives.
+- [x] **ADAPT-02**: Developer can add a new source adapter without modifying high-level utility business logic.
 
 ### Utility Layer
 

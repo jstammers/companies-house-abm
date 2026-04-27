@@ -182,58 +182,6 @@ _SERIES_METADATA: dict[str, dict[str, str]] = {
     },
 }
 
-_SERIES_METADATA: dict[str, dict[str, str]] = {
-    "ABMI": {
-        "concept": "gdp",
-        "name": "UK GDP at market prices",
-        "frequency": "Q",
-        "units": "GBP_M",
-        "seasonal_adjustment": "SA",
-    },
-    "RPHQ": {
-        "concept": "household_income",
-        "name": "UK household disposable income",
-        "frequency": "Q",
-        "units": "GBP_M",
-        "seasonal_adjustment": "SA",
-    },
-    "NRJS": {
-        "concept": "savings_ratio",
-        "name": "UK household savings ratio",
-        "frequency": "Q",
-        "units": "%",
-        "seasonal_adjustment": "SA",
-    },
-    "MGSX": {
-        "concept": "unemployment",
-        "name": "UK unemployment rate",
-        "frequency": "M",
-        "units": "%",
-        "seasonal_adjustment": "SA",
-    },
-    "KAB9": {
-        "concept": "average_earnings",
-        "name": "Average weekly earnings",
-        "frequency": "M",
-        "units": "GBP",
-        "seasonal_adjustment": "SA",
-    },
-    "HP7A": {
-        "concept": "affordability",
-        "name": "House price affordability ratio",
-        "frequency": "A",
-        "units": "ratio",
-        "seasonal_adjustment": "NSA",
-    },
-    "D7RA": {
-        "concept": "rental_growth",
-        "name": "Private rental growth",
-        "frequency": "M",
-        "units": "fraction",
-        "seasonal_adjustment": "NSA",
-    },
-}
-
 
 def _normalize_period_bound(value: object) -> str | None:
     if value is None:

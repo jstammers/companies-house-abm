@@ -1,3 +1,5 @@
+# HistoricalAdapter has been relocated to uk_data.workflows.historical
+
 """Historical quarterly time-series data fetchers for UK housing simulation.
 
 Provides quarterly-aligned data from 2013Q1 to 2024Q4 for driving a
@@ -32,14 +34,12 @@ from importlib import resources
 from typing import Any
 
 from uk_data._http import get_json, get_text, retry
-from uk_data.adapters.base import BaseAdapter
 from uk_data.adapters.boe import (
     _BANK_RATE_SERIES,
     _HOUSEHOLD_LENDING_SERIES,
     _build_iadb_url,
     _parse_iadb_csv,
 )
-from uk_data.models import series_from_observations
 
 logger = logging.getLogger(__name__)
 
@@ -365,33 +365,3 @@ def fetch_all_historical(
 ) -> dict[str, list[dict[str, Any]]]:
     """Fetch all historical time series for the simulation window."""
     return {key: _observations(key, start, end)[0] for key in _REGISTRY}
-
-
-class HistoricalAdapter(BaseAdapter):
-    """Canonical adapter for historical quarterly housing simulation data."""
-
-    def available_series(self) -> list[str]:
-        return list(_HISTORICAL_SERIES_IDS)
-
-    def fetch_series(self, series_id: str, **kwargs: object):
-        if series_id not in _REGISTRY:
-            msg = f"Unsupported historical series: {series_id}"
-            raise ValueError(msg)
-        concept = str(kwargs.get("concept", series_id.lower()))
-        start = str(kwargs.get("start", "2013Q1"))
-        end = str(kwargs.get("end", "2024Q4"))
-        name, units, _ = _REGISTRY[series_id]
-        observations, quality = _observations(series_id, start, end)
-        return series_from_observations(
-            series_id=concept,
-            name=name,
-            frequency="Q",
-            units=units,
-            seasonal_adjustment="NSA",
-            geography="UK",
-            observations=observations,
-            source="historical",
-            source_series_id=series_id,
-            date_key="quarter",
-            metadata={"source_quality": quality},
-        )

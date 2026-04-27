@@ -9,11 +9,12 @@ longer re-exported here — they are implementation details of the ABM
 calibration layer, not part of the canonical client API.
 """
 
+# HistoricalAdapter relocated to uk_data.workflows.historical (not a low-level adapter)
+
 from uk_data.adapters.base import AdapterProtocol, BaseAdapter
 from uk_data.adapters.boe import BoEAdapter
 from uk_data.adapters.companies_house import CompaniesHouseAdapter
 from uk_data.adapters.epc import EPCAdapter
-from uk_data.adapters.historical import HistoricalAdapter
 from uk_data.adapters.hmrc import HMRCAdapter
 from uk_data.adapters.land_registry import LandRegistryAdapter
 from uk_data.adapters.ons import ONSAdapter
@@ -25,7 +26,6 @@ __all__ = [
     "CompaniesHouseAdapter",
     "EPCAdapter",
     "HMRCAdapter",
-    "HistoricalAdapter",
     "LandRegistryAdapter",
     "ONSAdapter",
 ]

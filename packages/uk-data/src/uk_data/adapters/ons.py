@@ -521,6 +521,7 @@ class ONSAdapter:
         offset: int = 0,
         dataset_type: str | None = None,
     ) -> list[ONSDatasetInfo]:
+        # ONS dataset catalog endpoint contract: GET /datasets
         cache_key = (limit, offset, dataset_type)
         cached = self._datasets_cache.get(cache_key)
         if cached is not None:

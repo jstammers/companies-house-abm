@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+from uk_data.adapters.base import AdapterProtocol
 from uk_data.adapters.boe import BoEAdapter
 from uk_data.adapters.companies_house import CompaniesHouseAdapter
 from uk_data.adapters.epc import EPCAdapter
@@ -109,7 +110,7 @@ class UKDataClient:
         return [
             EntityTypeInfo(source=name, entity_types=adapter.available_entity_types())
             for name, adapter in self.adapters.items()
-            if adapter.available_entity_types()
+            if isinstance(adapter, AdapterProtocol) and adapter.available_entity_types()
         ]
 
     def list_events(self) -> list[EventTypeInfo]:
@@ -128,7 +129,7 @@ class UKDataClient:
         return [
             EventTypeInfo(source=name, event_types=adapter.available_event_types())
             for name, adapter in self.adapters.items()
-            if adapter.available_event_types()
+            if isinstance(adapter, AdapterProtocol) and adapter.available_event_types()
         ]
 
 

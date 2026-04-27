@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: ready_to_plan
-last_updated: "2026-04-27T16:49:18.927Z"
+status: unknown
+last_updated: "2026-04-27T19:55:49.139Z"
 progress:
-  total_phases: 4
+  total_phases: 5
   completed_phases: 2
-  total_plans: 9
-  completed_plans: 3
-  percent: 50
+  total_plans: 11
+  completed_plans: 6
+  percent: 55
 ---
 
 # State
@@ -70,4 +70,10 @@ progress:
 - Code review command unavailable in runtime (`gsd-code-review` not installed); treated as non-blocking.
 - Phase 03 verification passed with no human-verification gaps.
 
-**Planned Phase:** 4 (Historical Relocation) — 2 requirements pending
+## Accumulated Context
+
+### Roadmap Evolution
+
+- Phase 03.1 inserted after Phase 3: ONS dataset API migration: use dataset/edition/version/dimension/observation endpoints instead of legacy retrieval paths (URGENT)
+
+**Planned Phase:** 03.1 (ons-dataset-api-migration-use-dataset-edition-version-dimens) — 2 plans — 2026-04-27T19:55:49.133Z

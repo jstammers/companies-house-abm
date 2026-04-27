@@ -66,6 +66,17 @@ Success criteria:
 2. Date inclusion semantics are documented and validated.
 3. Legacy limit behavior has a migration/deprecation path and test coverage.
 
+### Phase 03.1: ONS dataset API migration: use dataset/edition/version/dimension/observation endpoints instead of legacy retrieval paths (INSERTED)
+
+**Goal:** Migrate ONS manifest-backed retrieval to dataset/edition/version/dimension/observation endpoints while preserving existing adapter and client semantics.
+**Requirements**: TBD
+**Depends on:** Phase 3
+**Plans:** 2 plans
+
+Plans:
+- [ ] 03.1-01-PLAN.md — Define manifest/provider endpoint contract for dataset observation retrieval and migrate provider transport path
+- [ ] 03.1-02-PLAN.md — Rewire ONS adapter to migrated provider path and lock behavior with offline/live regression tests
+
 ### Phase 4: Historical Relocation
 
 Goal: Move very high-level historical functions back into `companies_house_abm` and stabilize integration.

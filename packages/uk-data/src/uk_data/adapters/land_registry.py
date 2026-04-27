@@ -38,7 +38,7 @@ _SPARQL_ENDPOINT = "https://landregistry.data.gov.uk/landregistry/query"
 # ---------------------------------------------------------------------------
 
 _PRICE_PAID_BASE_URL = (
-    "http://prod.publicdata.landregistry.gov.uk.s3-website-eu-west-1.amazonaws.com"
+    "https://prod.publicdata.landregistry.gov.uk.s3-website-eu-west-1.amazonaws.com"
 )
 _PRICE_PAID_COMPLETE_CSV_URL = f"{_PRICE_PAID_BASE_URL}/pp-complete.csv"
 _PRICE_PAID_YEARLY_CSV_URL = f"{_PRICE_PAID_BASE_URL}/pp-{{year}}.csv"

@@ -49,7 +49,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 _BULK_URL_TEMPLATE = (
-    "http://download.companieshouse.gov.uk/"
+    "https://download.companieshouse.gov.uk/"
     "BasicCompanyDataAsOneFile-{year:04d}-{month:02d}-01.zip"
 )
 

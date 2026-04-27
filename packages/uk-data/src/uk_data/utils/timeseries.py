@@ -73,6 +73,85 @@ def date_to_utc_datetime(value: date | datetime) -> datetime:
     return datetime.combine(value, time.min, tzinfo=UTC)
 
 
+def _coerce_window_bound(
+    value: str | date | datetime | None,
+    *,
+    field_name: str,
+) -> np.datetime64 | None:
+    """Coerce a date-window bound to ``np.datetime64``.
+
+    Raises ``ValueError`` with ``field_name`` context when coercion fails.
+    """
+    if value is None:
+        return None
+
+    if isinstance(value, str):
+        normalized = value.strip()
+        if not normalized:
+            return None
+    elif isinstance(value, datetime):
+        normalized = value.astimezone(UTC).replace(tzinfo=None).isoformat()
+    elif isinstance(value, date):
+        normalized = value.isoformat()
+    else:
+        msg = f"Invalid {field_name}: expected str, date, datetime, or None"
+        raise ValueError(msg)
+
+    parsed = _parse_timestamp(normalized)
+    if np.isnat(parsed):
+        msg = f"Invalid {field_name}: {value!r}"
+        raise ValueError(msg)
+    return parsed
+
+
+def filter_observations_by_date_window(
+    observations: list[dict[str, Any]],
+    *,
+    start_date: str | date | datetime | None = None,
+    end_date: str | date | datetime | None = None,
+    date_key: str = "date",
+) -> list[dict[str, Any]]:
+    """Filter observations by inclusive date window.
+
+    The window semantics are inclusive: ``start_date <= observation_date <= end_date``.
+    Observations with missing/invalid dates are excluded from the filtered result.
+    """
+    start = _coerce_window_bound(start_date, field_name="start_date")
+    end = _coerce_window_bound(end_date, field_name="end_date")
+
+    if start is not None and end is not None and start > end:
+        msg = "Invalid date window: start_date must be <= end_date"
+        raise ValueError(msg)
+
+    if start is None and end is None:
+        return list(observations)
+
+    filtered: list[dict[str, Any]] = []
+    for observation in observations:
+        raw_date = observation.get(date_key)
+        if raw_date in (None, ""):
+            continue
+
+        if isinstance(raw_date, datetime):
+            obs_normalized = raw_date.astimezone(UTC).replace(tzinfo=None).isoformat()
+        elif isinstance(raw_date, date):
+            obs_normalized = raw_date.isoformat()
+        else:
+            obs_normalized = str(raw_date)
+
+        parsed = _parse_timestamp(obs_normalized)
+        if np.isnat(parsed):
+            continue
+
+        if start is not None and parsed < start:
+            continue
+        if end is not None and parsed > end:
+            continue
+        filtered.append(observation)
+
+    return filtered
+
+
 def series_from_observations(
     *,
     series_id: str,

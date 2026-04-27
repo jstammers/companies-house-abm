@@ -17,6 +17,7 @@ from uk_data.utils.http import (
     get_bytes,
     get_json,
     get_text,
+    request_bytes,
     retry,
 )
 
@@ -33,5 +34,6 @@ __all__ = [
     "get_bytes",
     "get_json",
     "get_text",
+    "request_bytes",
     "retry",
 ]

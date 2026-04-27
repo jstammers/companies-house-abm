@@ -7,10 +7,10 @@ import logging
 import os
 import threading
 import time
-import urllib.error
-import urllib.request
 from dataclasses import dataclass, field
 from typing import Any
+
+import httpx
 
 from uk_data.utils.http import encode_basic_auth
 
@@ -105,30 +105,33 @@ class CompaniesHouseClient:
 
         for attempt in range(retries + 1):
             self._rate_limit()
-            req = urllib.request.Request(
-                url,
-                headers={
-                    "Authorization": self._auth_header(),
-                    "Accept": accept,
-                    "User-Agent": self.config.user_agent,
-                },
-            )
             try:
-                with urllib.request.urlopen(req, timeout=self.config.timeout) as resp:
-                    data = resp.read()
-                    if raw:
-                        return data
-                    return json.loads(data.decode("utf-8"))
-            except urllib.error.HTTPError as exc:
-                if exc.code == 429:
+                response = httpx.get(
+                    url,
+                    headers={
+                        "Authorization": self._auth_header(),
+                        "Accept": accept,
+                        "User-Agent": self.config.user_agent,
+                    },
+                    timeout=self.config.timeout,
+                    follow_redirects=True,
+                )
+                response.raise_for_status()
+                data = response.content
+                if raw:
+                    return data
+                return json.loads(data.decode("utf-8"))
+            except httpx.HTTPStatusError as exc:
+                status_code = exc.response.status_code
+                if status_code == 429:
                     logger.warning("Rate limited (429), backing off %.1fs", delay)
                     time.sleep(delay)
                     delay *= 2
                     last_exc = exc
-                elif exc.code >= 500:
+                elif status_code >= 500:
                     logger.warning(
                         "Server error %d on %s, retry %d/%d",
-                        exc.code,
+                        status_code,
                         path,
                         attempt + 1,
                         retries,
@@ -138,7 +141,7 @@ class CompaniesHouseClient:
                     last_exc = exc
                 else:
                     raise
-            except (urllib.error.URLError, TimeoutError) as exc:
+            except (httpx.RequestError, TimeoutError) as exc:
                 if attempt < retries:
                     logger.warning(
                         "Request failed: %s, retry %d/%d",

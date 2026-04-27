@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import base64
 import json
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
+
+import httpx
 
 from uk_data.api.client import APIConfig, CompaniesHouseClient
 from uk_data.api.filings import (
@@ -64,26 +66,28 @@ class TestClient:
     def test_request_json(self):
         config = APIConfig(api_key="test")
         client = CompaniesHouseClient(config=config)
-        mock_response = MagicMock()
-        mock_response.read.return_value = json.dumps(
-            {"items": [], "total_results": 0}
-        ).encode()
-        mock_response.__enter__ = MagicMock(return_value=mock_response)
-        mock_response.__exit__ = MagicMock(return_value=False)
+        request = httpx.Request("GET", "https://example.com/test")
+        mock_response = httpx.Response(
+            200,
+            content=json.dumps({"items": [], "total_results": 0}).encode(),
+            request=request,
+        )
 
-        with patch("urllib.request.urlopen", return_value=mock_response):
+        with patch("uk_data.api.client.httpx.get", return_value=mock_response):
             result = client.request("/test")
             assert result == {"items": [], "total_results": 0}
 
     def test_request_raw(self):
         config = APIConfig(api_key="test")
         client = CompaniesHouseClient(config=config)
-        mock_response = MagicMock()
-        mock_response.read.return_value = b"%PDF-1.4 fake pdf content"
-        mock_response.__enter__ = MagicMock(return_value=mock_response)
-        mock_response.__exit__ = MagicMock(return_value=False)
+        request = httpx.Request("GET", "https://example.com/doc")
+        mock_response = httpx.Response(
+            200,
+            content=b"%PDF-1.4 fake pdf content",
+            request=request,
+        )
 
-        with patch("urllib.request.urlopen", return_value=mock_response):
+        with patch("uk_data.api.client.httpx.get", return_value=mock_response):
             result = client.request("/doc", raw=True)
             assert result == b"%PDF-1.4 fake pdf content"
 
@@ -93,23 +97,25 @@ class TestSearch:
         config = APIConfig(api_key="test")
         client = CompaniesHouseClient(config=config)
 
-        mock_response = MagicMock()
-        mock_response.read.return_value = json.dumps(
-            {
-                "items": [
-                    {
-                        "company_number": "01873499",
-                        "title": "EXEL COMPUTER SYSTEMS PLC",
-                        "company_status": "active",
-                    }
-                ],
-                "total_results": 1,
-            }
-        ).encode()
-        mock_response.__enter__ = MagicMock(return_value=mock_response)
-        mock_response.__exit__ = MagicMock(return_value=False)
+        request = httpx.Request("GET", "https://example.com/search")
+        mock_response = httpx.Response(
+            200,
+            content=json.dumps(
+                {
+                    "items": [
+                        {
+                            "company_number": "01873499",
+                            "title": "EXEL COMPUTER SYSTEMS PLC",
+                            "company_status": "active",
+                        }
+                    ],
+                    "total_results": 1,
+                }
+            ).encode(),
+            request=request,
+        )
 
-        with patch("urllib.request.urlopen", return_value=mock_response):
+        with patch("uk_data.api.client.httpx.get", return_value=mock_response):
             results = search_companies(client, "Exel")
             assert len(results) == 1
             assert results[0].company_number == "01873499"
@@ -117,11 +123,12 @@ class TestSearch:
 
 class TestFilings:
     def _mock_response(self, data):
-        mock = MagicMock()
-        mock.read.return_value = json.dumps(data).encode()
-        mock.__enter__ = MagicMock(return_value=mock)
-        mock.__exit__ = MagicMock(return_value=False)
-        return mock
+        request = httpx.Request("GET", "https://example.com/filings")
+        return httpx.Response(
+            200,
+            content=json.dumps(data).encode(),
+            request=request,
+        )
 
     def test_get_filing_history(self):
         config = APIConfig(api_key="test")
@@ -142,7 +149,7 @@ class TestFilings:
             }
         )
 
-        with patch("urllib.request.urlopen", return_value=resp):
+        with patch("uk_data.api.client.httpx.get", return_value=resp):
             filings = get_filing_history(client, "01873499")
             assert len(filings) == 1
             assert filings[0].category == "accounts"
@@ -164,7 +171,7 @@ class TestFilings:
             }
         )
 
-        with patch("urllib.request.urlopen", return_value=resp):
+        with patch("uk_data.api.client.httpx.get", return_value=resp):
             filings = get_account_filings(client, "01873499")
             assert len(filings) == 1
 
@@ -172,11 +179,9 @@ class TestFilings:
         config = APIConfig(api_key="test")
         client = CompaniesHouseClient(config=config)
 
-        mock_resp = MagicMock()
-        mock_resp.read.return_value = b"%PDF-content"
-        mock_resp.__enter__ = MagicMock(return_value=mock_resp)
-        mock_resp.__exit__ = MagicMock(return_value=False)
+        request = httpx.Request("GET", "https://example.com/document")
+        mock_resp = httpx.Response(200, content=b"%PDF-content", request=request)
 
-        with patch("urllib.request.urlopen", return_value=mock_resp):
+        with patch("uk_data.api.client.httpx.get", return_value=mock_resp):
             data = download_document(client, "doc123")
             assert data == b"%PDF-content"

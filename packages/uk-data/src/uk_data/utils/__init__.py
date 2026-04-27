@@ -18,6 +18,7 @@ from uk_data.utils.http import (
     get_bytes,
     get_json,
     get_text,
+    request_bytes,
     retry,
 )
 from uk_data.utils.timeseries import (
@@ -35,6 +36,7 @@ __all__ = [
     "get_json",
     "get_text",
     "point_timeseries",
+    "request_bytes",
     "retry",
     "series_from_observations",
 ]

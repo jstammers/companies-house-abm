@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, date, datetime
-from typing import Any
 from unittest.mock import MagicMock, patch
 
+import httpx
 import numpy as np
 import pytest
 
@@ -49,14 +49,11 @@ class TestEncodeBasicAuth:
         assert isinstance(encode_basic_auth("u", "p"), str)
 
 
-def _fake_urlopen(url_or_req: Any, *, timeout: int = 30) -> Any:  # noqa: ARG001
-    """Shared fake urlopen that returns a minimal HTTP-like response."""
-    body = json.dumps({"key": "value"}).encode()
-    mock = MagicMock()
-    mock.__enter__ = MagicMock(return_value=mock)
-    mock.__exit__ = MagicMock(return_value=False)
-    mock.read.return_value = body
-    return mock
+def _make_response(
+    *, content: bytes, url: str = "http://example.com"
+) -> httpx.Response:
+    request = httpx.Request("GET", url)
+    return httpx.Response(200, content=content, request=request)
 
 
 class TestGetJson:
@@ -66,30 +63,26 @@ class TestGetJson:
     def test_returns_parsed_json(self) -> None:
         payload = {"answer": 42}
 
-        def fake_open(req: Any, timeout: int = 30) -> Any:  # noqa: ARG001
-            mock = MagicMock()
-            mock.__enter__ = MagicMock(return_value=mock)
-            mock.__exit__ = MagicMock(return_value=False)
-            mock.read.return_value = json.dumps(payload).encode()
-            return mock
+        client = MagicMock()
+        client.get.return_value = _make_response(content=json.dumps(payload).encode())
 
-        with patch("uk_data.utils.http.urllib.request.urlopen", fake_open):
+        with patch("uk_data.utils.http._get_client", return_value=client):
             result = get_json("http://example.com/data")
         assert result == payload
 
     def test_caches_response(self) -> None:
         call_count = 0
 
-        def fake_open(req: Any, timeout: int = 30) -> Any:  # noqa: ARG001
+        client = MagicMock()
+
+        def _get(_url: str) -> httpx.Response:
             nonlocal call_count
             call_count += 1
-            mock = MagicMock()
-            mock.__enter__ = MagicMock(return_value=mock)
-            mock.__exit__ = MagicMock(return_value=False)
-            mock.read.return_value = b'{"x": 1}'
-            return mock
+            return _make_response(content=b'{"x": 1}')
 
-        with patch("uk_data.utils.http.urllib.request.urlopen", fake_open):
+        client.get.side_effect = _get
+
+        with patch("uk_data.utils.http._get_client", return_value=client):
             get_json("http://example.com/cached")
             get_json("http://example.com/cached")
 
@@ -101,14 +94,10 @@ class TestGetText:
         clear_cache()
 
     def test_returns_text(self) -> None:
-        def fake_open(req: Any, timeout: int = 30) -> Any:  # noqa: ARG001
-            mock = MagicMock()
-            mock.__enter__ = MagicMock(return_value=mock)
-            mock.__exit__ = MagicMock(return_value=False)
-            mock.read.return_value = b"hello world"
-            return mock
+        client = MagicMock()
+        client.get.return_value = _make_response(content=b"hello world")
 
-        with patch("uk_data.utils.http.urllib.request.urlopen", fake_open):
+        with patch("uk_data.utils.http._get_client", return_value=client):
             result = get_text("http://example.com/text")
         assert result == "hello world"
 
@@ -117,14 +106,10 @@ class TestGetBytes:
     def test_returns_bytes(self) -> None:
         raw = b"\x00\x01\x02"
 
-        def fake_open(req: Any, timeout: int = 30) -> Any:  # noqa: ARG001
-            mock = MagicMock()
-            mock.__enter__ = MagicMock(return_value=mock)
-            mock.__exit__ = MagicMock(return_value=False)
-            mock.read.return_value = raw
-            return mock
+        client = MagicMock()
+        client.get.return_value = _make_response(content=raw)
 
-        with patch("uk_data.utils.http.urllib.request.urlopen", fake_open):
+        with patch("uk_data.utils.http._get_client", return_value=client):
             result = get_bytes("http://example.com/bytes")
         assert result == raw
 
@@ -141,14 +126,13 @@ class TestRetry:
         assert len(calls) == 1
 
     def test_retries_on_url_error(self) -> None:
-        import urllib.error
-
         calls = []
 
         def fn() -> str:
             calls.append(1)
             if len(calls) < 3:
-                raise urllib.error.URLError("timeout")
+                req = httpx.Request("GET", "http://example.com")
+                raise httpx.ConnectError("timeout", request=req)
             return "ok"
 
         with patch("uk_data.utils.http.time.sleep"):
@@ -157,10 +141,9 @@ class TestRetry:
         assert len(calls) == 3
 
     def test_raises_after_all_retries_exhausted(self) -> None:
-        import urllib.error
-
         def fn() -> None:
-            raise urllib.error.URLError("always fails")
+            req = httpx.Request("GET", "http://example.com")
+            raise httpx.ConnectError("always fails", request=req)
 
         with (
             patch("uk_data.utils.http.time.sleep"),

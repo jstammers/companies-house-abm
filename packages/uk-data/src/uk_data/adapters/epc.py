@@ -9,8 +9,6 @@ from __future__ import annotations
 
 import logging
 import os
-import urllib.parse
-import urllib.request
 from datetime import date, datetime
 from io import BytesIO
 from pathlib import Path
@@ -19,7 +17,7 @@ from zipfile import ZipFile
 import polars as pl
 
 from uk_data.models import Event
-from uk_data.utils.http import _USER_AGENT, encode_basic_auth
+from uk_data.utils.http import _USER_AGENT, encode_basic_auth, request_bytes
 from uk_data.utils.timeseries import date_to_utc_datetime
 
 logger = logging.getLogger(__name__)
@@ -67,11 +65,7 @@ def _request_bytes(
     params: dict[str, str | int] | None = None,
     timeout: int = 60,
 ) -> bytes:
-    if params:
-        url = f"{url}?{urllib.parse.urlencode(params)}"
-    request = urllib.request.Request(url, headers=headers)
-    with urllib.request.urlopen(request, timeout=timeout) as response:
-        return response.read()
+    return request_bytes(url, headers=headers, params=params, timeout=timeout)
 
 
 def download_epc_data(

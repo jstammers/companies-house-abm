@@ -1,6 +1,14 @@
 """Compatibility shim for the standalone uk_data HTTP helpers."""
 
-from uk_data import _http as _impl
+import warnings
+
+warnings.warn(
+    "companies_house_abm.data_sources._http is deprecated. Use uk_data._http directly.",
+    DeprecationWarning,
+    stacklevel=2,
+)
+
+from uk_data import _http as _impl  # noqa: E402
 
 _CACHE = _impl._CACHE
 _DEFAULT_TIMEOUT = _impl._DEFAULT_TIMEOUT

@@ -18,6 +18,8 @@ from uk_data.registry import ConceptResolver
 from uk_data.workflows.historical import HistoricalAdapter
 
 if TYPE_CHECKING:
+    from datetime import date, datetime
+
     from uk_data.models import Entity, Event, TimeSeries
     from uk_data.storage import CanonicalStore
 
@@ -44,9 +46,20 @@ class UKDataClient:
         *,
         source: str | None = None,
         limit: int = 20,
+        start_date: str | date | datetime | None = None,
+        end_date: str | date | datetime | None = None,
     ) -> TimeSeries:
         """Resolve a canonical concept and fetch its time series."""
-        return self.resolver.resolve_series(concept, source=source, limit=limit)
+        resolver_kwargs: dict[str, object] = {"limit": limit}
+        if start_date is not None:
+            resolver_kwargs["start_date"] = start_date
+        if end_date is not None:
+            resolver_kwargs["end_date"] = end_date
+        return self.resolver.resolve_series(
+            concept,
+            source=source,
+            **resolver_kwargs,
+        )
 
     def get_entity(
         self,

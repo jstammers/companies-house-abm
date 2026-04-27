@@ -71,11 +71,11 @@ Success criteria:
 **Goal:** Migrate ONS manifest-backed retrieval to dataset/edition/version/dimension/observation endpoints while preserving existing adapter and client semantics.
 **Requirements**: TBD
 **Depends on:** Phase 3
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
-- [ ] 03.1-01-PLAN.md — Define manifest/provider endpoint contract for dataset observation retrieval and migrate provider transport path
-- [ ] 03.1-02-PLAN.md — Rewire ONS adapter to migrated provider path and lock behavior with offline/live regression tests
+- [x] 03.1-01-PLAN.md — Define manifest/provider endpoint contract for dataset observation retrieval and migrate provider transport path
+- [x] 03.1-02-PLAN.md — Rewire ONS adapter to migrated provider path and lock behavior with offline/live regression tests
 
 ### Phase 4: Historical Relocation
 

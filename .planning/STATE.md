@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: unknown
-last_updated: "2026-04-27T19:55:49.139Z"
+status: ready_to_plan
+last_updated: "2026-04-27T21:04:57.218Z"
 progress:
   total_phases: 5
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 11
   completed_plans: 6
-  percent: 55
+  percent: 60
 ---
 
 # State
@@ -26,6 +26,9 @@ progress:
 - Milestone 1: Data-layer refactor and ownership realignment
 
 ## Current Position
+
+Phase: 4
+Plan: Not started
 
 - Phase: 04-historical-relocation (not yet planned)
 - Next action: discuss-phase 4 → plan-phase 4 → execute-phase 4
@@ -50,6 +53,10 @@ progress:
 | Adapters apply window filtering before limit slicing | 03-02 | Enforces TS-03 migration precedence consistently |
 | CLI exposes --start-date/--end-date with migration guidance | 03-03 | User-facing migration path from implicit limit-only behavior |
 
+- ONSAdapter now owns dataset-first endpoint methods with typed payload models and process-local dataset catalog caching.
+- Removed ons_manifest/ons_provider modules; registry now uses explicit ONS concept mapping constants.
+- ONS fetch_series now derives non-fallback series via dataset observation methods while preserving date-window-before-limit semantics.
+
 ## Performance Metrics
 
 | Phase | Plan | Duration | Tasks | Files |
@@ -63,6 +70,8 @@ progress:
 | 03-date-bounded-series | 01 | ~55 min | 2/2 | 5 |
 | 03-date-bounded-series | 02 | ~48 min | 2/2 | 6 |
 | 03-date-bounded-series | 03 | ~31 min | 2/2 | 3 |
+| Phase 03.1 P01 | ~65 min | 2/2 tasks | 6 files |
+| Phase 03.1 P02 | ~58 min | 2/2 tasks | 4 files |
 
 ## Notes
 

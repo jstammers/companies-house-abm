@@ -14,7 +14,7 @@ import logging
 import urllib.error
 import urllib.parse
 import urllib.request
-from datetime import UTC, date, datetime, time
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
@@ -22,6 +22,7 @@ import polars as pl
 
 from uk_data._http import _USER_AGENT, retry
 from uk_data.models import Event, point_timeseries, series_from_observations
+from uk_data.utils.timeseries import date_to_utc_datetime
 
 logger = logging.getLogger(__name__)
 
@@ -229,10 +230,8 @@ def clean_price_paid_data(lazy_frame: pl.LazyFrame) -> pl.LazyFrame:
 
 
 def _transaction_event_timestamp(value: Any) -> datetime | None:
-    if isinstance(value, datetime):
-        return value if value.tzinfo else value.replace(tzinfo=UTC)
-    if isinstance(value, date):
-        return datetime.combine(value, time.min, tzinfo=UTC)
+    if isinstance(value, (datetime, date)):
+        return date_to_utc_datetime(value)
     return None
 
 

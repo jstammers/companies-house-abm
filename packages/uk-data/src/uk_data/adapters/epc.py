@@ -7,20 +7,20 @@ EPC domestic certificate data. The implementation is adapted from the public
 
 from __future__ import annotations
 
-import base64
 import logging
 import os
 import urllib.parse
 import urllib.request
-from datetime import UTC, date, datetime, time
+from datetime import date, datetime
 from io import BytesIO
 from pathlib import Path
 from zipfile import ZipFile
 
 import polars as pl
 
-from uk_data._http import _USER_AGENT
 from uk_data.models import Event
+from uk_data.utils.http import _USER_AGENT, encode_basic_auth
+from uk_data.utils.timeseries import date_to_utc_datetime
 
 logger = logging.getLogger(__name__)
 
@@ -46,11 +46,6 @@ def _resolve_epc_credentials(
     return user, password
 
 
-def _encode_basic_auth(user: str, password: str) -> str:
-    token = f"{user}:{password}".encode()
-    return base64.b64encode(token).decode()
-
-
 def _epc_headers(
     *,
     api_user: str | None = None,
@@ -59,7 +54,7 @@ def _epc_headers(
 ) -> dict[str, str]:
     api_user, api_pass = _resolve_epc_credentials(api_user, api_pass)
     return {
-        "Authorization": f"Basic {_encode_basic_auth(api_user, api_pass)}",
+        "Authorization": f"Basic {encode_basic_auth(api_user, api_pass)}",
         "Accept": accept,
         "User-Agent": _USER_AGENT,
     }
@@ -244,10 +239,8 @@ def clean_epc_data(lazy_frame: pl.LazyFrame) -> pl.LazyFrame:
 def _epc_event_timestamp(row: dict[str, object]) -> datetime | None:
     for key in ("lodgement_date", "inspection_date"):
         value = row.get(key)
-        if isinstance(value, datetime):
-            return value if value.tzinfo else value.replace(tzinfo=UTC)
-        if isinstance(value, date):
-            return datetime.combine(value, time.min, tzinfo=UTC)
+        if isinstance(value, (datetime, date)):
+            return date_to_utc_datetime(value)
     return None
 
 

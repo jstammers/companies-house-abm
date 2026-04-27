@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import base64
 import json
 import logging
 import os
@@ -12,6 +11,8 @@ import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
 from typing import Any
+
+from uk_data.utils.http import encode_basic_auth
 
 logger = logging.getLogger(__name__)
 
@@ -61,8 +62,7 @@ class CompaniesHouseClient:
 
     def _auth_header(self) -> str:
         """HTTP Basic auth: API key as username, empty password."""
-        encoded = base64.b64encode(f"{self.config.api_key}:".encode()).decode()
-        return f"Basic {encoded}"
+        return f"Basic {encode_basic_auth(self.config.api_key, '')}"
 
     def _rate_limit(self) -> None:
         """Block if we would exceed the rate limit.

@@ -130,6 +130,110 @@ _SERIES_URI: dict[str, str] = {
 
 _DEFAULT_URI_TEMPLATE = "/economy/grossdomesticproductgdp/timeseries/{sid}/ukea"
 
+_SERIES_METADATA: dict[str, dict[str, str]] = {
+    "ABMI": {
+        "concept": "gdp",
+        "name": "UK GDP at market prices",
+        "frequency": "Q",
+        "units": "GBP_M",
+        "seasonal_adjustment": "SA",
+    },
+    "RPHQ": {
+        "concept": "household_income",
+        "name": "UK household disposable income",
+        "frequency": "Q",
+        "units": "GBP_M",
+        "seasonal_adjustment": "SA",
+    },
+    "NRJS": {
+        "concept": "savings_ratio",
+        "name": "UK household savings ratio",
+        "frequency": "Q",
+        "units": "%",
+        "seasonal_adjustment": "SA",
+    },
+    "MGSX": {
+        "concept": "unemployment",
+        "name": "UK unemployment rate",
+        "frequency": "M",
+        "units": "%",
+        "seasonal_adjustment": "SA",
+    },
+    "KAB9": {
+        "concept": "average_earnings",
+        "name": "Average weekly earnings",
+        "frequency": "M",
+        "units": "GBP",
+        "seasonal_adjustment": "SA",
+    },
+    "HP7A": {
+        "concept": "affordability",
+        "name": "House price affordability ratio",
+        "frequency": "A",
+        "units": "ratio",
+        "seasonal_adjustment": "NSA",
+    },
+    "D7RA": {
+        "concept": "rental_growth",
+        "name": "Private rental growth",
+        "frequency": "M",
+        "units": "fraction",
+        "seasonal_adjustment": "NSA",
+    },
+}
+
+_SERIES_METADATA: dict[str, dict[str, str]] = {
+    "ABMI": {
+        "concept": "gdp",
+        "name": "UK GDP at market prices",
+        "frequency": "Q",
+        "units": "GBP_M",
+        "seasonal_adjustment": "SA",
+    },
+    "RPHQ": {
+        "concept": "household_income",
+        "name": "UK household disposable income",
+        "frequency": "Q",
+        "units": "GBP_M",
+        "seasonal_adjustment": "SA",
+    },
+    "NRJS": {
+        "concept": "savings_ratio",
+        "name": "UK household savings ratio",
+        "frequency": "Q",
+        "units": "%",
+        "seasonal_adjustment": "SA",
+    },
+    "MGSX": {
+        "concept": "unemployment",
+        "name": "UK unemployment rate",
+        "frequency": "M",
+        "units": "%",
+        "seasonal_adjustment": "SA",
+    },
+    "KAB9": {
+        "concept": "average_earnings",
+        "name": "Average weekly earnings",
+        "frequency": "M",
+        "units": "GBP",
+        "seasonal_adjustment": "SA",
+    },
+    "HP7A": {
+        "concept": "affordability",
+        "name": "House price affordability ratio",
+        "frequency": "A",
+        "units": "ratio",
+        "seasonal_adjustment": "NSA",
+    },
+    "D7RA": {
+        "concept": "rental_growth",
+        "name": "Private rental growth",
+        "frequency": "M",
+        "units": "fraction",
+        "seasonal_adjustment": "NSA",
+    },
+}
+
 
 def _normalize_period_bound(value: object) -> str | None:
     if value is None:
@@ -399,6 +503,44 @@ class ONSAdapter:
         return f"{base}?{urlencode(params)}"
 
     @staticmethod
+    def _coerce_limit(value: object) -> int:
+        if isinstance(value, int):
+            return value
+        if isinstance(value, str):
+            return int(value)
+        msg = f"Invalid ONS limit value: {value!r}"
+        raise ValueError(msg)
+
+    @staticmethod
+    def _coerce_date_bound(value: object) -> str | date | datetime | None:
+        if value is None:
+            return None
+        if isinstance(value, (str, date, datetime)):
+            return value
+        msg = f"Invalid ONS date bound: {value!r}"
+        raise ValueError(msg)
+
+    @staticmethod
+    def _series_dataset_id(series_id: str) -> str:
+        if series_id in {_UNEMPLOYMENT_RATE_SERIES, _AVERAGE_EARNINGS_SERIES}:
+            return "lms"
+        return "ukea"
+
+    def _fetch_series_observations(self, series_id: str) -> list[dict[str, str]]:
+        dataset_id = self._series_dataset_id(series_id)
+        return [
+            {"date": item.dimensions.get("time", ""), "value": item.observation}
+            for item in self.get_observation_series(
+                dataset_id,
+                "time-series",
+                "latest",
+                timeseries=series_id,
+                time="*",
+            )
+            if item.dimensions.get("time")
+        ]
+
+    @staticmethod
     def _coerce_observation_row(payload: dict[str, Any]) -> ONSObservation:
         raw_dimensions = payload.get("dimensions", {})
         dimensions: dict[str, str] = {}
@@ -538,103 +680,37 @@ class ONSAdapter:
     def fetch_series(self, series_id: str, **kwargs: object):
         """Fetch a canonical ONS time series."""
         series_id = series_id.upper()
-        limit = int(kwargs.get("limit", 20))
-        start_date = kwargs.get("start_date")
-        end_date = kwargs.get("end_date")
-        concept = str(kwargs.get("concept", "gdp"))
+        metadata = _SERIES_METADATA.get(series_id)
+        if metadata is None:
+            msg = f"Unsupported ONS series: {series_id}"
+            raise ValueError(msg)
 
-        if series_id == _GDP_SERIES:
-            concept = str(kwargs.get("concept", "gdp"))
-            observations = [
-                {"date": item.dimensions.get("time", ""), "value": item.observation}
-                for item in self.get_observation_series(
-                    "ukea",
-                    "time-series",
-                    "latest",
-                    timeseries=series_id,
-                    time="*",
-                )
-                if item.dimensions.get("time")
-            ]
-            observations = filter_observations_by_date_window(
-                observations,
-                start_date=start_date,  # type: ignore[arg-type]
-                end_date=end_date,  # type: ignore[arg-type]
-            )
-            if limit >= 0:
-                observations = observations[-limit:]
-            return series_from_observations(
-                series_id=concept,
-                name="UK GDP at market prices",
-                frequency="Q",
-                units="GBP_M",
-                seasonal_adjustment="SA",
-                geography="UK",
-                observations=observations,
-                source="ons",
-                source_series_id=series_id,
-            )
+        limit = self._coerce_limit(kwargs.get("limit", 20))
+        start_date = self._coerce_date_bound(kwargs.get("start_date"))
+        end_date = self._coerce_date_bound(kwargs.get("end_date"))
+        concept = str(kwargs.get("concept", metadata["concept"]))
 
         if series_id in {
+            _GDP_SERIES,
             _HOUSEHOLD_INCOME_SERIES,
             _SAVINGS_RATIO_SERIES,
             _UNEMPLOYMENT_RATE_SERIES,
             _AVERAGE_EARNINGS_SERIES,
         }:
-            concept_defaults = {
-                _HOUSEHOLD_INCOME_SERIES: "household_income",
-                _SAVINGS_RATIO_SERIES: "savings_ratio",
-                _UNEMPLOYMENT_RATE_SERIES: "unemployment",
-                _AVERAGE_EARNINGS_SERIES: "average_earnings",
-            }
-            names = {
-                _HOUSEHOLD_INCOME_SERIES: "UK household disposable income",
-                _SAVINGS_RATIO_SERIES: "UK household savings ratio",
-                _UNEMPLOYMENT_RATE_SERIES: "UK unemployment rate",
-                _AVERAGE_EARNINGS_SERIES: "Average weekly earnings",
-            }
-            frequencies = {
-                _HOUSEHOLD_INCOME_SERIES: "Q",
-                _SAVINGS_RATIO_SERIES: "Q",
-                _UNEMPLOYMENT_RATE_SERIES: "M",
-                _AVERAGE_EARNINGS_SERIES: "M",
-            }
-            units = {
-                _HOUSEHOLD_INCOME_SERIES: "GBP_M",
-                _SAVINGS_RATIO_SERIES: "%",
-                _UNEMPLOYMENT_RATE_SERIES: "%",
-                _AVERAGE_EARNINGS_SERIES: "GBP",
-            }
-            concept = str(kwargs.get("concept", concept_defaults[series_id]))
-            dataset_id = (
-                "lms"
-                if series_id in {_UNEMPLOYMENT_RATE_SERIES, _AVERAGE_EARNINGS_SERIES}
-                else "ukea"
-            )
-            observations = [
-                {"date": item.dimensions.get("time", ""), "value": item.observation}
-                for item in self.get_observation_series(
-                    dataset_id,
-                    "time-series",
-                    "latest",
-                    timeseries=series_id,
-                    time="*",
-                )
-                if item.dimensions.get("time")
-            ]
+            observations = self._fetch_series_observations(series_id)
             observations = filter_observations_by_date_window(
                 observations,
-                start_date=start_date,  # type: ignore[arg-type]
-                end_date=end_date,  # type: ignore[arg-type]
+                start_date=start_date,
+                end_date=end_date,
             )
             if limit >= 0:
                 observations = observations[-limit:]
             return series_from_observations(
                 series_id=concept,
-                name=names[series_id],
-                frequency=frequencies[series_id],
-                units=units[series_id],
-                seasonal_adjustment="SA",
+                name=metadata["name"],
+                frequency=metadata["frequency"],
+                units=metadata["units"],
+                seasonal_adjustment=metadata["seasonal_adjustment"],
                 geography="UK",
                 observations=observations,
                 source="ons",
@@ -642,36 +718,34 @@ class ONSAdapter:
             )
 
         if series_id == _AFFORDABILITY_SERIES:
-            concept = str(kwargs.get("concept", "affordability"))
             return point_timeseries(
                 series_id=concept,
-                name="House price affordability ratio",
+                name=metadata["name"],
                 value=fetch_affordability_ratio(),
-                units="ratio",
+                units=metadata["units"],
                 source="ons",
                 source_series_id=series_id,
-                frequency="A",
-                seasonal_adjustment="NSA",
+                frequency=metadata["frequency"],
+                seasonal_adjustment=metadata["seasonal_adjustment"],
                 geography="UK",
                 metadata={"source_quality": "fallback"},
             )
 
         if series_id == _RENTAL_INDEX_SERIES:
-            concept = str(kwargs.get("concept", "rental_growth"))
             return point_timeseries(
                 series_id=concept,
-                name="Private rental growth",
+                name=metadata["name"],
                 value=fetch_rental_growth(),
-                units="fraction",
+                units=metadata["units"],
                 source="ons",
                 source_series_id=series_id,
-                frequency="M",
-                seasonal_adjustment="NSA",
+                frequency=metadata["frequency"],
+                seasonal_adjustment=metadata["seasonal_adjustment"],
                 geography="UK",
                 metadata={"source_quality": "fallback"},
             )
 
-        msg = f"Unsupported ONS series: {series_id}"
+        msg = f"Unsupported ONS transport branch for series: {series_id}"
         raise ValueError(msg)
 
     def available_entity_types(self) -> list[str]:

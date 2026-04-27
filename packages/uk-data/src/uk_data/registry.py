@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING
 from uk_data.adapters.ons_manifest import ONS_CONCEPT_MAP
 
 if TYPE_CHECKING:
+    from datetime import date, datetime
+
     from uk_data.adapters.base import AdapterProtocol
     from uk_data.models import TimeSeries
 
@@ -40,6 +42,8 @@ class ConceptResolver:
         concept: str,
         *,
         source: str | None = None,
+        start_date: str | date | datetime | None = None,
+        end_date: str | date | datetime | None = None,
         **kwargs: object,
     ) -> TimeSeries:
         """Resolve and fetch a series for a canonical concept."""
@@ -48,6 +52,12 @@ class ConceptResolver:
             raise ValueError(msg)
 
         candidates = self.registry[concept]
+        fetch_kwargs = dict(kwargs)
+        if start_date is not None:
+            fetch_kwargs["start_date"] = start_date
+        if end_date is not None:
+            fetch_kwargs["end_date"] = end_date
+
         if source is not None:
             series_id = candidates.get(source)
             if series_id is None:
@@ -56,7 +66,7 @@ class ConceptResolver:
             return self.adapters[source].fetch_series(
                 series_id,
                 concept=concept,
-                **kwargs,
+                **fetch_kwargs,
             )
 
         for adapter_name, series_id in candidates.items():
@@ -65,7 +75,7 @@ class ConceptResolver:
             return self.adapters[adapter_name].fetch_series(
                 series_id,
                 concept=concept,
-                **kwargs,
+                **fetch_kwargs,
             )
 
         msg = f"No adapter available for concept {concept!r}"

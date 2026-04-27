@@ -36,6 +36,14 @@ Success criteria:
 
 Goal: Establish high-level utility APIs for series helpers and canonical upsert/query flows.
 
+**Requirements:** UTIL-01, UTIL-02, UTIL-03
+**Plans:** 3 plans
+
+Plans:
+- [x] 02-01-PLAN.md — Create uk_data/utils/ subpackage; consolidate encode_basic_auth, date_to_utc_datetime
+- [x] 02-02-PLAN.md — Add CanonicalStore.upsert() with DuckDB composite-key dedup
+- [x] 02-03-PLAN.md — Add CanonicalStore.query_typed() with concept/entity/date filters + SQL escape hatch
+
 Success criteria:
 1. Utility interfaces expose series-specific helper functions.
 2. Upsert/query pathways are available from high-level utilities.

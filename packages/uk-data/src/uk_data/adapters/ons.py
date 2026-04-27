@@ -24,11 +24,16 @@ See https://www.ons.gov.uk/methodology/geography/licences for details.
 from __future__ import annotations
 
 import logging
+from datetime import date, datetime
 from typing import Any
+from urllib.parse import urlencode
 
 from uk_data._http import retry
-from uk_data.adapters.ons_manifest import ONS_SERIES_IDS, ONS_SERIES_MANIFEST
-from uk_data.adapters.ons_provider import fetch_sdmx_series
+from uk_data.adapters.ons_models import (
+    ONSDatasetInfo,
+    ONSDatasetVersionInfo,
+    ONSObservation,
+)
 from uk_data.models import point_timeseries, series_from_observations
 from uk_data.utils.timeseries import filter_observations_by_date_window
 
@@ -126,6 +131,19 @@ _SERIES_URI: dict[str, str] = {
 _DEFAULT_URI_TEMPLATE = "/economy/grossdomesticproductgdp/timeseries/{sid}/ukea"
 
 
+def _normalize_period_bound(value: object) -> str | None:
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value.date().isoformat()
+    if isinstance(value, date):
+        return value.isoformat()
+    if isinstance(value, str):
+        stripped = value.strip()
+        return stripped or None
+    return str(value)
+
+
 def _get_json(url: str) -> Any:
     """Fetch *url* and return the parsed JSON body via the cache-aware helper."""
     from uk_data._http import get_json
@@ -192,55 +210,6 @@ def _latest_float(series_id: str) -> float | None:
         return None
 
 
-def _fetch_manifest_observations(
-    series_id: str,
-    *,
-    limit: int = 20,
-) -> list[dict[str, str]]:
-    entry = ONS_SERIES_MANIFEST[series_id.upper()]
-    if entry.transport != "sdmx":
-        msg = f"ONS series {series_id} does not expose SDMX observations"
-        raise ValueError(msg)
-    observations = fetch_sdmx_series(entry, limit=limit)
-    # Defensive outer slice: fetch_sdmx_series honours *limit*, but a mocked
-    # or non-compliant provider could return more rows and we promise callers
-    # we will cap to *limit*.
-    return observations[-limit:] if len(observations) > limit else observations
-
-
-def _latest_manifest_float(series_id: str) -> float | None:
-    try:
-        observations = _fetch_manifest_observations(series_id, limit=1)
-    except ModuleNotFoundError:
-        raise
-    except Exception:
-        logger.warning(
-            "ONS SDMX API unavailable for series %s, returning None",
-            series_id,
-        )
-        return None
-    if not observations:
-        return None
-    try:
-        return float(observations[-1]["value"])
-    except (KeyError, ValueError, TypeError):
-        return None
-
-
-def _fetch_sdmx_or_zebedee(series_id: str, *, limit: int = 20) -> list[dict[str, Any]]:
-    try:
-        return _fetch_manifest_observations(series_id, limit=limit)
-    except ModuleNotFoundError:
-        logger.info("pandasdmx unavailable; falling back to Zebedee for %s", series_id)
-        return _fetch_timeseries(series_id, limit=limit)
-    except Exception:
-        logger.warning(
-            "ONS SDMX API unavailable for series %s, returning []",
-            series_id,
-        )
-        return []
-
-
 # ---------------------------------------------------------------------------
 # Public fetch functions
 # ---------------------------------------------------------------------------
@@ -266,7 +235,7 @@ def fetch_gdp(limit: int = 20) -> list[dict[str, Any]]:
         >>> len(obs) <= 4
         True
     """
-    return _fetch_sdmx_or_zebedee(_GDP_SERIES, limit=limit)
+    return _fetch_timeseries(_GDP_SERIES, limit=limit)
 
 
 def fetch_household_income(limit: int = 20) -> list[dict[str, Any]]:
@@ -290,7 +259,7 @@ def fetch_household_income(limit: int = 20) -> list[dict[str, Any]]:
         >>> isinstance(obs, list)
         True
     """
-    return _fetch_sdmx_or_zebedee(_HOUSEHOLD_INCOME_SERIES, limit=limit)
+    return _fetch_timeseries(_HOUSEHOLD_INCOME_SERIES, limit=limit)
 
 
 def fetch_savings_ratio(limit: int = 20) -> list[dict[str, Any]]:
@@ -313,7 +282,7 @@ def fetch_savings_ratio(limit: int = 20) -> list[dict[str, Any]]:
         >>> isinstance(obs, list)
         True
     """
-    return _fetch_sdmx_or_zebedee(_SAVINGS_RATIO_SERIES, limit=limit)
+    return _fetch_timeseries(_SAVINGS_RATIO_SERIES, limit=limit)
 
 
 def fetch_labour_market() -> dict[str, float | None]:
@@ -337,17 +306,10 @@ def fetch_labour_market() -> dict[str, float | None]:
         >>> "unemployment_rate" in data
         True
     """
-    try:
-        return {
-            "unemployment_rate": _latest_manifest_float(_UNEMPLOYMENT_RATE_SERIES),
-            "average_weekly_earnings": _latest_manifest_float(_AVERAGE_EARNINGS_SERIES),
-        }
-    except ModuleNotFoundError:
-        logger.info("pandasdmx unavailable; falling back to Zebedee labour market data")
-        return {
-            "unemployment_rate": _latest_float(_UNEMPLOYMENT_RATE_SERIES),
-            "average_weekly_earnings": _latest_float(_AVERAGE_EARNINGS_SERIES),
-        }
+    return {
+        "unemployment_rate": _latest_float(_UNEMPLOYMENT_RATE_SERIES),
+        "average_weekly_earnings": _latest_float(_AVERAGE_EARNINGS_SERIES),
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -423,31 +385,177 @@ def fetch_rental_growth() -> float:
 class ONSAdapter:
     """Canonical adapter for Office for National Statistics data."""
 
+    def __init__(self) -> None:
+        self._datasets_cache: dict[
+            tuple[int, int, str | None], list[ONSDatasetInfo]
+        ] = {}
+
+    def _build_dataset_url(
+        self, path: str, *, params: dict[str, str] | None = None
+    ) -> str:
+        base = f"{_ONS_API}/{path.lstrip('/')}"
+        if not params:
+            return base
+        return f"{base}?{urlencode(params)}"
+
+    @staticmethod
+    def _coerce_observation_row(payload: dict[str, Any]) -> ONSObservation:
+        raw_dimensions = payload.get("dimensions", {})
+        dimensions: dict[str, str] = {}
+        if isinstance(raw_dimensions, dict):
+            for key, raw_value in raw_dimensions.items():
+                if isinstance(raw_value, dict):
+                    value = (
+                        raw_value.get("id")
+                        or raw_value.get("label")
+                        or raw_value.get("name")
+                    )
+                    if value is not None:
+                        dimensions[str(key)] = str(value)
+                elif raw_value is not None:
+                    dimensions[str(key)] = str(raw_value)
+
+        raw_observation = payload.get("observation")
+        if raw_observation is None:
+            raw_observation = payload.get("value")
+        if raw_observation is None:
+            msg = "ONS observation payload missing 'observation' or 'value'"
+            raise ValueError(msg)
+
+        return ONSObservation(dimensions=dimensions, observation=str(raw_observation))
+
+    def list_datasets(
+        self,
+        *,
+        limit: int = 20,
+        offset: int = 0,
+        dataset_type: str | None = None,
+    ) -> list[ONSDatasetInfo]:
+        cache_key = (limit, offset, dataset_type)
+        cached = self._datasets_cache.get(cache_key)
+        if cached is not None:
+            return cached
+
+        params: dict[str, str] = {"limit": str(limit), "offset": str(offset)}
+        if dataset_type is not None:
+            params["type"] = dataset_type
+        payload = _get_json(self._build_dataset_url("datasets", params=params))
+        items = payload.get("items") if isinstance(payload, dict) else None
+        if not isinstance(items, list):
+            msg = "Malformed ONS datasets payload: expected 'items' list"
+            raise ValueError(msg)
+        parsed = [ONSDatasetInfo.model_validate(item) for item in items]
+        self._datasets_cache[cache_key] = parsed
+        return parsed
+
+    def clear_dataset_cache(self) -> None:
+        """Clear process-local dataset catalog cache."""
+        self._datasets_cache.clear()
+
+    def get_dataset(self, dataset_id: str) -> ONSDatasetInfo:
+        payload = _get_json(self._build_dataset_url(f"datasets/{dataset_id}"))
+        if not isinstance(payload, dict):
+            msg = f"Malformed ONS dataset payload for {dataset_id!r}"
+            raise ValueError(msg)
+        return ONSDatasetInfo.model_validate(payload)
+
+    def get_version(
+        self,
+        dataset_id: str,
+        edition: str,
+        version: str | int,
+    ) -> ONSDatasetVersionInfo:
+        payload = _get_json(
+            self._build_dataset_url(
+                f"datasets/{dataset_id}/editions/{edition}/versions/{version}"
+            )
+        )
+        if not isinstance(payload, dict):
+            msg = (
+                f"Malformed ONS version payload for "
+                f"{dataset_id!r}/{edition!r}/{version!r}"
+            )
+            raise ValueError(msg)
+        return ONSDatasetVersionInfo.model_validate(payload)
+
+    def get_observation_series(
+        self,
+        dataset_id: str,
+        edition: str,
+        version: str | int,
+        **dimensions: str,
+    ) -> list[ONSObservation]:
+        payload = _get_json(
+            self._build_dataset_url(
+                f"datasets/{dataset_id}/editions/{edition}/versions/{version}/observations",
+                params={k: str(v) for k, v in dimensions.items()},
+            )
+        )
+        if not isinstance(payload, dict):
+            msg = (
+                f"Malformed ONS observations payload for "
+                f"{dataset_id!r}/{edition!r}/{version!r}"
+            )
+            raise ValueError(msg)
+        observations = payload.get("observations", [])
+        if not isinstance(observations, list):
+            msg = "Malformed ONS observations payload: expected 'observations' list"
+            raise ValueError(msg)
+        return [
+            self._coerce_observation_row(row)
+            for row in observations
+            if isinstance(row, dict)
+        ]
+
+    def get_observation(
+        self,
+        dataset_id: str,
+        edition: str,
+        version: str | int,
+        **dimensions: str,
+    ) -> ONSObservation:
+        series = self.get_observation_series(dataset_id, edition, version, **dimensions)
+        if not series:
+            msg = (
+                f"No ONS observations returned for "
+                f"{dataset_id!r}/{edition!r}/{version!r}"
+            )
+            raise ValueError(msg)
+        return series[-1]
+
     def available_series(self) -> list[str]:
         """Return the ONS series IDs supported by this adapter."""
-        return list(ONS_SERIES_IDS)
+        return [
+            _GDP_SERIES,
+            _HOUSEHOLD_INCOME_SERIES,
+            _SAVINGS_RATIO_SERIES,
+            _UNEMPLOYMENT_RATE_SERIES,
+            _AVERAGE_EARNINGS_SERIES,
+            _AFFORDABILITY_SERIES,
+            _RENTAL_INDEX_SERIES,
+        ]
 
     def fetch_series(self, series_id: str, **kwargs: object):
         """Fetch a canonical ONS time series."""
         series_id = series_id.upper()
-        entry = ONS_SERIES_MANIFEST.get(series_id)
-        if entry is None:
-            msg = f"Unsupported ONS series: {series_id}"
-            raise ValueError(msg)
-
-        concept = str(kwargs.get("concept", entry.concept))
         limit = int(kwargs.get("limit", 20))
         start_date = kwargs.get("start_date")
         end_date = kwargs.get("end_date")
+        concept = str(kwargs.get("concept", "gdp"))
 
-        if entry.transport == "sdmx":
-            # Apply date-window filtering before limit slicing.
-            # SDMX endpoint supports last-N pulls only, so request a wider
-            # history window when explicit date bounds are provided.
-            fetch_limit = (
-                5_000 if (start_date is not None or end_date is not None) else limit
-            )
-            observations = fetch_sdmx_series(entry, limit=fetch_limit)
+        if series_id == _GDP_SERIES:
+            concept = str(kwargs.get("concept", "gdp"))
+            observations = [
+                {"date": item.dimensions.get("time", ""), "value": item.observation}
+                for item in self.get_observation_series(
+                    "ukea",
+                    "time-series",
+                    "latest",
+                    timeseries=series_id,
+                    time="*",
+                )
+                if item.dimensions.get("time")
+            ]
             observations = filter_observations_by_date_window(
                 observations,
                 start_date=start_date,  # type: ignore[arg-type]
@@ -457,39 +565,114 @@ class ONSAdapter:
                 observations = observations[-limit:]
             return series_from_observations(
                 series_id=concept,
-                name=entry.name,
-                frequency=entry.frequency,
-                units=entry.units,
-                seasonal_adjustment=entry.seasonal_adjustment,
-                geography=entry.geography,
+                name="UK GDP at market prices",
+                frequency="Q",
+                units="GBP_M",
+                seasonal_adjustment="SA",
+                geography="UK",
                 observations=observations,
                 source="ons",
-                source_series_id=entry.source_series_id,
+                source_series_id=series_id,
             )
 
-        fallback_handlers = {
-            "affordability_ratio": fetch_affordability_ratio,
-            "rental_growth": fetch_rental_growth,
-        }
-        if entry.fallback_handler is None:
-            msg = f"ONS series {series_id} has no fallback handler"
-            raise ValueError(msg)
-        fetcher = fallback_handlers.get(entry.fallback_handler)
-        if fetcher is None:
-            msg = f"Unknown ONS fallback handler: {entry.fallback_handler}"
-            raise ValueError(msg)
-        return point_timeseries(
-            series_id=concept,
-            name=entry.name,
-            value=fetcher(),
-            units=entry.units,
-            source="ons",
-            source_series_id=entry.source_series_id,
-            frequency=entry.frequency,
-            seasonal_adjustment=entry.seasonal_adjustment,
-            geography=entry.geography,
-            metadata={"source_quality": "fallback"},
-        )
+        if series_id in {
+            _HOUSEHOLD_INCOME_SERIES,
+            _SAVINGS_RATIO_SERIES,
+            _UNEMPLOYMENT_RATE_SERIES,
+            _AVERAGE_EARNINGS_SERIES,
+        }:
+            concept_defaults = {
+                _HOUSEHOLD_INCOME_SERIES: "household_income",
+                _SAVINGS_RATIO_SERIES: "savings_ratio",
+                _UNEMPLOYMENT_RATE_SERIES: "unemployment",
+                _AVERAGE_EARNINGS_SERIES: "average_earnings",
+            }
+            names = {
+                _HOUSEHOLD_INCOME_SERIES: "UK household disposable income",
+                _SAVINGS_RATIO_SERIES: "UK household savings ratio",
+                _UNEMPLOYMENT_RATE_SERIES: "UK unemployment rate",
+                _AVERAGE_EARNINGS_SERIES: "Average weekly earnings",
+            }
+            frequencies = {
+                _HOUSEHOLD_INCOME_SERIES: "Q",
+                _SAVINGS_RATIO_SERIES: "Q",
+                _UNEMPLOYMENT_RATE_SERIES: "M",
+                _AVERAGE_EARNINGS_SERIES: "M",
+            }
+            units = {
+                _HOUSEHOLD_INCOME_SERIES: "GBP_M",
+                _SAVINGS_RATIO_SERIES: "%",
+                _UNEMPLOYMENT_RATE_SERIES: "%",
+                _AVERAGE_EARNINGS_SERIES: "GBP",
+            }
+            concept = str(kwargs.get("concept", concept_defaults[series_id]))
+            dataset_id = (
+                "lms"
+                if series_id in {_UNEMPLOYMENT_RATE_SERIES, _AVERAGE_EARNINGS_SERIES}
+                else "ukea"
+            )
+            observations = [
+                {"date": item.dimensions.get("time", ""), "value": item.observation}
+                for item in self.get_observation_series(
+                    dataset_id,
+                    "time-series",
+                    "latest",
+                    timeseries=series_id,
+                    time="*",
+                )
+                if item.dimensions.get("time")
+            ]
+            observations = filter_observations_by_date_window(
+                observations,
+                start_date=start_date,  # type: ignore[arg-type]
+                end_date=end_date,  # type: ignore[arg-type]
+            )
+            if limit >= 0:
+                observations = observations[-limit:]
+            return series_from_observations(
+                series_id=concept,
+                name=names[series_id],
+                frequency=frequencies[series_id],
+                units=units[series_id],
+                seasonal_adjustment="SA",
+                geography="UK",
+                observations=observations,
+                source="ons",
+                source_series_id=series_id,
+            )
+
+        if series_id == _AFFORDABILITY_SERIES:
+            concept = str(kwargs.get("concept", "affordability"))
+            return point_timeseries(
+                series_id=concept,
+                name="House price affordability ratio",
+                value=fetch_affordability_ratio(),
+                units="ratio",
+                source="ons",
+                source_series_id=series_id,
+                frequency="A",
+                seasonal_adjustment="NSA",
+                geography="UK",
+                metadata={"source_quality": "fallback"},
+            )
+
+        if series_id == _RENTAL_INDEX_SERIES:
+            concept = str(kwargs.get("concept", "rental_growth"))
+            return point_timeseries(
+                series_id=concept,
+                name="Private rental growth",
+                value=fetch_rental_growth(),
+                units="fraction",
+                source="ons",
+                source_series_id=series_id,
+                frequency="M",
+                seasonal_adjustment="NSA",
+                geography="UK",
+                metadata={"source_quality": "fallback"},
+            )
+
+        msg = f"Unsupported ONS series: {series_id}"
+        raise ValueError(msg)
 
     def available_entity_types(self) -> list[str]:
         """ONS adapter does not support entity lookup."""

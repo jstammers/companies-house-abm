@@ -7,7 +7,9 @@ from unittest.mock import patch
 import pytest
 
 from uk_data.adapters.ons import ONSAdapter
-from uk_data.adapters.ons_manifest import ONS_SERIES_IDS
+from uk_data.adapters.ons_models import ONSObservation
+
+ONS_SERIES_IDS = ["ABMI", "RPHQ", "NRJS", "MGSX", "KAB9", "HP7A", "D7RA"]
 
 
 class TestONSAdapterAvailableSeries:
@@ -46,17 +48,24 @@ class TestONSAdapterFetchSeriesOffline:
             {"date": "2024-02-01", "value": "4.1"},
         ]
 
-    def _patch_ons_sdmx(
+    def _patch_ons_dataset_series(
         self,
         observations: list[dict[str, str]],
     ) -> patch:  # type: ignore[type-arg]
+        modeled = [
+            {
+                "dimensions": {"time": row["date"]},
+                "observation": row["value"],
+            }
+            for row in observations
+        ]
         return patch(
-            "uk_data.adapters.ons.fetch_sdmx_series",
-            return_value=observations,
+            "uk_data.adapters.ons.ONSAdapter.get_observation_series",
+            return_value=[ONSObservation.model_validate(item) for item in modeled],
         )
 
     def test_manifest_backed_series_returns_timeseries_for_abmi(self) -> None:
-        with self._patch_ons_sdmx(self._mock_quarterly_observations()):
+        with self._patch_ons_dataset_series(self._mock_quarterly_observations()):
             adapter = ONSAdapter()
             ts = adapter.fetch_series("ABMI")
             assert ts.source == "ons"
@@ -64,21 +73,21 @@ class TestONSAdapterFetchSeriesOffline:
             assert ts.latest_value == pytest.approx(101.5)
 
     def test_manifest_backed_series_returns_timeseries_for_mgsx(self) -> None:
-        with self._patch_ons_sdmx(self._mock_monthly_observations()):
+        with self._patch_ons_dataset_series(self._mock_monthly_observations()):
             adapter = ONSAdapter()
             ts = adapter.fetch_series("MGSX")
             assert ts.source == "ons"
             assert ts.latest_value == pytest.approx(4.1)
 
     def test_manifest_backed_series_sets_source_and_source_series_id(self) -> None:
-        with self._patch_ons_sdmx(self._mock_quarterly_observations()):
+        with self._patch_ons_dataset_series(self._mock_quarterly_observations()):
             adapter = ONSAdapter()
             ts = adapter.fetch_series("RPHQ")
             assert ts.source == "ons"
             assert ts.source_series_id == "RPHQ"
 
     def test_manifest_backed_series_converts_dates_and_numeric_values(self) -> None:
-        with self._patch_ons_sdmx(self._mock_quarterly_observations()):
+        with self._patch_ons_dataset_series(self._mock_quarterly_observations()):
             adapter = ONSAdapter()
             ts = adapter.fetch_series("NRJS")
             assert ts.values.tolist() == pytest.approx([100.0, 101.5])
@@ -116,7 +125,7 @@ class TestONSAdapterFetchSeriesOffline:
             {"date": "2024-03-31", "value": "3.0"},
             {"date": "2024-04-01", "value": "4.0"},
         ]
-        with self._patch_ons_sdmx(observations):
+        with self._patch_ons_dataset_series(observations):
             adapter = ONSAdapter()
             ts = adapter.fetch_series(
                 "ABMI",
@@ -133,7 +142,7 @@ class TestONSAdapterFetchSeriesOffline:
             {"date": "2024-03-01", "value": "3.0"},
             {"date": "2024-04-01", "value": "4.0"},
         ]
-        with self._patch_ons_sdmx(observations):
+        with self._patch_ons_dataset_series(observations):
             adapter = ONSAdapter()
             ts = adapter.fetch_series(
                 "ABMI",
@@ -143,3 +152,23 @@ class TestONSAdapterFetchSeriesOffline:
             )
 
         assert ts.values.tolist() == pytest.approx([2.0, 3.0])
+
+    def test_sdmx_series_uses_endpoint_window_params(self) -> None:
+        with patch(
+            "uk_data.adapters.ons.ONSAdapter.get_observation_series",
+            return_value=[
+                ONSObservation(dimensions={"time": "2024-01-01"}, observation="2.0")
+            ],
+        ) as mocked_fetch:
+            adapter = ONSAdapter()
+            adapter.fetch_series(
+                "ABMI",
+                start_date="2024-01-01",
+                end_date="2024-03-31",
+                limit=5,
+            )
+
+        mocked_fetch.assert_called_once()
+        _, kwargs = mocked_fetch.call_args
+        assert kwargs["timeseries"] == "ABMI"
+        assert kwargs["time"] == "*"

@@ -5,13 +5,21 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
-from uk_data.adapters.ons_manifest import ONS_CONCEPT_MAP
-
 if TYPE_CHECKING:
     from datetime import date, datetime
 
     from uk_data.adapters.base import AdapterProtocol
     from uk_data.models import TimeSeries
+
+ONS_CONCEPT_MAP: dict[str, str] = {
+    "gdp": "ABMI",
+    "household_income": "RPHQ",
+    "savings_ratio": "NRJS",
+    "unemployment": "MGSX",
+    "average_earnings": "KAB9",
+    "affordability": "HP7A",
+    "rental_growth": "D7RA",
+}
 
 CONCEPT_REGISTRY: dict[str, dict[str, str | None]] = {
     **{

@@ -193,6 +193,15 @@ def check_company(
         )
         raise typer.Exit(code=2)
 
+    def _segment_match(name: str, cid: str) -> bool:
+        """Match company ID against the 3rd underscore-separated path segment.
+
+        Avoids false positives from the company number appearing in other
+        parts of the filename (e.g. date stamps or other numeric fields).
+        """
+        parts = name.rsplit("/", 1)[-1].split("_")
+        return len(parts) >= 3 and parts[2] == cid
+
     try:
         is_url = zip_source.startswith("http://") or zip_source.startswith("https://")
         if is_url:
@@ -201,7 +210,7 @@ def check_company(
                 "(downloading central directory only)..."
             )
             names = fetch_zip_index(zip_source)
-            found = any(company_id in name for name in names)
+            found = any(_segment_match(n, company_id) for n in names)
         else:
             found = check_company_in_zip(Path(zip_source), company_id)
 

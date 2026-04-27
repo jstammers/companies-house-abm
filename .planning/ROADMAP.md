@@ -23,7 +23,7 @@ Goal: Formalize low-level adapter responsibilities and isolate source-specific l
 **Plans:** 3 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Replace BaseAdapter ABC with @runtime_checkable AdapterProtocol; update all 6 source adapters and registry
+- [x] 01-01-PLAN.md — Replace BaseAdapter ABC with @runtime_checkable AdapterProtocol; update all 6 source adapters and registry
 - [ ] 01-02-PLAN.md — Relocate HistoricalAdapter to uk_data/workflows/; update client.py imports
 - [ ] 01-03-PLAN.md — Protocol compliance test module for all 6 source adapters
 

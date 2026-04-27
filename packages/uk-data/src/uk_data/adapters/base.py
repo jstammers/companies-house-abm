@@ -2,51 +2,51 @@
 
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
     from uk_data.models import Entity, Event, TimeSeries
 
 
-class BaseAdapter(ABC):
-    """Protocol for all UK data source adapters."""
+@runtime_checkable
+class AdapterProtocol(Protocol):
+    """Structural contract for all low-level UK data source adapters.
 
-    @abstractmethod
+    A low-level adapter is responsible for:
+      1. Fetching raw data from a **single** external source.
+      2. Translating it into canonical models (``Entity``, ``Event``, ``TimeSeries``).
+      3. Operational concerns scoped to that source (retry, rate limiting,
+         caching of raw responses).
+
+    Out of scope for adapters:
+      - Cross-source routing or concept resolution (that is ``ConceptResolver``'s job).
+      - Domain aggregation across multiple sources.
+      - High-level orchestration (that belongs in ``uk_data.workflows``).
+
+    To add a new source adapter: implement this Protocol structurally
+    (no inheritance required). All methods with default implementations below
+    are optional — only ``fetch_series`` is required.
+    """
+
     def fetch_series(self, series_id: str, **kwargs: object) -> TimeSeries:
-        """Fetch a canonical time series."""
+        """Fetch a canonical time series by its source-specific series ID."""
+        ...
 
     def available_series(self) -> list[str]:
-        """Return the list of series IDs supported by this adapter.
-
-        Subclasses should override this to advertise their valid series IDs.
-        Returns an empty list by default (e.g. for event-only adapters).
-        """
-        return []
+        """Return the list of series IDs supported by this adapter."""
+        ...
 
     def available_entity_types(self) -> list[str]:
-        """Return the entity types that can be fetched via :meth:`fetch_entity`.
-
-        Subclasses that implement ``fetch_entity`` should override this to
-        advertise the entity type strings they produce (e.g. ``["company"]``).
-        Returns an empty list by default (i.e. the adapter does not support
-        entity lookup).
-        """
-        return []
+        """Return the entity types fetchable via ``fetch_entity``."""
+        ...
 
     def available_event_types(self) -> list[str]:
-        """Return the event types that can be fetched via :meth:`fetch_events`.
-
-        Subclasses that implement ``fetch_events`` should override this to
-        advertise the event type strings they produce
-        (e.g. ``["property_transaction"]``).
-        Returns an empty list by default.
-        """
-        return []
+        """Return the event types fetchable via ``fetch_events``."""
+        ...
 
     def fetch_entity(self, entity_id: str, **kwargs: object) -> Entity:
         """Fetch a canonical entity."""
-        raise NotImplementedError
+        ...
 
     def fetch_events(
         self,
@@ -55,4 +55,8 @@ class BaseAdapter(ABC):
         **kwargs: object,
     ) -> list[Event]:
         """Fetch canonical events."""
-        raise NotImplementedError
+        ...
+
+
+# Backwards-compatibility alias — deprecated, use AdapterProtocol directly.
+BaseAdapter = AdapterProtocol

@@ -89,6 +89,21 @@ class TestUKDataClientConceptResolutionIntegration:
             ts = client.get_series(concept)
             assert ts is not None, f"Concept {concept!r} returned None"
 
+    def test_get_series_accepts_window_and_limit_together(self) -> None:
+        _skip_if_cannot_reach(_ONS_URL)
+        from uk_data._http import clear_cache
+
+        clear_cache()
+        client = UKDataClient()
+        ts = client.get_series(
+            "gdp",
+            start_date="2019-01-01",
+            end_date="2025-12-31",
+            limit=2,
+        )
+        assert ts.source == "ons"
+        assert len(ts.values) <= 2
+
 
 class TestUKDataClientListEntitiesIntegration:
     """Verify that list_entities() reports the correct structure at runtime."""

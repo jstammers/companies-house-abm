@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import numpy as np
 import pytest
 
 from uk_data import EntityTypeInfo, EventTypeInfo, SourceInfo, UKDataClient
@@ -128,6 +129,84 @@ class TestUKDataClientGetSeries:
         client.get_series("gdp", source="ons", limit=7)
 
         assert calls == [{"concept": "gdp", "source": "ons", "limit": 7}]
+
+
+class TestCliGetSeriesCommand:
+    def test_get_series_cmd_forwards_start_and_end_dates(self, monkeypatch) -> None:
+        from uk_data import cli
+
+        class _ClientStub:
+            def __init__(self) -> None:
+                self.captured: dict[str, object] = {}
+
+            def get_series(self, concept: str, **kwargs: object):
+                self.captured = {"concept": concept, **kwargs}
+                return type(
+                    "_TS",
+                    (),
+                    {
+                        "source": "ons",
+                        "series_id": concept,
+                        "latest_value": 1.0,
+                        "timestamps": np.array([np.datetime64("2024-01-01")]),
+                        "values": np.array([1.0]),
+                    },
+                )()
+
+        stub = _ClientStub()
+        monkeypatch.setattr(cli, "UKDataClient", lambda: stub)
+
+        cli.get_series_cmd(
+            concept="gdp",
+            source="ons",
+            limit=5,
+            start_date="2024-01-01",
+            end_date="2024-03-31",
+            data_path=None,
+            output="json",
+        )
+
+        assert stub.captured == {
+            "concept": "gdp",
+            "source": "ons",
+            "limit": 5,
+            "start_date": "2024-01-01",
+            "end_date": "2024-03-31",
+        }
+
+    def test_get_series_cmd_limit_only_unchanged(self, monkeypatch) -> None:
+        from uk_data import cli
+
+        class _ClientStub:
+            def __init__(self) -> None:
+                self.captured: dict[str, object] = {}
+
+            def get_series(self, concept: str, **kwargs: object):
+                self.captured = {"concept": concept, **kwargs}
+                return type(
+                    "_TS",
+                    (),
+                    {
+                        "source": "ons",
+                        "series_id": concept,
+                        "latest_value": 1.0,
+                        "timestamps": np.array([np.datetime64("2024-01-01")]),
+                        "values": np.array([1.0]),
+                    },
+                )()
+
+        stub = _ClientStub()
+        monkeypatch.setattr(cli, "UKDataClient", lambda: stub)
+
+        cli.get_series_cmd(
+            concept="gdp",
+            source="ons",
+            limit=7,
+            data_path=None,
+            output="json",
+        )
+
+        assert stub.captured == {"concept": "gdp", "source": "ons", "limit": 7}
 
 
 class TestUKDataClientListEntities:

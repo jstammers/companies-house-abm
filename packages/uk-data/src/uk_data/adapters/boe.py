@@ -31,6 +31,7 @@ import logging
 
 from uk_data._http import get_text, retry
 from uk_data.models import point_timeseries, series_from_observations
+from uk_data.utils.timeseries import filter_observations_by_date_window
 
 logger = logging.getLogger(__name__)
 
@@ -284,9 +285,24 @@ class BoEAdapter:
         """Fetch a canonical BoE time series."""
         concept = str(kwargs.get("concept", series_id.lower()))
         limit = int(kwargs.get("limit", 20))
+        start_date = kwargs.get("start_date")
+        end_date = kwargs.get("end_date")
 
         if series_id == _BANK_RATE_SERIES:
-            raw_obs = fetch_bank_rate(limit)
+            # Apply date-window filtering before limit slicing.
+            # Bank-rate helper supports optional tail limit, so request full
+            # available history when a date window is present.
+            fetch_limit = (
+                None if (start_date is not None or end_date is not None) else limit
+            )
+            raw_obs = fetch_bank_rate(fetch_limit)
+            raw_obs = filter_observations_by_date_window(
+                raw_obs,
+                start_date=start_date,  # type: ignore[arg-type]
+                end_date=end_date,  # type: ignore[arg-type]
+            )
+            if limit >= 0:
+                raw_obs = raw_obs[-limit:]
             # Normalise to fraction convention to match the other BoE series
             # and the Land Registry / HMRC adapters.
             fraction_obs = [

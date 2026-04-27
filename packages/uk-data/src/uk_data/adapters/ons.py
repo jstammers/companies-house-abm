@@ -30,6 +30,7 @@ from uk_data._http import retry
 from uk_data.adapters.ons_manifest import ONS_SERIES_IDS, ONS_SERIES_MANIFEST
 from uk_data.adapters.ons_provider import fetch_sdmx_series
 from uk_data.models import point_timeseries, series_from_observations
+from uk_data.utils.timeseries import filter_observations_by_date_window
 
 logger = logging.getLogger(__name__)
 
@@ -436,9 +437,24 @@ class ONSAdapter:
 
         concept = str(kwargs.get("concept", entry.concept))
         limit = int(kwargs.get("limit", 20))
+        start_date = kwargs.get("start_date")
+        end_date = kwargs.get("end_date")
 
         if entry.transport == "sdmx":
-            observations = fetch_sdmx_series(entry, limit=limit)
+            # Apply date-window filtering before limit slicing.
+            # SDMX endpoint supports last-N pulls only, so request a wider
+            # history window when explicit date bounds are provided.
+            fetch_limit = (
+                5_000 if (start_date is not None or end_date is not None) else limit
+            )
+            observations = fetch_sdmx_series(entry, limit=fetch_limit)
+            observations = filter_observations_by_date_window(
+                observations,
+                start_date=start_date,  # type: ignore[arg-type]
+                end_date=end_date,  # type: ignore[arg-type]
+            )
+            if limit >= 0:
+                observations = observations[-limit:]
             return series_from_observations(
                 series_id=concept,
                 name=entry.name,

@@ -36,6 +36,7 @@ import urllib.request
 import zipfile
 from datetime import date
 from pathlib import Path
+from typing import Any
 
 import polars as pl
 
@@ -385,3 +386,113 @@ class CompaniesHouseAdapter(BaseAdapter):
             for index, filing in enumerate(filings)
             if filing.date is not None
         ]
+
+    # ------------------------------------------------------------------
+    # extract / transform hooks (BaseAdapter contract)
+    # ------------------------------------------------------------------
+
+    def extract(self, kind: str = "sic_codes", **kwargs: Any) -> Any:
+        """Fetch raw data from the Companies House source.
+
+        Args:
+            kind: ``"sic_codes"`` for the monthly bulk download,
+                ``"entity"`` for a REST company lookup, or ``"events"``
+                for filing history.
+            **kwargs: Source-specific options (see individual kinds).
+
+        Returns:
+            Polars DataFrame for ``"sic_codes"``, a dict for ``"entity"``,
+            or a list[dict] for ``"events"``.
+        """
+        if kind == "sic_codes":
+            return fetch_sic_codes()
+
+        if kind == "entity":
+            from uk_data.api.client import CompaniesHouseClient
+            from uk_data.api.search import search_companies
+
+            entity_id = str(kwargs.get("entity_id", ""))
+            query = entity_id.split(":", 1)[-1] if ":" in entity_id else entity_id
+            results = search_companies(CompaniesHouseClient(), query, items_per_page=1)
+            if not results:
+                msg = f"No Companies House entity found for {entity_id!r}"
+                raise ValueError(msg)
+            return results[0].model_dump()
+
+        if kind == "events":
+            from uk_data.api.client import CompaniesHouseClient
+            from uk_data.api.filings import get_filing_history
+
+            entity_id = str(kwargs.get("entity_id", ""))
+            company_number = entity_id.split(":", maxsplit=1)[-1]
+            category = str(kwargs["category"]) if kwargs.get("category") else None
+            filings = get_filing_history(
+                CompaniesHouseClient(),
+                company_number,
+                category=category,
+                items_per_page=int(kwargs.get("items_per_page", 25)),
+            )
+            return [f.model_dump() for f in filings]
+
+        msg = f"Unsupported Companies House extract kind: {kind!r}"
+        raise ValueError(msg)
+
+    def transform(self, raw: Any) -> Any:
+        """Convert raw Companies House data to canonical models.
+
+        The payload type determines the output:
+
+        - Polars DataFrame (``extract("sic_codes")``) → returned as-is (no
+          canonical model exists for the SIC code lookup table).
+        - dict (``extract("entity")``) → canonical
+          :class:`~uk_data.models.Entity`.
+        - list[dict] (``extract("events")``) → list of canonical
+          :class:`~uk_data.models.Event`.
+        """
+        from datetime import datetime as _datetime
+
+        from uk_data.transformers import EntityTransformer, EventTransformer
+        from uk_data.utils.timeseries import date_to_utc_datetime
+
+        if isinstance(raw, pl.DataFrame):
+            return raw
+
+        if isinstance(raw, dict):
+            return EntityTransformer.from_dict(
+                entity_id=f"companies_house:{raw.get('company_number', '')}",
+                name=raw.get("title", ""),
+                entity_type="company",
+                attributes={
+                    k: v for k, v in raw.items() if k not in ("company_number", "title")
+                },
+                source="companies_house",
+                source_id=str(raw.get("company_number", "")),
+            )
+
+        if isinstance(raw, list):
+            events: list[Event] = []
+            for i, filing in enumerate(raw):
+                ts = filing.get("date")
+                if ts is None:
+                    continue
+                if isinstance(ts, str):
+                    try:
+                        ts = _datetime.fromisoformat(ts)
+                    except ValueError:
+                        continue
+                if not isinstance(ts, _datetime):
+                    ts = date_to_utc_datetime(ts)
+                events.append(
+                    EventTransformer.from_dict(
+                        event_id=f"companies_house:{filing.get('transaction_id', i)}",
+                        entity_id=None,
+                        event_type="filing",
+                        timestamp=ts,
+                        payload=filing,
+                        source="companies_house",
+                    )
+                )
+            return events
+
+        msg = f"Cannot transform Companies House payload of type {type(raw).__name__}"
+        raise TypeError(msg)

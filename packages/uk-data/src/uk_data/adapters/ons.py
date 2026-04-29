@@ -516,30 +516,26 @@ class ONSAdapter(BaseAdapter):
         offset: int = 0,
         dataset_type: str | None = None,
     ) -> list[ONSDatasetInfo]:
-        # ONS dataset catalog endpoint contract: GET /datasets
+        """Return catalog datasets from the ONS dataset API (cached by args)."""
         cache_key = (limit, offset, dataset_type)
-        cached = self._datasets_cache.get(cache_key)
-        if cached is not None:
-            return cached
-
+        if cache_key in self._datasets_cache:
+            return self._datasets_cache[cache_key]
         params: dict[str, str] = {"limit": str(limit), "offset": str(offset)}
         if dataset_type is not None:
             params["type"] = dataset_type
         url = self._build_dataset_url("datasets", params=params)
         payload = _get_json(url)
-        items = payload.get("items") if isinstance(payload, dict) else None
-        if not isinstance(items, list):
-            msg = "Malformed ONS datasets payload: expected 'items' list"
-            raise ValueError(msg)
-        parsed = [ONSDatasetInfo.model_validate(item) for item in items]
-        self._datasets_cache[cache_key] = parsed
-        return parsed
+        raw_items = payload.get("items", []) if isinstance(payload, dict) else payload
+        result = [ONSDatasetInfo.model_validate(item) for item in raw_items]
+        self._datasets_cache[cache_key] = result
+        return result
 
     def clear_dataset_cache(self) -> None:
         """Clear process-local dataset catalog cache."""
         self._datasets_cache.clear()
 
     def get_dataset(self, dataset_id: str) -> ONSDatasetInfo:
+        """Return typed metadata for a single ONS dataset."""
         payload = _get_json(self._build_dataset_url(f"datasets/{dataset_id}"))
         if not isinstance(payload, dict):
             msg = f"Malformed ONS dataset payload for {dataset_id!r}"
@@ -552,6 +548,7 @@ class ONSAdapter(BaseAdapter):
         edition: str,
         version: str | int,
     ) -> ONSDatasetVersionInfo:
+        """Return typed metadata for a specific dataset edition/version."""
         payload = _get_json(
             self._build_dataset_url(
                 f"datasets/{dataset_id}/editions/{edition}/versions/{version}"

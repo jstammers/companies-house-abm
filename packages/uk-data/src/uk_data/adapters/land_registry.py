@@ -598,3 +598,166 @@ class LandRegistryAdapter(BaseAdapter):
     def fetch_entity(self, entity_id: str, **kwargs: object) -> object:
         """Not supported by Land Registry adapter."""
         raise NotImplementedError
+
+    # ------------------------------------------------------------------
+    # extract / transform hooks (BaseAdapter contract)
+    # ------------------------------------------------------------------
+
+    def extract(self, kind: str = "uk_hpi", **kwargs: Any) -> dict[str, Any]:
+        """Download Land Registry data to the RawStore, skipping if cached.
+
+        The downloaded file path and any caller-supplied transform options are
+        bundled into the returned dict so they can be passed directly to
+        :meth:`transform`.
+
+        Args:
+            kind: ``"uk_hpi"`` or ``"price_paid"``.
+            **kwargs: Forwarded options. ``timeout`` (int, default 600)
+                controls the download timeout.  ``year`` (int) selects a
+                yearly Price Paid snapshot instead of the full dataset.
+                All remaining keys are passed through to :meth:`transform`.
+
+        Returns:
+            Dict with at least ``"kind"`` and ``"path"`` keys.
+        """
+        timeout = int(kwargs.get("timeout", 600))
+
+        if kind == "uk_hpi":
+            if self._store is not None:
+                output_path = self._store.root / "raw" / "land_registry" / "uk_hpi.csv"
+            else:
+                output_path = Path(str(kwargs.get("output_path", "uk_hpi.csv")))
+            path = download_uk_hpi_data(output_path, timeout=timeout)
+            passthrough = {
+                k: v for k, v in kwargs.items() if k not in ("timeout", "output_path")
+            }
+            return {"kind": "uk_hpi", "path": path, **passthrough}
+
+        if kind == "price_paid":
+            year = kwargs.get("year")
+            filename = f"pp-{year}.csv" if year else "pp-complete.csv"
+            if self._store is not None:
+                output_path = self._store.root / "raw" / "land_registry" / filename
+            else:
+                output_path = Path(str(kwargs.get("output_path", filename)))
+            path = download_price_paid_data(
+                output_path,
+                year=int(year) if year else None,  # type: ignore[arg-type]
+                timeout=timeout,
+            )
+            passthrough = {
+                k: v
+                for k, v in kwargs.items()
+                if k not in ("timeout", "year", "output_path")
+            }
+            return {"kind": "price_paid", "path": path, **passthrough}
+
+        msg = f"Unsupported Land Registry extract kind: {kind!r}"
+        raise ValueError(msg)
+
+    def transform(self, raw: Any) -> Any:
+        """Convert a downloaded Land Registry file into canonical models.
+
+        Accepts the dict returned by :meth:`extract`.  The ``"kind"`` key
+        selects the transformation path; ``"path"`` points to the downloaded
+        CSV.  Extra keys (``area_name``, ``limit``, ``start_date``,
+        ``end_date``, ``postcode``) are forwarded to the cleaning functions.
+
+        Args:
+            raw: Dict with ``"kind"`` and ``"path"``, as returned by
+                :meth:`extract`.
+
+        Returns:
+            Canonical :class:`~uk_data.models.TimeSeries` for ``"uk_hpi"``,
+            or ``list[Event]`` for ``"price_paid"``.
+        """
+        from uk_data.transformers import EventTransformer, TimeSeriesTransformer
+
+        kind = raw["kind"]
+        filepath = Path(raw["path"])
+
+        if kind == "uk_hpi":
+            area_name = str(raw.get("area_name", "United Kingdom"))
+            limit = int(raw.get("limit", 20))
+            lazy = clean_uk_hpi_data(load_uk_hpi_data(filepath))
+            schema_names = lazy.collect_schema().names()
+            area_column = next(
+                (c for c in ("regionname", "region_name") if c in schema_names),
+                None,
+            )
+            if (
+                area_column is None
+                or "average_price" not in schema_names
+                or "date" not in schema_names
+            ):
+                raise KeyError(
+                    "UK HPI data requires region name, average_price, and date columns"
+                )
+            filtered = lazy.filter(
+                pl.col(area_column).str.to_lowercase() == area_name.lower()
+            )
+            start_date = raw.get("start_date")
+            end_date = raw.get("end_date")
+            if start_date is not None:
+                _sd = (
+                    date.fromisoformat(str(start_date))
+                    if isinstance(start_date, str)
+                    else start_date
+                )
+                filtered = filtered.filter(pl.col("date") >= pl.lit(_sd))
+            if end_date is not None:
+                _ed = (
+                    date.fromisoformat(str(end_date))
+                    if isinstance(end_date, str)
+                    else end_date
+                )
+                filtered = filtered.filter(pl.col("date") <= pl.lit(_ed))
+            filtered = filtered.sort("date")
+            observations = [
+                {"date": row["date"].isoformat(), "value": row["average_price"]}
+                for row in filtered.collect().to_dicts()
+            ]
+            if limit >= 0:
+                observations = observations[-limit:]
+            return TimeSeriesTransformer.from_observations(
+                series_id="uk_hpi_monthly",
+                name=f"UK HPI average price ({area_name})",
+                frequency="M",
+                units="GBP",
+                source="land_registry",
+                source_series_id="uk_hpi_full",
+                observations=observations,
+            )
+
+        if kind == "price_paid":
+            limit = int(raw.get("limit", 100))
+            postcode = str(raw["postcode"]) if raw.get("postcode") else None
+            lazy = clean_price_paid_data(load_price_paid_data(filepath))
+            if postcode is not None:
+                lazy = lazy.filter(pl.col("postcode") == postcode.upper().strip())
+            if limit >= 0:
+                lazy = lazy.head(limit)
+            events: list[Event] = []
+            for row in lazy.collect().to_dicts():
+                ts = _transaction_event_timestamp(row.get("date_of_transfer"))
+                if ts is None:
+                    continue
+                raw_postcode = row.get("postcode")
+                event_id = str(row.get("transaction_id") or len(events))
+                entity_id = (
+                    f"land_registry:postcode:{raw_postcode}" if raw_postcode else None
+                )
+                events.append(
+                    EventTransformer.from_dict(
+                        event_id=f"land_registry:{event_id}",
+                        entity_id=entity_id,
+                        event_type="property_transaction",
+                        timestamp=ts,
+                        payload=row,
+                        source="land_registry",
+                    )
+                )
+            return events
+
+        msg = f"Unsupported Land Registry transform kind: {kind!r}"
+        raise ValueError(msg)

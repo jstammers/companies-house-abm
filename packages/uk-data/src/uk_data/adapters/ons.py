@@ -28,6 +28,8 @@ from datetime import date, datetime
 from typing import Any
 from urllib.parse import urlencode
 
+import httpx
+
 from uk_data._http import retry
 from uk_data.adapters.ons_models import (
     ONSDatasetInfo,
@@ -43,7 +45,7 @@ logger = logging.getLogger(__name__)
 # ONS API root
 # ---------------------------------------------------------------------------
 
-_ONS_API = "https://api.ons.gov.uk/v1"
+_ONS_API = "https://api.beta.ons.gov.uk/v1"
 
 # ---------------------------------------------------------------------------
 # Dataset series IDs
@@ -488,32 +490,6 @@ class ONSAdapter:
             if item.dimensions.get("time")
         ]
 
-    @staticmethod
-    def _coerce_observation_row(payload: dict[str, Any]) -> ONSObservation:
-        raw_dimensions = payload.get("dimensions", {})
-        dimensions: dict[str, str] = {}
-        if isinstance(raw_dimensions, dict):
-            for key, raw_value in raw_dimensions.items():
-                if isinstance(raw_value, dict):
-                    value = (
-                        raw_value.get("id")
-                        or raw_value.get("label")
-                        or raw_value.get("name")
-                    )
-                    if value is not None:
-                        dimensions[str(key)] = str(value)
-                elif raw_value is not None:
-                    dimensions[str(key)] = str(raw_value)
-
-        raw_observation = payload.get("observation")
-        if raw_observation is None:
-            raw_observation = payload.get("value")
-        if raw_observation is None:
-            msg = "ONS observation payload missing 'observation' or 'value'"
-            raise ValueError(msg)
-
-        return ONSObservation(dimensions=dimensions, observation=str(raw_observation))
-
     def list_datasets(
         self,
         *,
@@ -530,7 +506,7 @@ class ONSAdapter:
         params: dict[str, str] = {"limit": str(limit), "offset": str(offset)}
         if dataset_type is not None:
             params["type"] = dataset_type
-        payload = _get_json(self._build_dataset_url("datasets", params=params))
+        payload = httpx.get(self._build_dataset_url("datasets", params=params)).json()
         items = payload.get("items") if isinstance(payload, dict) else None
         if not isinstance(items, list):
             msg = "Malformed ONS datasets payload: expected 'items' list"
@@ -544,7 +520,7 @@ class ONSAdapter:
         self._datasets_cache.clear()
 
     def get_dataset(self, dataset_id: str) -> ONSDatasetInfo:
-        payload = _get_json(self._build_dataset_url(f"datasets/{dataset_id}"))
+        payload = httpx.get(self._build_dataset_url(f"datasets/{dataset_id}")).json()
         if not isinstance(payload, dict):
             msg = f"Malformed ONS dataset payload for {dataset_id!r}"
             raise ValueError(msg)
@@ -556,17 +532,11 @@ class ONSAdapter:
         edition: str,
         version: str | int,
     ) -> ONSDatasetVersionInfo:
-        payload = _get_json(
+        payload = httpx.get(
             self._build_dataset_url(
                 f"datasets/{dataset_id}/editions/{edition}/versions/{version}"
             )
-        )
-        if not isinstance(payload, dict):
-            msg = (
-                f"Malformed ONS version payload for "
-                f"{dataset_id!r}/{edition!r}/{version!r}"
-            )
-            raise ValueError(msg)
+        ).json()
         return ONSDatasetVersionInfo.model_validate(payload)
 
     def get_observation_series(
@@ -576,27 +546,7 @@ class ONSAdapter:
         version: str | int,
         **dimensions: str,
     ) -> list[ONSObservation]:
-        payload = _get_json(
-            self._build_dataset_url(
-                f"datasets/{dataset_id}/editions/{edition}/versions/{version}/observations",
-                params={k: str(v) for k, v in dimensions.items()},
-            )
-        )
-        if not isinstance(payload, dict):
-            msg = (
-                f"Malformed ONS observations payload for "
-                f"{dataset_id!r}/{edition!r}/{version!r}"
-            )
-            raise ValueError(msg)
-        observations = payload.get("observations", [])
-        if not isinstance(observations, list):
-            msg = "Malformed ONS observations payload: expected 'observations' list"
-            raise ValueError(msg)
-        return [
-            self._coerce_observation_row(row)
-            for row in observations
-            if isinstance(row, dict)
-        ]
+        pass
 
     def get_observation(
         self,
@@ -605,14 +555,13 @@ class ONSAdapter:
         version: str | int,
         **dimensions: str,
     ) -> ONSObservation:
-        series = self.get_observation_series(dataset_id, edition, version, **dimensions)
-        if not series:
-            msg = (
-                f"No ONS observations returned for "
-                f"{dataset_id!r}/{edition!r}/{version!r}"
+        payload = httpx.get(
+            self._build_dataset_url(
+                f"datasets/{dataset_id}/editions/{edition}/versions/{version}/observations",
+                params={k: str(v) for k, v in dimensions.items()},
             )
-            raise ValueError(msg)
-        return series[-1]
+        ).json()
+        return ONSObservation.model_validate(payload)
 
     def available_series(self) -> list[str]:
         """Return the ONS series IDs supported by this adapter."""

@@ -145,6 +145,34 @@ def test_uk_hpi_history_filters_before_limit(tmp_path):
     assert series.values.tolist() == pytest.approx([290_000.0])
 
 
+def test_uk_hpi_history_pushes_date_filter_into_lazy_query(tmp_path):
+    from uk_data.adapters.land_registry import fetch_uk_hpi_history
+
+    csv_path = tmp_path / "uk-hpi.csv"
+    csv_path.write_text(
+        "Date,RegionName,Average Price,Sales Volume\n"
+        "01/12/2023,United Kingdom,275000,900\n"
+        "01/01/2024,United Kingdom,280000,1000\n"
+        "01/03/2024,United Kingdom,290000,1200\n"
+        "01/04/2024,United Kingdom,295000,1250\n"
+    )
+
+    with patch(
+        "uk_data.adapters.land_registry.filter_observations_by_date_window",
+        side_effect=AssertionError("post-hoc filter should not be called"),
+        create=True,
+    ):
+        series = fetch_uk_hpi_history(
+            csv_path,
+            area_name="United Kingdom",
+            start_date="2024-01-01",
+            end_date="2024-03-01",
+            limit=20,
+        )
+
+    assert series.values.tolist() == pytest.approx([280_000.0, 290_000.0])
+
+
 def test_land_registry_adapter_events_and_series(tmp_path):
     price_paid_path = tmp_path / "pp-sample.csv"
     price_paid_path.write_text(

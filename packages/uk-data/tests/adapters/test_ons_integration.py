@@ -13,6 +13,7 @@ import urllib.request
 import pytest
 
 from uk_data.adapters.ons import ONSAdapter
+from uk_data.adapters.ons_models import ONSDatasetInfo, ONSDatasetVersionInfo
 from uk_data.models import TimeSeries
 
 pytestmark = pytest.mark.integration
@@ -118,3 +119,32 @@ class TestONSAdapterIntegration:
             assert ts.latest_value is not None, (
                 f"ONS series {series_id!r} returned null latest_value"
             )
+
+    def test_list_datasets_live(self) -> None:
+        adapter = ONSAdapter()
+        result = adapter.list_datasets()
+        assert isinstance(result, list), "Expected list of datasets"
+        assert isinstance(result[0], ONSDatasetInfo), "Expected dataset details"
+
+    def test_get_dataset_live(self) -> None:
+        adapter = ONSAdapter()
+        dataset = adapter.get_dataset("cpih01")
+        assert isinstance(dataset, ONSDatasetInfo), "Expected dataset details"
+
+    def test_get_version_live(self) -> None:
+        adapter = ONSAdapter()
+        version = adapter.get_version("cpih01", "time-series", 6)
+        assert isinstance(version, ONSDatasetVersionInfo), "Expected version details"
+
+    def test_get_observations_live(self) -> None:
+        adapter = ONSAdapter()
+        observations = adapter.get_observation(
+            "cpih01",
+            "time-series",
+            6,
+            time="Aug-16",
+            geography="K02000001",
+            aggregate="cpih1dim1A0",
+        )
+        assert isinstance(observations, list), "Expected list of observations"
+        assert len(observations) > 0, "Expected at least one observation"

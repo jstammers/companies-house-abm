@@ -28,6 +28,7 @@ See https://www.bankofengland.co.uk/legal for details.
 from __future__ import annotations
 
 import logging
+from datetime import date, datetime
 
 from uk_data._http import get_text, retry
 from uk_data.models import point_timeseries, series_from_observations
@@ -56,10 +57,29 @@ _FALLBACK_CAPITAL_RATIO = 0.148  # CET1 ratio ~14.8% (BoE FSR 2023)
 _DEFAULT_IADB_FROM_YEAR = 2013
 
 
+def _year_from_bound(value: object) -> int | None:
+    if value is None:
+        return None
+    if isinstance(value, str):
+        stripped = value.strip()
+        if not stripped:
+            return None
+        try:
+            return datetime.fromisoformat(stripped.replace("Z", "+00:00")).year
+        except ValueError:
+            return int(stripped[:4]) if len(stripped) >= 4 else None
+    if isinstance(value, datetime):
+        return value.year
+    if isinstance(value, date):
+        return value.year
+    return None
+
+
 def _build_iadb_url(
     series: str,
     *,
     from_year: int | None = None,
+    to_year: int | None = None,
     years_back: int | None = None,
 ) -> str:
     """Build an IADB CSV download URL for a given series.
@@ -84,7 +104,7 @@ def _build_iadb_url(
         else:
             from_year = _DEFAULT_IADB_FROM_YEAR
     from_date = f"01/Jan/{from_year}"
-    return (
+    url = (
         f"{_BOE_IADB}"
         f"?csv.x=yes"
         f"&Datefrom={from_date}"
@@ -93,6 +113,9 @@ def _build_iadb_url(
         f"&VPD=Y"
         f"&VFD=N"
     )
+    if to_year is not None:
+        url += f"&Dateto=31/Dec/{to_year}"
+    return url
 
 
 def _parse_iadb_csv(text: str) -> list[dict[str, str]]:
@@ -130,7 +153,12 @@ def _parse_iadb_csv(text: str) -> list[dict[str, str]]:
     return rows
 
 
-def fetch_bank_rate(num_observations: int | None = None) -> list[dict[str, str]]:
+def fetch_bank_rate(
+    num_observations: int | None = None,
+    *,
+    from_year: int | None = None,
+    to_year: int | None = None,
+) -> list[dict[str, str]]:
     """Fetch recent Bank Rate observations from the BoE IADB.
 
     The Bank Rate (also known as the Base Rate) is the single most
@@ -152,7 +180,7 @@ def fetch_bank_rate(num_observations: int | None = None) -> list[dict[str, str]]
         >>> isinstance(obs, list)
         True
     """
-    url = _build_iadb_url(_BANK_RATE_SERIES)
+    url = _build_iadb_url(_BANK_RATE_SERIES, from_year=from_year, to_year=to_year)
     try:
         text = retry(get_text, url)
         rows = _parse_iadb_csv(text)
@@ -289,13 +317,13 @@ class BoEAdapter:
         end_date = kwargs.get("end_date")
 
         if series_id == _BANK_RATE_SERIES:
-            # Apply date-window filtering before limit slicing.
-            # Bank-rate helper supports optional tail limit, so request full
-            # available history when a date window is present.
-            fetch_limit = (
-                None if (start_date is not None or end_date is not None) else limit
+            from_year = _year_from_bound(start_date)
+            to_year = _year_from_bound(end_date)
+            raw_obs = fetch_bank_rate(
+                limit,
+                from_year=from_year,
+                to_year=to_year,
             )
-            raw_obs = fetch_bank_rate(fetch_limit)
             raw_obs = filter_observations_by_date_window(
                 raw_obs,
                 start_date=start_date,  # type: ignore[arg-type]

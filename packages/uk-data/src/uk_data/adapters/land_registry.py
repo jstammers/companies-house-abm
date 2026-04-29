@@ -22,10 +22,7 @@ import polars as pl
 
 from uk_data._http import _USER_AGENT, retry
 from uk_data.models import Event, point_timeseries, series_from_observations
-from uk_data.utils.timeseries import (
-    date_to_utc_datetime,
-    filter_observations_by_date_window,
-)
+from uk_data.utils.timeseries import date_to_utc_datetime
 
 logger = logging.getLogger(__name__)
 
@@ -403,6 +400,23 @@ def fetch_uk_hpi_history(
     end_date: str | date | datetime | None = None,
 ):
     """Convert UK HPI rows for an area into a canonical time series."""
+
+    def _coerce_bound(value: str | date | datetime | None) -> date | None:
+        if value is None:
+            return None
+        if isinstance(value, datetime):
+            return value.date()
+        if isinstance(value, date):
+            return value
+        normalized = value.strip()
+        if not normalized:
+            return None
+        try:
+            return datetime.fromisoformat(normalized.replace("Z", "+00:00")).date()
+        except ValueError as exc:
+            msg = f"Invalid date bound: {value!r}"
+            raise ValueError(msg) from exc
+
     lazy = clean_uk_hpi_data(load_uk_hpi_data(filepath))
     schema_names = lazy.collect_schema().names()
     area_column = next(
@@ -418,18 +432,21 @@ def fetch_uk_hpi_history(
             "UK HPI data requires region name, average_price, and date columns"
         )
 
-    filtered = lazy.filter(
-        pl.col(area_column).str.to_lowercase() == area_name.lower()
-    ).sort("date")
+    filtered = lazy.filter(pl.col(area_column).str.to_lowercase() == area_name.lower())
+
+    start_bound = _coerce_bound(start_date)
+    end_bound = _coerce_bound(end_date)
+    if start_bound is not None:
+        filtered = filtered.filter(pl.col("date") >= pl.lit(start_bound))
+    if end_bound is not None:
+        filtered = filtered.filter(pl.col("date") <= pl.lit(end_bound))
+
+    filtered = filtered.sort("date")
+
     observations = [
         {"date": row["date"].isoformat(), "value": row["average_price"]}
         for row in filtered.collect().to_dicts()
     ]
-    observations = filter_observations_by_date_window(
-        observations,
-        start_date=start_date,
-        end_date=end_date,
-    )
     if limit >= 0:
         observations = observations[-limit:]
     return series_from_observations(

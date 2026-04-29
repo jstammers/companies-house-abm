@@ -129,3 +129,25 @@ class TestBoEAdapterFetchSeries:
             )
 
         assert ts.values.tolist() == pytest.approx([0.0525, 0.05])
+
+    def test_bank_rate_passes_endpoint_year_bounds_from_date_window(self) -> None:
+        with patch(
+            "uk_data.adapters.boe.fetch_bank_rate",
+            return_value=[
+                {"date": "01 Jan 2024", "value": "5.25"},
+                {"date": "01 Mar 2024", "value": "5.00"},
+            ],
+        ) as mocked_fetch:
+            adapter = BoEAdapter()
+            adapter.fetch_series(
+                "IUMABEDR",
+                start_date="2024-01-01",
+                end_date="2024-03-31",
+                limit=10,
+            )
+
+        mocked_fetch.assert_called_once_with(
+            10,
+            from_year=2024,
+            to_year=2024,
+        )

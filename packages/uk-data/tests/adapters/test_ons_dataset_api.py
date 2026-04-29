@@ -6,6 +6,7 @@ from unittest.mock import patch
 
 from uk_data.adapters.ons import ONSAdapter
 from uk_data.adapters.ons_models import (
+    Observation,
     ONSDatasetInfo,
     ONSDatasetVersionInfo,
     ONSObservation,
@@ -143,4 +144,4 @@ class TestONSDatasetAPI:
             )
 
         assert len(series) == 2
-        assert all(isinstance(row, ONSObservation) for row in series)
+        assert all(isinstance(row, Observation) for row in series)

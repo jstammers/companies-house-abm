@@ -1,8 +1,4 @@
-"""Shared HTTP helpers for public data source fetchers.
-
-Uses ``httpx`` as the transport layer and prefers cache-aware clients from
-``hishel`` or ``httpx_cache`` when available.
-"""
+"""Shared HTTP helpers for public data source fetchers."""
 
 from __future__ import annotations
 
@@ -10,104 +6,82 @@ import base64
 import threading
 import time
 from collections import OrderedDict
-from typing import Any
+from typing import TYPE_CHECKING, Any, TypeVar
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 import httpx
 
-_CACHE_MAX_ENTRIES = 256
-_CACHE: OrderedDict[str, Any] = OrderedDict()
-_CACHE_LOCK = threading.Lock()
-_DEFAULT_TIMEOUT = 30  # seconds
-# Browser-like User-Agent to avoid 403 blocks from government data APIs that
-# reject default urllib clients.  Note: some government APIs require honest
-# identification — override via _USER_AGENT if your use case requires it.
 _USER_AGENT = (
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 )
 
-_CLIENT_LOCK = threading.Lock()
-_CLIENT: httpx.Client | Any | None = None
-_CLIENT_TIMEOUT = _DEFAULT_TIMEOUT
+_DEFAULT_TIMEOUT = 10  # seconds
+_CACHE_MAX_ENTRIES = 256
+_CACHE: OrderedDict[str, Any] = OrderedDict()
+_CACHE_LOCK = threading.Lock()
+
+T = TypeVar("T")
 
 
 def _cache_get(key: str) -> Any | None:
     with _CACHE_LOCK:
-        if key not in _CACHE:
-            return None
-        # LRU: mark most-recently used
-        _CACHE.move_to_end(key)
-        return _CACHE[key]
+        return _CACHE.get(key)
 
 
 def _cache_set(key: str, value: Any) -> None:
     with _CACHE_LOCK:
+        if key in _CACHE:
+            _CACHE.move_to_end(key)
         _CACHE[key] = value
-        _CACHE.move_to_end(key)
         while len(_CACHE) > _CACHE_MAX_ENTRIES:
             _CACHE.popitem(last=False)
 
 
-def _build_client(*, timeout: int) -> Any:
-    """Build a shared HTTP client, preferring cache-aware implementations."""
-    headers = {"User-Agent": _USER_AGENT}
+def clear_cache() -> None:
+    """Clear the in-process HTTP response cache."""
+    with _CACHE_LOCK:
+        _CACHE.clear()
 
-    # 1) hishel transport (preferred when available)
-    try:
-        from hishel.httpx import SyncCacheClient  # type: ignore[import-not-found]
 
-        return SyncCacheClient(
-            timeout=timeout,
-            follow_redirects=True,
-            headers=headers,
-        )
-    except Exception:
-        pass
-
-    # 2) httpx_cache client (fallback cache provider)
-    try:
-        import httpx_cache  # type: ignore[import-not-found]
-
-        cache_client_cls = getattr(httpx_cache, "Client", None)
-        if cache_client_cls is not None:
-            return cache_client_cls(
-                timeout=timeout,
-                follow_redirects=True,
-                headers=headers,
-            )
-    except Exception:
-        pass
-
-    # 3) plain httpx client
+def _get_client(*, timeout: int = _DEFAULT_TIMEOUT) -> httpx.Client:
+    """Return a configured httpx client. Separate function to allow test patching."""
     return httpx.Client(
         timeout=timeout,
         follow_redirects=True,
-        headers=headers,
+        headers={"User-Agent": _USER_AGENT},
     )
 
 
-def _get_client(*, timeout: int = _DEFAULT_TIMEOUT) -> Any:
-    """Return a lazily-initialized shared HTTP client."""
-    global _CLIENT, _CLIENT_TIMEOUT
+def retry(
+    fn: Callable[..., T],
+    /,
+    *args: Any,
+    retries: int = 3,
+    backoff: float = 1.0,
+    **kwargs: Any,
+) -> T:
+    """Call *fn* with *args*/*kwargs*, retrying up to *retries* additional times.
 
-    with _CLIENT_LOCK:
-        if _CLIENT is not None and timeout == _CLIENT_TIMEOUT:
-            return _CLIENT
-
-        if _CLIENT is not None:
-            close_fn = getattr(_CLIENT, "close", None)
-            if callable(close_fn):
-                close_fn()
-
-        _CLIENT = _build_client(timeout=timeout)
-        _CLIENT_TIMEOUT = timeout
-        return _CLIENT
+    Total attempts = retries + 1. Uses exponential backoff: waits
+    ``backoff * 2**attempt`` seconds between attempts.
+    """
+    total = retries + 1
+    last_exc: Exception | None = None
+    for attempt in range(total):
+        try:
+            return fn(*args, **kwargs)
+        except Exception as exc:
+            last_exc = exc
+            if attempt < total - 1:
+                time.sleep(backoff * (2**attempt))
+    raise RuntimeError(f"All {total} attempts failed") from last_exc
 
 
 def get_json(url: str, *, timeout: int = _DEFAULT_TIMEOUT) -> Any:
-    """Fetch *url* and return the parsed JSON body.
-
-    Responses are cached in-process.
+    """Fetch *url* and return the parsed JSON body (in-process cached).
 
     Args:
         url: The URL to fetch.
@@ -123,19 +97,16 @@ def get_json(url: str, *, timeout: int = _DEFAULT_TIMEOUT) -> Any:
     cached = _cache_get(url)
     if cached is not None:
         return cached
-
     client = _get_client(timeout=timeout)
     response = client.get(url)
     response.raise_for_status()
-    data = response.json()
-    _cache_set(url, data)
-    return data
+    result = response.json()
+    _cache_set(url, result)
+    return result
 
 
 def get_text(url: str, *, timeout: int = _DEFAULT_TIMEOUT) -> str:
-    """Fetch *url* and return the raw text body.
-
-    Responses are cached in-process.
+    """Fetch *url* and return the raw text body (in-process cached).
 
     Args:
         url: The URL to fetch.
@@ -151,20 +122,16 @@ def get_text(url: str, *, timeout: int = _DEFAULT_TIMEOUT) -> str:
     cached = _cache_get(cache_key)
     if cached is not None:
         return cached
-
     client = _get_client(timeout=timeout)
     response = client.get(url)
     response.raise_for_status()
-    body = response.text
-
-    _cache_set(cache_key, body)
-    return body
+    result = response.text
+    _cache_set(cache_key, result)
+    return result
 
 
 def get_bytes(url: str, *, timeout: int = _DEFAULT_TIMEOUT) -> bytes:
-    """Fetch *url* and return the raw bytes body.
-
-    Responses are NOT cached (binary downloads may be large).
+    """Fetch *url* and return the raw bytes body (not cached).
 
     Args:
         url: The URL to fetch.
@@ -186,76 +153,14 @@ def request_bytes(
     params: dict[str, str | int] | None = None,
     timeout: int = _DEFAULT_TIMEOUT,
 ) -> bytes:
-    """Fetch *url* and return raw response bytes.
-
-    This is a thin convenience wrapper around ``httpx.Client.get`` and is used
-    by adapters that need header/params control.
-    """
+    """Fetch *url* and return raw response bytes."""
     client = _get_client(timeout=timeout)
     response = client.get(url, headers=headers, params=params)
     response.raise_for_status()
     return response.content
 
 
-def retry(
-    fn: Any,
-    *args: Any,
-    retries: int = 3,
-    backoff: float = 1.0,
-    **kwargs: Any,
-) -> Any:
-    """Call *fn* with *args*/*kwargs*, retrying up to *retries* times.
-
-    Args:
-        fn: Callable to retry.
-        *args: Positional arguments forwarded to *fn*.
-        retries: Maximum number of retry attempts.
-        backoff: Initial back-off delay in seconds (doubles each attempt).
-        **kwargs: Keyword arguments forwarded to *fn*.
-
-    Returns:
-        The return value of *fn* on success.
-
-    Raises:
-        The last exception raised if all attempts fail.
-    """
-    delay = backoff
-    last_exc: BaseException | None = None
-    for attempt in range(retries + 1):
-        try:
-            return fn(*args, **kwargs)
-        except (httpx.HTTPError, TimeoutError) as exc:
-            last_exc = exc
-            if attempt < retries:
-                time.sleep(delay)
-                delay *= 2
-    raise RuntimeError(f"All {retries + 1} attempts failed") from last_exc
-
-
-def clear_cache() -> None:
-    """Clear caches and reset the shared HTTP client."""
-    global _CLIENT
-
-    with _CACHE_LOCK:
-        _CACHE.clear()
-
-    with _CLIENT_LOCK:
-        if _CLIENT is not None:
-            close_fn = getattr(_CLIENT, "close", None)
-            if callable(close_fn):
-                close_fn()
-        _CLIENT = None
-
-
 def encode_basic_auth(user: str, password: str) -> str:
-    """Base64-encode ``user:password`` for an HTTP Basic Authorization header.
-
-    Args:
-        user: Username (or API key).
-        password: Password (may be empty string).
-
-    Returns:
-        Base64-encoded credentials string (suitable for ``Basic <value>``).
-    """
+    """Base64-encode ``user:password`` for an HTTP Basic Authorization header."""
     token = f"{user}:{password}".encode()
     return base64.b64encode(token).decode()

@@ -53,18 +53,43 @@ class Dimensions(BaseModel):
 
 
 class TimeDimension(BaseModel):
-    href: HttpUrl
+    model_config = ConfigDict(extra="allow")
+
+    href: HttpUrl | None = None
     id: str
-    label: str
+    label: str = ""
 
 
 class ObservationDimensions(BaseModel):
-    Time: TimeDimension  # ONS uses capitalised "Time"
+    """Dimension metadata for a single observation row.
+
+    The ONS API returns dimension keys in lowercase (e.g. ``"time"``).
+    Unknown keys are preserved via ``extra="allow"`` so callers can access
+    them through :attr:`model_extra`.
+    """
+
+    model_config = ConfigDict(extra="allow")
+
+    time: TimeDimension | None = None
+
+    def get_time_id(self) -> str:
+        """Return the period identifier, regardless of key casing."""
+        if self.time is not None:
+            return self.time.id
+        extra = self.model_extra or {}
+        time_dim = extra.get("Time")
+        if isinstance(time_dim, TimeDimension):
+            return time_dim.id
+        if isinstance(time_dim, dict):
+            return time_dim.get("id", "")
+        return ""
 
 
 class Observation(BaseModel):
-    dimensions: ObservationDimensions
-    observation: float  # coerce from string
+    model_config = ConfigDict(extra="allow")
+
+    dimensions: ObservationDimensions = Field(default_factory=ObservationDimensions)
+    observation: float = 0.0  # coerced from string
 
 
 class Links(BaseModel):
@@ -76,7 +101,9 @@ class Links(BaseModel):
 class ONSObservation(BaseModel):
     """Normalized observation payload row from ONS dataset endpoints."""
 
-    dimensions: Dimensions
-    observations: list[Observation]
-    links: Links
-    limit: int
+    model_config = ConfigDict(extra="allow")
+
+    dimensions: Dimensions = Field(default_factory=Dimensions)
+    observations: list[Observation] = Field(default_factory=list)
+    links: Links | None = None
+    limit: int = 0

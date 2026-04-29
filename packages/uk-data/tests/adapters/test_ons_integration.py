@@ -137,8 +137,10 @@ class TestONSAdapterIntegration:
         assert isinstance(version, ONSDatasetVersionInfo), "Expected version details"
 
     def test_get_observations_live(self) -> None:
+        from uk_data.adapters.ons_models import ONSObservation
+
         adapter = ONSAdapter()
-        observations = adapter.get_observation(
+        result = adapter.get_observation(
             "cpih01",
             "time-series",
             6,
@@ -146,5 +148,5 @@ class TestONSAdapterIntegration:
             geography="K02000001",
             aggregate="cpih1dim1A0",
         )
-        assert isinstance(observations, list), "Expected list of observations"
-        assert len(observations) > 0, "Expected at least one observation"
+        assert isinstance(result, ONSObservation), "Expected ONSObservation container"
+        assert len(result.observations) > 0, "Expected at least one observation"

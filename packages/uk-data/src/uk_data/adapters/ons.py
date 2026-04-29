@@ -28,15 +28,14 @@ from datetime import date, datetime
 from typing import Any
 from urllib.parse import urlencode
 
-import httpx
-
-from uk_data._http import retry
 from uk_data.adapters.ons_models import (
+    Observation,
     ONSDatasetInfo,
     ONSDatasetVersionInfo,
     ONSObservation,
 )
 from uk_data.models import point_timeseries, series_from_observations
+from uk_data.utils.http import retry
 from uk_data.utils.timeseries import filter_observations_by_date_window
 
 logger = logging.getLogger(__name__)
@@ -478,17 +477,30 @@ class ONSAdapter:
 
     def _fetch_series_observations(self, series_id: str) -> list[dict[str, str]]:
         dataset_id = self._series_dataset_id(series_id)
+        rows = self.get_observation_series(
+            dataset_id,
+            "time-series",
+            "latest",
+            timeseries=series_id,
+            time="*",
+        )
         return [
-            {"date": item.dimensions.get("time", ""), "value": item.observation}
-            for item in self.get_observation_series(
-                dataset_id,
-                "time-series",
-                "latest",
-                timeseries=series_id,
-                time="*",
-            )
-            if item.dimensions.get("time")
+            {"date": date_id, "value": str(item.observation)}
+            for item in rows
+            if (date_id := item.dimensions.get_time_id())
         ]
+
+    def get_observation_series(
+        self,
+        dataset_id: str,
+        edition: str,
+        version: str | int,
+        **dimensions: str,
+    ) -> list[Observation]:
+        """Return individual observation rows from a dataset endpoint."""
+        return self.get_observation(
+            dataset_id, edition, version, **dimensions
+        ).observations
 
     def list_datasets(
         self,
@@ -506,7 +518,8 @@ class ONSAdapter:
         params: dict[str, str] = {"limit": str(limit), "offset": str(offset)}
         if dataset_type is not None:
             params["type"] = dataset_type
-        payload = httpx.get(self._build_dataset_url("datasets", params=params)).json()
+        url = self._build_dataset_url("datasets", params=params)
+        payload = _get_json(url)
         items = payload.get("items") if isinstance(payload, dict) else None
         if not isinstance(items, list):
             msg = "Malformed ONS datasets payload: expected 'items' list"
@@ -520,7 +533,7 @@ class ONSAdapter:
         self._datasets_cache.clear()
 
     def get_dataset(self, dataset_id: str) -> ONSDatasetInfo:
-        payload = httpx.get(self._build_dataset_url(f"datasets/{dataset_id}")).json()
+        payload = _get_json(self._build_dataset_url(f"datasets/{dataset_id}"))
         if not isinstance(payload, dict):
             msg = f"Malformed ONS dataset payload for {dataset_id!r}"
             raise ValueError(msg)
@@ -532,21 +545,12 @@ class ONSAdapter:
         edition: str,
         version: str | int,
     ) -> ONSDatasetVersionInfo:
-        payload = httpx.get(
+        payload = _get_json(
             self._build_dataset_url(
                 f"datasets/{dataset_id}/editions/{edition}/versions/{version}"
             )
-        ).json()
+        )
         return ONSDatasetVersionInfo.model_validate(payload)
-
-    def get_observation_series(
-        self,
-        dataset_id: str,
-        edition: str,
-        version: str | int,
-        **dimensions: str,
-    ) -> list[ONSObservation]:
-        pass
 
     def get_observation(
         self,
@@ -555,12 +559,12 @@ class ONSAdapter:
         version: str | int,
         **dimensions: str,
     ) -> ONSObservation:
-        payload = httpx.get(
-            self._build_dataset_url(
-                f"datasets/{dataset_id}/editions/{edition}/versions/{version}/observations",
-                params={k: str(v) for k, v in dimensions.items()},
-            )
-        ).json()
+        url = self._build_dataset_url(
+            f"datasets/{dataset_id}/editions/{edition}/versions/{version}/observations"
+        )
+        params = {k: v for k, v in dimensions.items() if isinstance(v, str)}
+        full_url = f"{url}?{urlencode(params)}" if params else url
+        payload = _get_json(full_url)
         return ONSObservation.model_validate(payload)
 
     def available_series(self) -> list[str]:

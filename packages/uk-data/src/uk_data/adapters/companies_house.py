@@ -39,6 +39,7 @@ from pathlib import Path
 
 import polars as pl
 
+from uk_data.adapters.base import BaseAdapter
 from uk_data.models import Entity, Event
 
 logger = logging.getLogger(__name__)
@@ -282,8 +283,10 @@ def fetch_sic_codes(
     ) from last_exc
 
 
-class CompaniesHouseAdapter:
+class CompaniesHouseAdapter(BaseAdapter):
     """Canonical adapter for Companies House company and filing data."""
+
+    _source_name = "companies_house"
 
     def fetch_series(self, series_id: str, **_kwargs: object):
         """Companies House does not expose generic macro time-series here."""

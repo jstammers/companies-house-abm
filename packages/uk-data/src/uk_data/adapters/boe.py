@@ -31,6 +31,7 @@ import logging
 from datetime import date, datetime
 
 from uk_data._http import get_text, retry
+from uk_data.adapters.base import BaseAdapter
 from uk_data.models import point_timeseries, series_from_observations
 from uk_data.utils.timeseries import filter_observations_by_date_window
 
@@ -297,8 +298,10 @@ def get_aggregate_capital_ratio() -> float:
     return _FALLBACK_CAPITAL_RATIO
 
 
-class BoEAdapter:
+class BoEAdapter(BaseAdapter):
     """Canonical adapter for Bank of England data."""
+
+    _source_name = "boe"
 
     def available_series(self) -> list[str]:
         """Return the BoE series IDs supported by this adapter."""

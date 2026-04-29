@@ -21,6 +21,7 @@ from typing import Any
 import polars as pl
 
 from uk_data._http import _USER_AGENT, retry
+from uk_data.adapters.base import BaseAdapter
 from uk_data.models import Event, point_timeseries, series_from_observations
 from uk_data.utils.timeseries import date_to_utc_datetime
 
@@ -527,8 +528,10 @@ def _encode_query(query: str) -> str:
     return urllib.parse.quote(query.strip())
 
 
-class LandRegistryAdapter:
+class LandRegistryAdapter(BaseAdapter):
     """Canonical adapter for Land Registry house-price and transaction data."""
+
+    _source_name = "land_registry"
 
     def available_series(self) -> list[str]:
         """Return the Land Registry series IDs supported by this adapter."""

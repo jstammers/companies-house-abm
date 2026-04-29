@@ -16,6 +16,7 @@ from zipfile import ZipFile
 
 import polars as pl
 
+from uk_data.adapters.base import BaseAdapter
 from uk_data.models import Event
 from uk_data.utils.http import _USER_AGENT, encode_basic_auth, request_bytes
 from uk_data.utils.timeseries import date_to_utc_datetime
@@ -277,8 +278,10 @@ def fetch_epc_lodgement_events(
     return events
 
 
-class EPCAdapter:
+class EPCAdapter(BaseAdapter):
     """Canonical adapter for EPC certificate data."""
+
+    _source_name = "epc"
 
     def fetch_series(self, _series_id: str, **_kwargs: object):
         """EPC integration does not expose canonical series yet."""

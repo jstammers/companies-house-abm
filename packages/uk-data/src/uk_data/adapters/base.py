@@ -1,31 +1,23 @@
-"""Base adapter interface for canonical UK data sources."""
+"""Base adapter interface and class for canonical UK data sources."""
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Protocol, runtime_checkable
+import json
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from uk_data.models import Entity, Event, TimeSeries
+    from uk_data.storage.raw import RawStore
 
 
 @runtime_checkable
 class AdapterProtocol(Protocol):
     """Structural contract for all low-level UK data source adapters.
 
-    A low-level adapter is responsible for:
-      1. Fetching raw data from a **single** external source.
-      2. Translating it into canonical models (``Entity``, ``Event``, ``TimeSeries``).
-      3. Operational concerns scoped to that source (retry, rate limiting,
-         caching of raw responses).
-
-    Out of scope for adapters:
-      - Cross-source routing or concept resolution (that is ``ConceptResolver``'s job).
-      - Domain aggregation across multiple sources.
-      - High-level orchestration (that belongs in ``uk_data.workflows``).
-
-    To add a new source adapter: implement this Protocol structurally
-    (no inheritance required). All methods with default implementations below
-    are optional — only ``fetch_series`` is required.
+    Keeps duck-typing interop: anything that implements ``fetch_series``
+    satisfies this protocol without inheriting from ``BaseAdapter``.
     """
 
     def fetch_series(self, series_id: str, **kwargs: object) -> TimeSeries:
@@ -58,5 +50,59 @@ class AdapterProtocol(Protocol):
         ...
 
 
-# Backwards-compatibility alias — deprecated, use AdapterProtocol directly.
-BaseAdapter = AdapterProtocol
+class BaseAdapter:
+    """Concrete base class for UK data source adapters.
+
+    Subclasses declare ``_source_name`` and implement:
+    - ``extract(*args, **kwargs)`` — fetch raw payload from the external source
+    - ``transform(raw)`` — convert raw payload into canonical models
+
+    The base class provides ``save`` / ``load`` for optional raw provenance
+    storage via an injected :class:`~uk_data.storage.raw.RawStore`.
+    """
+
+    _source_name: str = "unknown"
+
+    def __init__(self, store: RawStore | None = None) -> None:
+        self._store = store
+
+    # ------------------------------------------------------------------
+    # Raw storage helpers
+    # ------------------------------------------------------------------
+
+    def save(self, key: str, raw: Any) -> Path | None:
+        """Persist *raw* under *key* in the raw store.
+
+        Returns the written ``Path``, or ``None`` when no store is configured.
+        """
+        if self._store is None:
+            return None
+        return self._store.write(source=self._source_name, key=key, payload=raw)
+
+    def load(self, key: str) -> Any | None:
+        """Return the most-recent raw payload for *key*, or ``None``.
+
+        Looks under ``<store.root>/raw/<_source_name>/<key>/`` for timestamped
+        JSON files and returns the content of the newest one.
+        """
+        if self._store is None:
+            return None
+        directory = self._store.root / "raw" / self._source_name / key
+        if not directory.exists():
+            return None
+        files = sorted(directory.glob("*.json"))
+        if not files:
+            return None
+        return json.loads(files[-1].read_text())
+
+    # ------------------------------------------------------------------
+    # Abstract hooks — subclasses implement these
+    # ------------------------------------------------------------------
+
+    def extract(self, *args: Any, **kwargs: Any) -> Any:
+        """Fetch raw payload from the external source."""
+        raise NotImplementedError
+
+    def transform(self, raw: Any) -> Any:
+        """Convert a raw payload into canonical models."""
+        raise NotImplementedError

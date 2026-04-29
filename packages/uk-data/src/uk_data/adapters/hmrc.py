@@ -26,6 +26,7 @@ from functools import lru_cache
 from importlib import resources
 from typing import Any, ClassVar
 
+from uk_data.adapters.base import BaseAdapter
 from uk_data.models import point_timeseries
 
 
@@ -246,7 +247,7 @@ def effective_tax_wedge(
     }
 
 
-class HMRCAdapter:
+class HMRCAdapter(BaseAdapter):
     """Canonical adapter for static HMRC tax parameters.
 
     Series IDs embed the tax year, e.g. ``"corporation_tax_2024"``,
@@ -254,6 +255,8 @@ class HMRCAdapter:
     parses the trailing year to choose which tax-year registry entry
     to use, so years 2023, 2024, 2025 all work out of the box.
     """
+
+    _source_name = "hmrc"
 
     # Mapping of series-suffix to (name, fraction-fetcher).  The trailing
     # year token is parsed dynamically.

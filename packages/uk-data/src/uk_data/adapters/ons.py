@@ -25,9 +25,13 @@ from __future__ import annotations
 
 import logging
 from datetime import date, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urlencode
 
+if TYPE_CHECKING:
+    from uk_data.storage.raw import RawStore
+
+from uk_data.adapters.base import BaseAdapter
 from uk_data.adapters.ons_models import (
     Observation,
     ONSDatasetInfo,
@@ -435,10 +439,13 @@ def fetch_rental_growth() -> float:
     return _FALLBACK_RENTAL_GROWTH
 
 
-class ONSAdapter:
+class ONSAdapter(BaseAdapter):
     """Canonical adapter for Office for National Statistics data."""
 
-    def __init__(self) -> None:
+    _source_name = "ons"
+
+    def __init__(self, store: RawStore | None = None) -> None:
+        super().__init__(store=store)
         self._datasets_cache: dict[
             tuple[int, int, str | None], list[ONSDatasetInfo]
         ] = {}

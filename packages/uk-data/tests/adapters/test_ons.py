@@ -103,7 +103,7 @@ class TestONSAdapterFetchSeriesOffline:
 
     def test_affordability_series_still_uses_fallback_point_series(self) -> None:
         with patch(
-            "uk_data.adapters.ons.fetch_affordability_ratio",
+            "uk_data.adapters.ons._fetch_affordability_ratio",
             return_value=8.5,
         ):
             adapter = ONSAdapter()
@@ -113,7 +113,7 @@ class TestONSAdapterFetchSeriesOffline:
 
     def test_rental_growth_series_still_uses_fallback_point_series(self) -> None:
         with patch(
-            "uk_data.adapters.ons.fetch_rental_growth",
+            "uk_data.adapters.ons._fetch_rental_growth",
             return_value=0.03,
         ):
             adapter = ONSAdapter()

@@ -12,7 +12,7 @@ warnings.warn(
 from companies_house_abm.data_sources.input_output import (  # noqa: E402
     fetch_input_output_table,
 )
-from uk_data.adapters.ons import *  # noqa: E402, F403
+from uk_data.workflows.ons import *  # noqa: E402, F403
 
 __all__ = [
     "fetch_input_output_table",

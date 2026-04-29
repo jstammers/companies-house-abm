@@ -216,7 +216,7 @@ class TestBoeFetchBankRate:
             "uk_data.adapters.boe.retry",
             return_value=fake_csv,
         ):
-            from uk_data.adapters.boe import fetch_bank_rate
+            from uk_data.workflows.boe import fetch_bank_rate
 
             obs = fetch_bank_rate()
         assert isinstance(obs, list)
@@ -231,7 +231,7 @@ class TestBoeFetchBankRate:
             "uk_data.adapters.boe.retry",
             side_effect=urllib.error.URLError("connection refused"),
         ):
-            from uk_data.adapters.boe import fetch_bank_rate
+            from uk_data.workflows.boe import fetch_bank_rate
 
             obs = fetch_bank_rate()
         assert obs == []
@@ -241,10 +241,10 @@ class TestBoeFetchBankRate:
 
         _http.clear_cache()
         with patch(
-            "uk_data.adapters.boe.fetch_bank_rate",
+            "uk_data.adapters.boe._fetch_bank_rate",
             return_value=[],
         ):
-            from uk_data.adapters.boe import fetch_bank_rate_current
+            from uk_data.workflows.boe import fetch_bank_rate_current
 
             rate = fetch_bank_rate_current()
         assert 0.0 <= rate <= 0.25
@@ -254,10 +254,10 @@ class TestBoeFetchBankRate:
 
         _http.clear_cache()
         with patch(
-            "uk_data.adapters.boe.fetch_bank_rate",
+            "uk_data.adapters.boe._fetch_bank_rate",
             return_value=[{"date": "01 Jan 2024", "value": "5.25"}],
         ):
-            from uk_data.adapters.boe import fetch_bank_rate_current
+            from uk_data.workflows.boe import fetch_bank_rate_current
 
             rate = fetch_bank_rate_current()
         assert rate == pytest.approx(0.0525)
@@ -270,7 +270,7 @@ class TestBoeLendingRates:
         _http.clear_cache()
         with (
             patch(
-                "uk_data.adapters.boe.fetch_bank_rate",
+                "uk_data.adapters.boe._fetch_bank_rate",
                 return_value=[{"date": "01 Jan 2024", "value": "5.25"}],
             ),
             patch(
@@ -278,7 +278,7 @@ class TestBoeLendingRates:
                 side_effect=Exception("no network"),
             ),
         ):
-            from uk_data.adapters.boe import fetch_lending_rates
+            from uk_data.workflows.boe import fetch_lending_rates
 
             rates = fetch_lending_rates()
         assert "household_rate" in rates
@@ -293,7 +293,7 @@ class TestBoeLendingRates:
         _http.clear_cache()
         with (
             patch(
-                "uk_data.adapters.boe.fetch_bank_rate",
+                "uk_data.adapters.boe._fetch_bank_rate",
                 return_value=[],
             ),
             patch(
@@ -301,7 +301,7 @@ class TestBoeLendingRates:
                 side_effect=Exception("no network"),
             ),
         ):
-            from uk_data.adapters.boe import fetch_lending_rates
+            from uk_data.workflows.boe import fetch_lending_rates
 
             rates = fetch_lending_rates()
         assert rates["household_spread"] >= 0.0
@@ -310,7 +310,7 @@ class TestBoeLendingRates:
 
 class TestBoeCapitalRatio:
     def test_returns_reasonable_value(self) -> None:
-        from uk_data.adapters.boe import get_aggregate_capital_ratio
+        from uk_data.workflows.boe import get_aggregate_capital_ratio
 
         ratio = get_aggregate_capital_ratio()
         assert 0.05 < ratio < 0.40
@@ -343,10 +343,10 @@ class TestOnsGdp:
 
         _http.clear_cache()
         with patch(
-            "uk_data.adapters.ons.fetch_sdmx_series",
+            "uk_data.workflows.ons._fetch_timeseries",
             return_value=_FAKE_ONS_RESPONSE["quarters"],
         ):
-            from uk_data.adapters.ons import fetch_gdp
+            from uk_data.workflows.ons import fetch_gdp
 
             obs = fetch_gdp(limit=4)
         assert isinstance(obs, list)
@@ -357,10 +357,10 @@ class TestOnsGdp:
 
         _http.clear_cache()
         with patch(
-            "uk_data.adapters.ons.fetch_sdmx_series",
-            side_effect=Exception("api down"),
+            "uk_data.workflows.ons._fetch_timeseries",
+            return_value=[],
         ):
-            from uk_data.adapters.ons import fetch_gdp
+            from uk_data.workflows.ons import fetch_gdp
 
             obs = fetch_gdp()
         assert obs == []
@@ -370,10 +370,10 @@ class TestOnsGdp:
 
         _http.clear_cache()
         with patch(
-            "uk_data.adapters.ons.fetch_sdmx_series",
+            "uk_data.workflows.ons._fetch_timeseries",
             return_value=_FAKE_ONS_RESPONSE["quarters"],
         ):
-            from uk_data.adapters.ons import fetch_gdp
+            from uk_data.workflows.ons import fetch_gdp
 
             obs = fetch_gdp(limit=2)
         assert len(obs) <= 2
@@ -385,10 +385,10 @@ class TestOnsHouseholdIncome:
 
         _http.clear_cache()
         with patch(
-            "uk_data.adapters.ons.fetch_sdmx_series",
+            "uk_data.workflows.ons._fetch_timeseries",
             return_value=_FAKE_ONS_RESPONSE["quarters"],
         ):
-            from uk_data.adapters.ons import fetch_household_income
+            from uk_data.workflows.ons import fetch_household_income
 
             obs = fetch_household_income(limit=4)
         assert isinstance(obs, list)
@@ -400,10 +400,10 @@ class TestOnsSavingsRatio:
 
         _http.clear_cache()
         with patch(
-            "uk_data.adapters.ons.fetch_sdmx_series",
+            "uk_data.workflows.ons._fetch_timeseries",
             return_value=_FAKE_ONS_RESPONSE["quarters"],
         ):
-            from uk_data.adapters.ons import fetch_savings_ratio
+            from uk_data.workflows.ons import fetch_savings_ratio
 
             obs = fetch_savings_ratio(limit=4)
         assert isinstance(obs, list)
@@ -415,10 +415,10 @@ class TestOnsLabourMarket:
 
         _http.clear_cache()
         with patch(
-            "uk_data.adapters.ons.fetch_sdmx_series",
+            "uk_data.workflows.ons._fetch_timeseries",
             return_value=_FAKE_ONS_MONTHLY_RESPONSE["months"],
         ):
-            from uk_data.adapters.ons import fetch_labour_market
+            from uk_data.workflows.ons import fetch_labour_market
 
             data = fetch_labour_market()
         assert "unemployment_rate" in data
@@ -429,10 +429,10 @@ class TestOnsLabourMarket:
 
         _http.clear_cache()
         with patch(
-            "uk_data.adapters.ons.fetch_sdmx_series",
-            side_effect=Exception("api down"),
+            "uk_data.adapters.ons._fetch_timeseries",
+            return_value=[],
         ):
-            from uk_data.adapters.ons import fetch_labour_market
+            from uk_data.workflows.ons import fetch_labour_market
 
             data = fetch_labour_market()
         assert data["unemployment_rate"] is None
@@ -605,7 +605,7 @@ class TestCalibrateBanks:
                 side_effect=Exception("no network"),
             ),
             patch(
-                "uk_data.adapters.boe.fetch_bank_rate",
+                "uk_data.adapters.boe._fetch_bank_rate",
                 return_value=[],
             ),
         ):
@@ -623,11 +623,11 @@ class TestCalibrateBanks:
         _http.clear_cache()
         with (
             patch(
-                "uk_data.adapters.boe.get_aggregate_capital_ratio",
+                "uk_data.workflows.boe.get_aggregate_capital_ratio",
                 return_value=0.148,
             ),
             patch(
-                "uk_data.adapters.boe.fetch_lending_rates",
+                "uk_data.workflows.boe.fetch_lending_rates",
                 return_value={
                     "household_rate": 0.057,
                     "business_rate": 0.065,
@@ -715,7 +715,7 @@ class TestCalibrateModel:
                 side_effect=Exception("api down"),
             ),
             patch(
-                "uk_data.adapters.boe.fetch_bank_rate",
+                "uk_data.adapters.boe._fetch_bank_rate",
                 return_value=[],
             ),
             patch(
@@ -744,7 +744,7 @@ class TestCalibrateModel:
                 side_effect=Exception("api down"),
             ),
             patch(
-                "uk_data.adapters.boe.fetch_bank_rate",
+                "uk_data.adapters.boe._fetch_bank_rate",
                 return_value=[],
             ),
             patch(
@@ -1115,7 +1115,7 @@ class TestFetchDataCli:
                 side_effect=Exception("no network"),
             ),
             patch(
-                "uk_data.adapters.boe.fetch_bank_rate",
+                "uk_data.adapters.boe._fetch_bank_rate",
                 return_value=[],
             ),
             patch(

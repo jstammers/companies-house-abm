@@ -9,4 +9,4 @@ warnings.warn(
     stacklevel=2,
 )
 
-from uk_data.adapters.boe import *  # noqa: E402, F403
+from uk_data.workflows.boe import *  # noqa: E402, F403

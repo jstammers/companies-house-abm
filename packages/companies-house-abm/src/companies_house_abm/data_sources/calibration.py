@@ -63,7 +63,7 @@ def calibrate_households(
         >>> cfg.income_mean > 0
         True
     """
-    from uk_data.adapters.ons import (
+    from uk_data.workflows.ons import (
         fetch_labour_market,
         fetch_savings_ratio,
     )
@@ -143,7 +143,7 @@ def calibrate_banks(
         >>> 0.05 < cfg.capital_requirement < 0.30
         True
     """
-    from uk_data.adapters.boe import (
+    from uk_data.workflows.boe import (
         fetch_lending_rates,
         get_aggregate_capital_ratio,
     )
@@ -334,7 +334,7 @@ def calibrate_housing(
     from uk_data.adapters.land_registry import (
         fetch_uk_average_price,
     )
-    from uk_data.adapters.ons import (
+    from uk_data.workflows.ons import (
         fetch_affordability_ratio,
         fetch_tenure_distribution,
     )

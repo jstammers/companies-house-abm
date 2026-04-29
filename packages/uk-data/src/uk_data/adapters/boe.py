@@ -154,33 +154,18 @@ def _parse_iadb_csv(text: str) -> list[dict[str, str]]:
     return rows
 
 
-def fetch_bank_rate(
+# ---------------------------------------------------------------------------
+# Fetch helpers — private; public interface lives in uk_data/workflows/boe.py
+# ---------------------------------------------------------------------------
+
+
+def _fetch_bank_rate(
     num_observations: int | None = None,
     *,
     from_year: int | None = None,
     to_year: int | None = None,
 ) -> list[dict[str, str]]:
-    """Fetch recent Bank Rate observations from the BoE IADB.
-
-    The Bank Rate (also known as the Base Rate) is the single most
-    important interest rate in the UK, set by the Monetary Policy
-    Committee of the Bank of England.
-
-    Args:
-        num_observations: Optional cap on the number of most-recent
-            observations returned.  ``None`` returns the full response.
-
-    Returns:
-        List of ``{"date": str, "value": str}`` dicts (most-recent last),
-        or an empty list if the BoE API is unreachable.
-
-    Example::
-
-        >>> from uk_data.adapters.boe import fetch_bank_rate
-        >>> obs = fetch_bank_rate()
-        >>> isinstance(obs, list)
-        True
-    """
+    """Fetch Bank Rate observations from the BoE IADB (internal helper)."""
     url = _build_iadb_url(_BANK_RATE_SERIES, from_year=from_year, to_year=to_year)
     try:
         text = retry(get_text, url)
@@ -193,24 +178,9 @@ def fetch_bank_rate(
     return rows
 
 
-def fetch_bank_rate_current() -> float:
-    """Return the current Bank Rate as a decimal fraction.
-
-    Tries to fetch the latest value from the BoE IADB.  If the API is
-    unavailable, returns a hardcoded fallback based on the most recent
-    published rate.
-
-    Returns:
-        Bank Rate as a fraction (e.g. ``0.0525`` for 5.25%).
-
-    Example::
-
-        >>> from uk_data.adapters.boe import fetch_bank_rate_current
-        >>> rate = fetch_bank_rate_current()
-        >>> 0.0 <= rate <= 0.25
-        True
-    """
-    obs = fetch_bank_rate(num_observations=1)
+def _fetch_bank_rate_current() -> float:
+    """Return the current Bank Rate as a decimal fraction (internal helper)."""
+    obs = _fetch_bank_rate(num_observations=1)
     if obs:
         try:
             return float(obs[-1]["value"]) / 100.0
@@ -220,33 +190,9 @@ def fetch_bank_rate_current() -> float:
     return _FALLBACK_BANK_RATE
 
 
-def fetch_lending_rates() -> dict[str, float]:
-    """Fetch effective lending rates for households and businesses.
-
-    Returns the weighted average interest rates charged by UK monetary
-    financial institutions, sourced from the BoE IADB.
-
-    Returns:
-        Dictionary with keys:
-
-        - ``"household_rate"`` - effective rate on outstanding household
-          loans (decimal fraction).
-        - ``"business_rate"`` - effective rate on outstanding business
-          loans (decimal fraction).
-        - ``"bank_rate"`` - the prevailing policy rate (decimal fraction).
-        - ``"household_spread"`` - spread of household rate over Bank Rate.
-        - ``"business_spread"`` - spread of business rate over Bank Rate.
-
-        Falls back to published values if the API is unreachable.
-
-    Example::
-
-        >>> from uk_data.adapters.boe import fetch_lending_rates
-        >>> rates = fetch_lending_rates()
-        >>> "household_rate" in rates and "business_rate" in rates
-        True
-    """
-    bank_rate = fetch_bank_rate_current()
+def _fetch_lending_rates() -> dict[str, float]:
+    """Fetch effective lending rates (internal helper)."""
+    bank_rate = _fetch_bank_rate_current()
 
     def _fetch_rate(series: str, fallback: float) -> float:
         url = _build_iadb_url(series)
@@ -271,29 +217,8 @@ def fetch_lending_rates() -> dict[str, float]:
     }
 
 
-def get_aggregate_capital_ratio() -> float:
-    """Return the aggregate CET1 capital ratio for major UK banks.
-
-    This is sourced from the Bank of England Financial Stability Report
-    (FSR) which is published twice yearly.  The value represents the
-    weighted average Common Equity Tier 1 ratio across the eight major
-    UK banks monitored by the PRA.
-
-    If live data is unavailable, returns a hardcoded value from the most
-    recent published FSR.
-
-    Returns:
-        CET1 ratio as a decimal fraction (e.g. ``0.148`` for 14.8%).
-
-    Example::
-
-        >>> from uk_data.adapters.boe import get_aggregate_capital_ratio
-        >>> ratio = get_aggregate_capital_ratio()
-        >>> 0.05 < ratio < 0.40
-        True
-    """
-    # The BoE does not expose the FSR aggregate CET1 via the IADB API.
-    # We use the most recently published figure as a calibration constant.
+def _get_aggregate_capital_ratio() -> float:
+    """Return the aggregate CET1 capital ratio (internal helper)."""
     # Source: Bank of England Financial Stability Report, July 2023.
     return _FALLBACK_CAPITAL_RATIO
 
@@ -322,7 +247,7 @@ class BoEAdapter(BaseAdapter):
         if series_id == _BANK_RATE_SERIES:
             from_year = _year_from_bound(start_date)
             to_year = _year_from_bound(end_date)
-            raw_obs = fetch_bank_rate(
+            raw_obs = _fetch_bank_rate(
                 limit,
                 from_year=from_year,
                 to_year=to_year,
@@ -366,7 +291,7 @@ class BoEAdapter(BaseAdapter):
             )
 
         if series_id in {_HOUSEHOLD_LENDING_SERIES, _BUSINESS_LENDING_SERIES}:
-            rates = fetch_lending_rates()
+            rates = _fetch_lending_rates()
             value = (
                 rates["household_rate"]
                 if series_id == _HOUSEHOLD_LENDING_SERIES
@@ -390,7 +315,7 @@ class BoEAdapter(BaseAdapter):
             return point_timeseries(
                 series_id=concept,
                 name="Aggregate CET1 capital ratio",
-                value=get_aggregate_capital_ratio(),
+                value=_get_aggregate_capital_ratio(),
                 units="fraction",
                 source="boe",
                 source_series_id=series_id,

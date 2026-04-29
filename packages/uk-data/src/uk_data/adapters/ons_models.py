@@ -48,6 +48,7 @@ class Dimensions(BaseModel):
     """Dimensions metadata payload from ONS dataset endpoints."""
 
     model_config = ConfigDict(extra="allow")
+    time: Dimension | None = None
     aggregate: Dimension | None = None
     geography: Dimension | None = None
 

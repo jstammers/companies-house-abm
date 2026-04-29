@@ -42,7 +42,7 @@ class TestOnsGdpIntegration:
     def test_returns_nonempty_list(self) -> None:
         _skip_if_offline()
         from uk_data._http import clear_cache
-        from uk_data.adapters.ons import fetch_gdp
+        from uk_data.workflows.ons import fetch_gdp
 
         clear_cache()
         obs = fetch_gdp(limit=8)
@@ -52,7 +52,7 @@ class TestOnsGdpIntegration:
     def test_observations_have_date_and_value_keys(self) -> None:
         _skip_if_offline()
         from uk_data._http import clear_cache
-        from uk_data.adapters.ons import fetch_gdp
+        from uk_data.workflows.ons import fetch_gdp
 
         clear_cache()
         obs = fetch_gdp(limit=4)
@@ -63,7 +63,7 @@ class TestOnsGdpIntegration:
     def test_values_are_numeric_strings(self) -> None:
         _skip_if_offline()
         from uk_data._http import clear_cache
-        from uk_data.adapters.ons import fetch_gdp
+        from uk_data.workflows.ons import fetch_gdp
 
         clear_cache()
         obs = fetch_gdp(limit=4)
@@ -73,7 +73,7 @@ class TestOnsGdpIntegration:
     def test_limit_respected(self) -> None:
         _skip_if_offline()
         from uk_data._http import clear_cache
-        from uk_data.adapters.ons import fetch_gdp
+        from uk_data.workflows.ons import fetch_gdp
 
         clear_cache()
         obs = fetch_gdp(limit=3)
@@ -86,7 +86,7 @@ class TestOnsHouseholdIncomeIntegration:
     def test_returns_nonempty_list(self) -> None:
         _skip_if_offline()
         from uk_data._http import clear_cache
-        from uk_data.adapters.ons import fetch_household_income
+        from uk_data.workflows.ons import fetch_household_income
 
         clear_cache()
         obs = fetch_household_income(limit=8)
@@ -96,7 +96,7 @@ class TestOnsHouseholdIncomeIntegration:
     def test_observations_have_date_and_value(self) -> None:
         _skip_if_offline()
         from uk_data._http import clear_cache
-        from uk_data.adapters.ons import fetch_household_income
+        from uk_data.workflows.ons import fetch_household_income
 
         clear_cache()
         obs = fetch_household_income(limit=4)
@@ -112,7 +112,7 @@ class TestOnsSavingsRatioIntegration:
     def test_returns_nonempty_list(self) -> None:
         _skip_if_offline()
         from uk_data._http import clear_cache
-        from uk_data.adapters.ons import fetch_savings_ratio
+        from uk_data.workflows.ons import fetch_savings_ratio
 
         clear_cache()
         obs = fetch_savings_ratio(limit=8)
@@ -123,7 +123,7 @@ class TestOnsSavingsRatioIntegration:
         """Household saving ratio should be between -20% and 35%."""
         _skip_if_offline()
         from uk_data._http import clear_cache
-        from uk_data.adapters.ons import fetch_savings_ratio
+        from uk_data.workflows.ons import fetch_savings_ratio
 
         clear_cache()
         obs = fetch_savings_ratio(limit=4)
@@ -138,7 +138,7 @@ class TestOnsLabourMarketIntegration:
     def test_returns_expected_keys(self) -> None:
         _skip_if_offline()
         from uk_data._http import clear_cache
-        from uk_data.adapters.ons import fetch_labour_market
+        from uk_data.workflows.ons import fetch_labour_market
 
         clear_cache()
         data = fetch_labour_market()
@@ -148,7 +148,7 @@ class TestOnsLabourMarketIntegration:
     def test_unemployment_rate_is_numeric(self) -> None:
         _skip_if_offline()
         from uk_data._http import clear_cache
-        from uk_data.adapters.ons import fetch_labour_market
+        from uk_data.workflows.ons import fetch_labour_market
 
         clear_cache()
         data = fetch_labour_market()
@@ -160,7 +160,7 @@ class TestOnsLabourMarketIntegration:
     def test_average_weekly_earnings_positive(self) -> None:
         _skip_if_offline()
         from uk_data._http import clear_cache
-        from uk_data.adapters.ons import fetch_labour_market
+        from uk_data.workflows.ons import fetch_labour_market
 
         clear_cache()
         data = fetch_labour_market()
@@ -174,7 +174,7 @@ class TestOnsAffordabilityRatioIntegration:
     """fetch_affordability_ratio() — uses fallback (HP7A not on Zebedee API)."""
 
     def test_returns_positive_float(self) -> None:
-        from uk_data.adapters.ons import fetch_affordability_ratio
+        from uk_data.workflows.ons import fetch_affordability_ratio
 
         ratio = fetch_affordability_ratio()
         assert isinstance(ratio, float)
@@ -182,10 +182,8 @@ class TestOnsAffordabilityRatioIntegration:
 
     def test_falls_back_to_known_value(self) -> None:
         """With HP7A unavailable via Zebedee, should return the hardcoded fallback."""
-        from uk_data.adapters.ons import (
-            _FALLBACK_AFFORDABILITY,
-            fetch_affordability_ratio,
-        )
+        from uk_data.adapters.ons import _FALLBACK_AFFORDABILITY
+        from uk_data.workflows.ons import fetch_affordability_ratio
 
         ratio = fetch_affordability_ratio()
         # Either live data (in range 5-15) or the static fallback (8.3)
@@ -198,16 +196,14 @@ class TestOnsRentalGrowthIntegration:
     """fetch_rental_growth() — uses fallback (D7RA not on Zebedee API)."""
 
     def test_returns_float(self) -> None:
-        from uk_data.adapters.ons import fetch_rental_growth
+        from uk_data.workflows.ons import fetch_rental_growth
 
         growth = fetch_rental_growth()
         assert isinstance(growth, float)
 
     def test_falls_back_to_known_value(self) -> None:
-        from uk_data.adapters.ons import (
-            _FALLBACK_RENTAL_GROWTH,
-            fetch_rental_growth,
-        )
+        from uk_data.adapters.ons import _FALLBACK_RENTAL_GROWTH
+        from uk_data.workflows.ons import fetch_rental_growth
 
         growth = fetch_rental_growth()
         # Since D7RA is not on Zebedee, expect the fallback
@@ -218,20 +214,20 @@ class TestOnsTenureDistributionIntegration:
     """fetch_tenure_distribution() — always uses English Housing Survey fallback."""
 
     def test_returns_three_tenure_types(self) -> None:
-        from uk_data.adapters.ons import fetch_tenure_distribution
+        from uk_data.workflows.ons import fetch_tenure_distribution
 
         dist = fetch_tenure_distribution()
         assert set(dist.keys()) == {"owner_occupier", "private_renter", "social_renter"}
 
     def test_shares_sum_to_one(self) -> None:
-        from uk_data.adapters.ons import fetch_tenure_distribution
+        from uk_data.workflows.ons import fetch_tenure_distribution
 
         dist = fetch_tenure_distribution()
         total = sum(dist.values())
         assert total == pytest.approx(1.0, abs=1e-6)
 
     def test_all_shares_positive(self) -> None:
-        from uk_data.adapters.ons import fetch_tenure_distribution
+        from uk_data.workflows.ons import fetch_tenure_distribution
 
         dist = fetch_tenure_distribution()
         for k, v in dist.items():
@@ -292,7 +288,7 @@ class TestBoeFetchBankRateIntegration:
 
     def test_returns_list(self) -> None:
         from uk_data._http import clear_cache
-        from uk_data.adapters.boe import fetch_bank_rate
+        from uk_data.workflows.boe import fetch_bank_rate
 
         clear_cache()
         obs = fetch_bank_rate()
@@ -301,7 +297,7 @@ class TestBoeFetchBankRateIntegration:
 
     def test_items_have_date_and_value_when_available(self) -> None:
         from uk_data._http import clear_cache
-        from uk_data.adapters.boe import fetch_bank_rate
+        from uk_data.workflows.boe import fetch_bank_rate
 
         clear_cache()
         obs = fetch_bank_rate()
@@ -316,7 +312,7 @@ class TestBoeFetchBankRateCurrentIntegration:
 
     def test_returns_float_in_valid_range(self) -> None:
         from uk_data._http import clear_cache
-        from uk_data.adapters.boe import fetch_bank_rate_current
+        from uk_data.workflows.boe import fetch_bank_rate_current
 
         clear_cache()
         rate = fetch_bank_rate_current()
@@ -326,10 +322,8 @@ class TestBoeFetchBankRateCurrentIntegration:
     def test_fallback_value_when_iadb_unavailable(self) -> None:
         """Since IADB returns 403, current rate should equal the fallback constant."""
         from uk_data._http import clear_cache
-        from uk_data.adapters.boe import (
-            _FALLBACK_BANK_RATE,
-            fetch_bank_rate_current,
-        )
+        from uk_data.adapters.boe import _FALLBACK_BANK_RATE
+        from uk_data.workflows.boe import fetch_bank_rate_current
 
         clear_cache()
         rate = fetch_bank_rate_current()
@@ -342,7 +336,7 @@ class TestBoeFetchLendingRatesIntegration:
 
     def test_returns_expected_keys(self) -> None:
         from uk_data._http import clear_cache
-        from uk_data.adapters.boe import fetch_lending_rates
+        from uk_data.workflows.boe import fetch_lending_rates
 
         clear_cache()
         rates = fetch_lending_rates()
@@ -354,7 +348,7 @@ class TestBoeFetchLendingRatesIntegration:
 
     def test_rates_in_plausible_range(self) -> None:
         from uk_data._http import clear_cache
-        from uk_data.adapters.boe import fetch_lending_rates
+        from uk_data.workflows.boe import fetch_lending_rates
 
         clear_cache()
         rates = fetch_lending_rates()
@@ -364,7 +358,7 @@ class TestBoeFetchLendingRatesIntegration:
 
     def test_spreads_are_non_negative(self) -> None:
         from uk_data._http import clear_cache
-        from uk_data.adapters.boe import fetch_lending_rates
+        from uk_data.workflows.boe import fetch_lending_rates
 
         clear_cache()
         rates = fetch_lending_rates()
@@ -376,7 +370,7 @@ class TestBoeCapitalRatioIntegration:
     """get_aggregate_capital_ratio() — hardcoded CET1."""
 
     def test_returns_reasonable_value(self) -> None:
-        from uk_data.adapters.boe import get_aggregate_capital_ratio
+        from uk_data.workflows.boe import get_aggregate_capital_ratio
 
         ratio = get_aggregate_capital_ratio()
         assert isinstance(ratio, float)
@@ -745,13 +739,11 @@ class TestBoeFallbackBehaviourUnit:
     def test_uses_fallback_when_fetch_returns_empty(self) -> None:
         from unittest.mock import patch
 
-        from uk_data.adapters.boe import (
-            _FALLBACK_BANK_RATE,
-            fetch_bank_rate_current,
-        )
+        from uk_data.adapters.boe import _FALLBACK_BANK_RATE
+        from uk_data.workflows.boe import fetch_bank_rate_current
 
         with patch(
-            "uk_data.adapters.boe.fetch_bank_rate",
+            "uk_data.adapters.boe._fetch_bank_rate",
             return_value=[],
         ):
             rate = fetch_bank_rate_current()
@@ -760,10 +752,10 @@ class TestBoeFallbackBehaviourUnit:
     def test_parses_live_value_when_available(self) -> None:
         from unittest.mock import patch
 
-        from uk_data.adapters.boe import fetch_bank_rate_current
+        from uk_data.workflows.boe import fetch_bank_rate_current
 
         with patch(
-            "uk_data.adapters.boe.fetch_bank_rate",
+            "uk_data.adapters.boe._fetch_bank_rate",
             return_value=[{"date": "01 Jan 2024", "value": "5.25"}],
         ):
             rate = fetch_bank_rate_current()

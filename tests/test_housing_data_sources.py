@@ -59,9 +59,7 @@ class TestLandRegistryFallback:
 
 class TestOnsHousing:
     def test_tenure_distribution_fallback(self):
-        from uk_data.adapters.ons import (
-            fetch_tenure_distribution,
-        )
+        from uk_data.workflows.ons import fetch_tenure_distribution
 
         tenure = fetch_tenure_distribution()
         assert "owner_occupier" in tenure
@@ -70,9 +68,7 @@ class TestOnsHousing:
         assert total == pytest.approx(1.0)
 
     def test_affordability_ratio_fallback(self):
-        from uk_data.adapters.ons import (
-            fetch_affordability_ratio,
-        )
+        from uk_data.workflows.ons import fetch_affordability_ratio
 
         with patch(
             "uk_data.adapters.ons.retry",
@@ -82,9 +78,7 @@ class TestOnsHousing:
         assert ratio == pytest.approx(8.3)
 
     def test_rental_growth_fallback(self):
-        from uk_data.adapters.ons import (
-            fetch_rental_growth,
-        )
+        from uk_data.workflows.ons import fetch_rental_growth
 
         with patch(
             "uk_data.adapters.ons.retry",
@@ -137,7 +131,7 @@ class TestCalibrateHousing:
                 side_effect=Exception("api down"),
             ),
             patch(
-                "uk_data.adapters.boe.fetch_bank_rate",
+                "uk_data.adapters.boe._fetch_bank_rate",
                 return_value=[],
             ),
             patch(

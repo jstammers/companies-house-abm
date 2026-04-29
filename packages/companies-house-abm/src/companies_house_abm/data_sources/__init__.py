@@ -33,11 +33,6 @@ from companies_house_abm.data_sources.firm_distributions import (
     run_profile_pipeline,
 )
 from companies_house_abm.data_sources.input_output import fetch_input_output_table
-from uk_data.adapters.boe import (
-    fetch_bank_rate,
-    fetch_bank_rate_current,
-    fetch_lending_rates,
-)
 from uk_data.adapters.companies_house import fetch_sic_codes
 from uk_data.adapters.historical import (
     fetch_all_historical,
@@ -58,7 +53,14 @@ from uk_data.adapters.land_registry import (
     fetch_regional_prices,
     fetch_uk_average_price,
 )
-from uk_data.adapters.ons import (
+from uk_data.client import UKDataClient
+from uk_data.models import Entity, Event, TimeSeries
+from uk_data.workflows.boe import (
+    fetch_bank_rate,
+    fetch_bank_rate_current,
+    fetch_lending_rates,
+)
+from uk_data.workflows.ons import (
     fetch_affordability_ratio,
     fetch_gdp,
     fetch_household_income,
@@ -67,8 +69,6 @@ from uk_data.adapters.ons import (
     fetch_savings_ratio,
     fetch_tenure_distribution,
 )
-from uk_data.client import UKDataClient
-from uk_data.models import Entity, Event, TimeSeries
 
 __all__ = [
     "Entity",

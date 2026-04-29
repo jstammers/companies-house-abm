@@ -272,134 +272,13 @@ def _latest_float(series_id: str) -> float | None:
 # ---------------------------------------------------------------------------
 
 
-def fetch_gdp(limit: int = 20) -> list[dict[str, Any]]:
-    """Fetch recent UK GDP at market prices observations.
-
-    Data is sourced from the ONS time series ``ABMI`` (seasonally
-    adjusted, current prices, GBP million).
-
-    Args:
-        limit: Number of most-recent quarterly observations to return.
-
-    Returns:
-        List of ``{"date": str, "value": str}`` dicts, oldest first.
-        Returns an empty list if the ONS API is unreachable.
-
-    Example::
-
-        >>> from uk_data.adapters.ons import fetch_gdp
-        >>> obs = fetch_gdp(limit=4)
-        >>> len(obs) <= 4
-        True
-    """
-    return _fetch_timeseries(_GDP_SERIES, limit=limit)
-
-
-def fetch_household_income(limit: int = 20) -> list[dict[str, Any]]:
-    """Fetch UK households' real disposable income observations.
-
-    Data is sourced from ONS series ``RPHQ`` (households and NPISH real
-    household disposable income, SA, reference year chained-volume
-    measure, GBP million).
-
-    Args:
-        limit: Number of most-recent quarterly observations to return.
-
-    Returns:
-        List of ``{"date": str, "value": str}`` dicts, oldest first.
-        Returns an empty list if the ONS API is unreachable.
-
-    Example::
-
-        >>> from uk_data.adapters.ons import fetch_household_income
-        >>> obs = fetch_household_income(limit=4)
-        >>> isinstance(obs, list)
-        True
-    """
-    return _fetch_timeseries(_HOUSEHOLD_INCOME_SERIES, limit=limit)
-
-
-def fetch_savings_ratio(limit: int = 20) -> list[dict[str, Any]]:
-    """Fetch UK household saving ratio observations.
-
-    Data is sourced from ONS series ``NRJS`` (households and NPISH
-    saving ratio, SA, %).
-
-    Args:
-        limit: Number of most-recent quarterly observations to return.
-
-    Returns:
-        List of ``{"date": str, "value": str}`` dicts, oldest first.
-        Returns an empty list if the ONS API is unreachable.
-
-    Example::
-
-        >>> from uk_data.adapters.ons import fetch_savings_ratio
-        >>> obs = fetch_savings_ratio(limit=4)
-        >>> isinstance(obs, list)
-        True
-    """
-    return _fetch_timeseries(_SAVINGS_RATIO_SERIES, limit=limit)
-
-
-def fetch_labour_market() -> dict[str, float | None]:
-    """Fetch key UK labour market indicators.
-
-    Returns the latest values for unemployment rate and average weekly
-    earnings from the ONS Labour Force Survey and ASHE series.
-
-    Returns:
-        Dictionary with keys:
-
-        - ``"unemployment_rate"`` - LFS unemployment rate (%, SA).
-        - ``"average_weekly_earnings"`` - Average weekly earnings (GBP, SA).
-
-        Values are ``None`` if the ONS API is unreachable.
-
-    Example::
-
-        >>> from uk_data.adapters.ons import fetch_labour_market
-        >>> data = fetch_labour_market()
-        >>> "unemployment_rate" in data
-        True
-    """
-    return {
-        "unemployment_rate": _latest_float(_UNEMPLOYMENT_RATE_SERIES),
-        "average_weekly_earnings": _latest_float(_AVERAGE_EARNINGS_SERIES),
-    }
-
-
 # ---------------------------------------------------------------------------
-# Housing statistics
+# Housing statistics (private helpers — public interface in workflows/ons.py)
 # ---------------------------------------------------------------------------
 
 
-def fetch_tenure_distribution() -> dict[str, float]:
-    """Fetch the UK housing tenure distribution.
-
-    Returns shares for owner-occupiers, private renters, and social renters.
-    Falls back to English Housing Survey 2023-24 values when live data is
-    unavailable.
-
-    Returns:
-        Dict mapping tenure type to share (0-1).
-    """
-    # ONS does not expose tenure via a simple timeseries endpoint; we rely
-    # on the English Housing Survey headline figures as a stable fallback.
-    logger.info("Using EHS 2023-24 tenure distribution (fallback)")
-    return dict(_FALLBACK_TENURE)
-
-
-def fetch_affordability_ratio() -> float:
-    """Fetch the median house price to workplace earnings affordability ratio.
-
-    Uses ONS series ``HP7A`` (median workplace-based affordability ratio for
-    England and Wales) from the ``housepricestatistics`` dataset.
-
-    Returns:
-        Median price-to-income ratio, or the fallback value of 8.3 when the
-        API is unavailable.
-    """
+def _fetch_affordability_ratio() -> float:
+    """Return the median house price to earnings affordability ratio."""
     try:
         obs = _fetch_timeseries(_AFFORDABILITY_SERIES, limit=1)
         if obs:
@@ -413,17 +292,8 @@ def fetch_affordability_ratio() -> float:
     return _FALLBACK_AFFORDABILITY
 
 
-def fetch_rental_growth() -> float:
-    """Fetch the annual private rental price growth rate.
-
-    Uses ONS series ``D7RA`` (Index of Private Housing Rental Prices,
-    monthly) from the ``mm23`` dataset.  Computes the year-on-year
-    growth from the most recent 13 months of observations.
-
-    Returns:
-        Annual rental price growth as a decimal (e.g. 0.065 for 6.5%),
-        or the fallback value of 0.065 when data is unavailable.
-    """
+def _fetch_rental_growth() -> float:
+    """Return the annual private rental price growth rate."""
     try:
         obs = _fetch_timeseries(_RENTAL_INDEX_SERIES, limit=13)
         if len(obs) >= 13:
@@ -627,7 +497,7 @@ class ONSAdapter(BaseAdapter):
             return point_timeseries(
                 series_id=concept,
                 name=metadata["name"],
-                value=fetch_affordability_ratio(),
+                value=_fetch_affordability_ratio(),
                 units=metadata["units"],
                 source="ons",
                 source_series_id=series_id,
@@ -641,7 +511,7 @@ class ONSAdapter(BaseAdapter):
             return point_timeseries(
                 series_id=concept,
                 name=metadata["name"],
-                value=fetch_rental_growth(),
+                value=_fetch_rental_growth(),
                 units=metadata["units"],
                 source="ons",
                 source_series_id=series_id,

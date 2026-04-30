@@ -13,8 +13,13 @@ import urllib.request
 import pytest
 
 from uk_data.adapters.ons import ONSAdapter
-from uk_data.adapters.ons_models import ONSDatasetInfo, ONSDatasetVersionInfo
+from uk_data.adapters.ons_models import (
+    ONSDatasetInfo,
+    ONSDatasetVersionInfo,
+    ONSObservation,
+)
 from uk_data.models import TimeSeries
+from uk_data.utils.http import clear_cache
 
 pytestmark = pytest.mark.integration
 
@@ -33,7 +38,6 @@ class TestONSAdapterIntegration:
 
     def test_gdp_series_live(self) -> None:
         _skip_if_cannot_reach(_ONS_URL)
-        from uk_data.utils.http import clear_cache
 
         clear_cache()
         adapter = ONSAdapter()
@@ -45,7 +49,6 @@ class TestONSAdapterIntegration:
 
     def test_household_income_series_live(self) -> None:
         _skip_if_cannot_reach(_ONS_URL)
-        from uk_data.utils.http import clear_cache
 
         clear_cache()
         adapter = ONSAdapter()
@@ -55,7 +58,6 @@ class TestONSAdapterIntegration:
 
     def test_savings_ratio_series_live(self) -> None:
         _skip_if_cannot_reach(_ONS_URL)
-        from uk_data.utils.http import clear_cache
 
         clear_cache()
         adapter = ONSAdapter()
@@ -65,7 +67,6 @@ class TestONSAdapterIntegration:
 
     def test_unemployment_series_live(self) -> None:
         _skip_if_cannot_reach(_ONS_URL)
-        from uk_data.utils.http import clear_cache
 
         clear_cache()
         adapter = ONSAdapter()
@@ -76,7 +77,6 @@ class TestONSAdapterIntegration:
 
     def test_average_earnings_series_live(self) -> None:
         _skip_if_cannot_reach(_ONS_URL)
-        from uk_data.utils.http import clear_cache
 
         clear_cache()
         adapter = ONSAdapter()
@@ -87,7 +87,6 @@ class TestONSAdapterIntegration:
 
     def test_affordability_series_live(self) -> None:
         _skip_if_cannot_reach(_ONS_URL)
-        from uk_data.utils.http import clear_cache
 
         clear_cache()
         adapter = ONSAdapter()
@@ -97,7 +96,6 @@ class TestONSAdapterIntegration:
 
     def test_rental_index_series_live(self) -> None:
         _skip_if_cannot_reach(_ONS_URL)
-        from uk_data.utils.http import clear_cache
 
         clear_cache()
         adapter = ONSAdapter()
@@ -108,7 +106,6 @@ class TestONSAdapterIntegration:
     def test_all_advertised_series_fetchable_live(self) -> None:
         """Parametric: every series in available_series() must succeed live."""
         _skip_if_cannot_reach(_ONS_URL)
-        from uk_data.utils.http import clear_cache
 
         clear_cache()
         adapter = ONSAdapter()
@@ -137,7 +134,6 @@ class TestONSAdapterIntegration:
         assert isinstance(version, ONSDatasetVersionInfo), "Expected version details"
 
     def test_get_observations_live(self) -> None:
-        from uk_data.adapters.ons_models import ONSObservation
 
         adapter = ONSAdapter()
         result = adapter.get_observation(

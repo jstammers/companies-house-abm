@@ -17,9 +17,14 @@ import json
 from datetime import date
 from pathlib import Path
 
+import numpy as np
 import polars as pl
 import pytest
+import yaml
+from typer.testing import CliRunner
 
+from companies_house_abm.abm.config import FirmConfig
+from companies_house_abm.cli import app
 from companies_house_abm.data_sources.firm_distributions import (
     CANDIDATE_DISTRIBUTIONS,
     DEBT_COLUMNS,
@@ -34,6 +39,7 @@ from companies_house_abm.data_sources.firm_distributions import (
     SectorYearParameters,
     _distribution_param_names,
     _financial_year,
+    _summary_to_dict,
     assign_sectors,
     build_summary,
     compute_sector_year_parameters,
@@ -64,7 +70,6 @@ def _make_accounts_df(
 
     Generates *n* rows with realistic-ish financial data.
     """
-    import numpy as np
 
     rng = np.random.default_rng(42)
 
@@ -300,7 +305,6 @@ class TestSICToSector:
 
     def test_all_sectors_covered(self) -> None:
         """Every ABM sector appears in the SIC mapping."""
-        from companies_house_abm.abm.config import FirmConfig
 
         expected = set(FirmConfig().sectors)
         mapped = set(SIC_TO_SECTOR.values())
@@ -506,7 +510,6 @@ class TestProfileField:
         assert p.std is None
 
     def test_outlier_detection(self) -> None:
-        import numpy as np
 
         rng = np.random.default_rng(42)
         values = rng.normal(100, 10, 1000).tolist()
@@ -563,7 +566,6 @@ class TestFitDistribution:
     """Tests for statistical distribution fitting."""
 
     def test_fits_lognormal_data(self) -> None:
-        import numpy as np
 
         rng = np.random.default_rng(42)
         values = rng.lognormal(10, 1, 500)
@@ -577,7 +579,6 @@ class TestFitDistribution:
         assert result.aic < float("inf")
 
     def test_fits_normal_data(self) -> None:
-        import numpy as np
 
         rng = np.random.default_rng(42)
         values = rng.normal(1000, 200, 500)
@@ -598,7 +599,6 @@ class TestFitDistribution:
         assert result is None
 
     def test_handles_nulls_gracefully(self) -> None:
-        import numpy as np
 
         rng = np.random.default_rng(42)
         values: list[float | None] = rng.lognormal(5, 1, 100).tolist()
@@ -610,7 +610,6 @@ class TestFitDistribution:
         assert result.n_observations <= 100
 
     def test_ks_test_values(self) -> None:
-        import numpy as np
 
         rng = np.random.default_rng(42)
         values = rng.lognormal(5, 0.5, 1000)
@@ -622,7 +621,6 @@ class TestFitDistribution:
         assert 0 <= result.ks_pvalue <= 1
 
     def test_custom_candidates(self) -> None:
-        import numpy as np
 
         rng = np.random.default_rng(42)
         values = rng.normal(100, 20, 200)
@@ -803,7 +801,6 @@ class TestSaveParameters:
         )
 
     def test_save_yaml(self, tmp_path: Path) -> None:
-        import yaml
 
         summary = self._make_summary()
         path = tmp_path / "params.yml"
@@ -832,7 +829,6 @@ class TestSaveParameters:
         assert path.exists()
 
     def test_yaml_roundtrip_preserves_structure(self, tmp_path: Path) -> None:
-        import yaml
 
         summary = self._make_summary()
         path = tmp_path / "roundtrip.yml"
@@ -854,9 +850,6 @@ class TestProfileFirmsCLI:
     """Tests for the profile-firms CLI command."""
 
     def test_help(self) -> None:
-        from typer.testing import CliRunner
-
-        from companies_house_abm.cli import app
 
         runner = CliRunner(env={"NO_COLOR": "1", "FORCE_COLOR": None})
         result = runner.invoke(app, ["profile-firms", "--help"])
@@ -864,9 +857,6 @@ class TestProfileFirmsCLI:
         assert "profile-firms" in result.output.lower() or "Profile" in result.output
 
     def test_missing_parquet_exits_with_error(self, tmp_path: Path) -> None:
-        from typer.testing import CliRunner
-
-        from companies_house_abm.cli import app
 
         runner = CliRunner(env={"NO_COLOR": "1", "FORCE_COLOR": None})
         result = runner.invoke(
@@ -878,9 +868,6 @@ class TestProfileFirmsCLI:
     def test_unsupported_format_exits_with_error(
         self, parquet_path: Path, tmp_path: Path
     ) -> None:
-        from typer.testing import CliRunner
-
-        from companies_house_abm.cli import app
 
         runner = CliRunner(env={"NO_COLOR": "1", "FORCE_COLOR": None})
         result = runner.invoke(
@@ -898,9 +885,6 @@ class TestProfileFirmsCLI:
         assert result.exit_code == 1
 
     def test_runs_with_sample(self, parquet_path: Path, tmp_path: Path) -> None:
-        from typer.testing import CliRunner
-
-        from companies_house_abm.cli import app
 
         runner = CliRunner(env={"NO_COLOR": "1", "FORCE_COLOR": None})
         output = tmp_path / "output.yml"
@@ -920,9 +904,6 @@ class TestProfileFirmsCLI:
         assert output.exists()
 
     def test_json_output(self, parquet_path: Path, tmp_path: Path) -> None:
-        from typer.testing import CliRunner
-
-        from companies_house_abm.cli import app
 
         runner = CliRunner(env={"NO_COLOR": "1", "FORCE_COLOR": None})
         output = tmp_path / "output.json"
@@ -946,9 +927,6 @@ class TestProfileFirmsCLI:
     def test_with_sic_file(
         self, parquet_path: Path, sic_csv: Path, tmp_path: Path
     ) -> None:
-        from typer.testing import CliRunner
-
-        from companies_house_abm.cli import app
 
         runner = CliRunner(env={"NO_COLOR": "1", "FORCE_COLOR": None})
         output = tmp_path / "output.yml"
@@ -1057,9 +1035,6 @@ class TestDataclasses:
         assert syp.n_companies == 100
 
     def test_summary_to_dict(self) -> None:
-        from companies_house_abm.data_sources.firm_distributions import (
-            _summary_to_dict,
-        )
 
         summary = FirmDistributionSummary(
             generated_at="2025-01-01",

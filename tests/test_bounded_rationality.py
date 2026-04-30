@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
+from mesa import Model
 
 from companies_house_abm.abm.agents.bank import Bank
 from companies_house_abm.abm.agents.firm import Firm
@@ -28,6 +29,10 @@ from companies_house_abm.abm.markets.credit import CreditMarket
 # ---------------------------------------------------------------------------
 
 
+def _model() -> Model:
+    return Model()
+
+
 def _rng(seed: int = 0) -> np.random.Generator:
     return np.random.default_rng(seed)
 
@@ -41,6 +46,7 @@ def _firm(markup: float = 0.15, aspiration: float = 0.5) -> Firm:
         markup_noise_std=0.0,
     )
     return Firm(
+        _model(),
         turnover=1000.0,
         wage_bill=400.0,
         employees=10,
@@ -54,7 +60,7 @@ def _household(
     mpc: float = 0.8,
 ) -> Household:
     cfg = HouseholdBehaviorConfig(expectation_adaptation_speed=alpha)
-    return Household(income=income, mpc=mpc, behavior=cfg)
+    return Household(_model(), income=income, mpc=mpc, behavior=cfg)
 
 
 def _bank(noise_std: float = 0.0, capital: float = 1e6) -> Bank:
@@ -64,7 +70,7 @@ def _bank(noise_std: float = 0.0, capital: float = 1e6) -> Bank:
         capital_buffer=0.0,
         credit_score_noise_std=noise_std,
     )
-    b = Bank(capital=capital, loans=0.0, behavior=beh, config=cfg)
+    b = Bank(_model(), capital=capital, loans=0.0, behavior=beh, config=cfg)
     b.interest_rate = 0.05
     return b
 
@@ -166,14 +172,16 @@ class TestSatisficingMarkup:
             satisficing_window=4,
             markup_noise_std=0.05,  # noise enabled
         )
-        f = Firm(turnover=1000.0, wage_bill=400.0, employees=10, behavior=cfg)
+        f = Firm(_model(), turnover=1000.0, wage_bill=400.0, employees=10, behavior=cfg)
         f.profit = 50.0
         f.turnover = 1000.0
 
         rng = _rng(42)
         markups = set()
         for _ in range(20):
-            f2 = Firm(turnover=1000.0, wage_bill=400.0, employees=10, behavior=cfg)
+            f2 = Firm(
+                _model(), turnover=1000.0, wage_bill=400.0, employees=10, behavior=cfg
+            )
             f2.profit = 50.0
             f2.adapt_markup(0.0, rng=rng)
             markups.add(round(f2.markup, 6))
@@ -189,7 +197,9 @@ class TestSatisficingMarkup:
         )
         markups = []
         for _ in range(5):
-            f = Firm(turnover=1000.0, wage_bill=400.0, employees=10, behavior=cfg)
+            f = Firm(
+                _model(), turnover=1000.0, wage_bill=400.0, employees=10, behavior=cfg
+            )
             f.profit = 50.0
             f.adapt_markup(0.0)  # no rng
             markups.append(f.markup)
@@ -368,7 +378,7 @@ class TestNoisyCreditScoring:
         """evaluate_loan returns False immediately if capital requirement unmet."""
         cfg = BankConfig(capital_requirement=0.80)
         beh = BankBehaviorConfig(capital_buffer=0.0, credit_score_noise_std=0.5)
-        b = Bank(capital=10.0, loans=1000.0, config=cfg, behavior=beh)
+        b = Bank(_model(), capital=10.0, loans=1000.0, config=cfg, behavior=beh)
         b.interest_rate = 0.05
         # capital_ratio = 10/1000 = 1% << 80%
         assert not b.evaluate_loan(
@@ -398,6 +408,7 @@ class TestCreditMarketRngForwarding:
         b.loans = 0.0
 
         f = Firm(
+            _model(),
             cash=-100.0,
             equity=100.0,
             turnover=1000.0,

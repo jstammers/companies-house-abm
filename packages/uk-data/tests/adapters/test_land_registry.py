@@ -6,7 +6,13 @@ from unittest.mock import patch
 
 import pytest
 
-from uk_data.adapters.land_registry import LandRegistryAdapter
+from uk_data.adapters.land_registry import (
+    LandRegistryAdapter,
+    clean_price_paid_data,
+    fetch_property_transaction_events,
+    fetch_uk_hpi_history,
+    load_price_paid_data,
+)
 
 
 class TestLandRegistryAdapterAvailableSeries:
@@ -52,11 +58,6 @@ class TestLandRegistryAdapterEventTypes:
 
 
 def test_price_paid_load_clean_and_event_conversion(tmp_path):
-    from uk_data.adapters.land_registry import (
-        clean_price_paid_data,
-        fetch_property_transaction_events,
-        load_price_paid_data,
-    )
 
     csv_path = tmp_path / "pp-sample.csv"
     csv_path.write_text(
@@ -82,7 +83,6 @@ def test_price_paid_load_clean_and_event_conversion(tmp_path):
 
 
 def test_uk_hpi_history_from_local_file(tmp_path):
-    from uk_data.adapters.land_registry import fetch_uk_hpi_history
 
     csv_path = tmp_path / "uk-hpi.csv"
     csv_path.write_text(
@@ -101,7 +101,6 @@ def test_uk_hpi_history_from_local_file(tmp_path):
 
 
 def test_uk_hpi_history_applies_inclusive_date_window(tmp_path):
-    from uk_data.adapters.land_registry import fetch_uk_hpi_history
 
     csv_path = tmp_path / "uk-hpi.csv"
     csv_path.write_text(
@@ -123,7 +122,6 @@ def test_uk_hpi_history_applies_inclusive_date_window(tmp_path):
 
 
 def test_uk_hpi_history_filters_before_limit(tmp_path):
-    from uk_data.adapters.land_registry import fetch_uk_hpi_history
 
     csv_path = tmp_path / "uk-hpi.csv"
     csv_path.write_text(
@@ -146,7 +144,6 @@ def test_uk_hpi_history_filters_before_limit(tmp_path):
 
 
 def test_uk_hpi_history_pushes_date_filter_into_lazy_query(tmp_path):
-    from uk_data.adapters.land_registry import fetch_uk_hpi_history
 
     csv_path = tmp_path / "uk-hpi.csv"
     csv_path.write_text(

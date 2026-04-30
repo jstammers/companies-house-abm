@@ -9,6 +9,23 @@ from unittest.mock import patch
 
 import pytest
 
+from companies_house_abm.abm.config import HousingMarketConfig, PropertyConfig
+from companies_house_abm.data_sources.calibration import (
+    calibrate_housing,
+    calibrate_model,
+)
+from uk_data.adapters.land_registry import (
+    fetch_price_by_type,
+    fetch_regional_prices,
+    fetch_uk_average_price,
+)
+from uk_data.utils import http as _http
+from uk_data.workflows.ons import (
+    fetch_affordability_ratio,
+    fetch_rental_growth,
+    fetch_tenure_distribution,
+)
+
 # ---------------------------------------------------------------------------
 # Land Registry
 # ---------------------------------------------------------------------------
@@ -16,9 +33,6 @@ import pytest
 
 class TestLandRegistryFallback:
     def test_regional_prices_fallback(self):
-        from uk_data.adapters.land_registry import (
-            fetch_regional_prices,
-        )
 
         with patch(
             "uk_data.adapters.land_registry.get_json",
@@ -30,9 +44,6 @@ class TestLandRegistryFallback:
         assert len(prices) == 11
 
     def test_uk_average_price_fallback(self):
-        from uk_data.adapters.land_registry import (
-            fetch_uk_average_price,
-        )
 
         with patch(
             "uk_data.adapters.land_registry.get_json",
@@ -42,9 +53,6 @@ class TestLandRegistryFallback:
         assert price > 0
 
     def test_price_by_type(self):
-        from uk_data.adapters.land_registry import (
-            fetch_price_by_type,
-        )
 
         prices = fetch_price_by_type()
         assert "detached" in prices
@@ -59,7 +67,6 @@ class TestLandRegistryFallback:
 
 class TestOnsHousing:
     def test_tenure_distribution_fallback(self):
-        from uk_data.workflows.ons import fetch_tenure_distribution
 
         tenure = fetch_tenure_distribution()
         assert "owner_occupier" in tenure
@@ -68,20 +75,18 @@ class TestOnsHousing:
         assert total == pytest.approx(1.0)
 
     def test_affordability_ratio_fallback(self):
-        from uk_data.workflows.ons import fetch_affordability_ratio
 
         with patch(
-            "uk_data.adapters.ons.retry",
+            "uk_data.adapters.ons.get_json",
             side_effect=Exception("offline"),
         ):
             ratio = fetch_affordability_ratio()
         assert ratio == pytest.approx(8.3)
 
     def test_rental_growth_fallback(self):
-        from uk_data.workflows.ons import fetch_rental_growth
 
         with patch(
-            "uk_data.adapters.ons.retry",
+            "uk_data.adapters.ons.get_json",
             side_effect=Exception("offline"),
         ):
             growth = fetch_rental_growth()
@@ -95,11 +100,6 @@ class TestOnsHousing:
 
 class TestCalibrateHousing:
     def test_calibrate_housing_returns_configs(self):
-        from companies_house_abm.abm.config import (
-            HousingMarketConfig,
-            PropertyConfig,
-        )
-        from companies_house_abm.data_sources.calibration import calibrate_housing
 
         with (
             patch(
@@ -117,17 +117,19 @@ class TestCalibrateHousing:
         assert props.average_price > 0
 
     def test_calibrate_model_includes_housing(self):
-        from companies_house_abm.data_sources.calibration import calibrate_model
-        from uk_data.utils import http as _http
 
         _http.clear_cache()
         with (
             patch(
-                "uk_data.adapters.ons.retry",
+                "uk_data.adapters.ons.get_json",
                 side_effect=Exception("api down"),
             ),
             patch(
-                "uk_data.adapters.boe.retry",
+                "uk_data.adapters.ons.retry",
+                side_effect=lambda fn, *args, **kw: fn(*args, **kw),
+            ),
+            patch(
+                "uk_data.adapters.boe.get_text",
                 side_effect=Exception("api down"),
             ),
             patch(

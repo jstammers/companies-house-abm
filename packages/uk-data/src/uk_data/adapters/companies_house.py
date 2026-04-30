@@ -30,18 +30,25 @@ from __future__ import annotations
 
 import io
 import logging
+import os
 import tempfile
 import urllib.error
 import urllib.request
 import zipfile
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
 import polars as pl
 
 from uk_data.adapters.base import BaseAdapter
+from uk_data.api.client import CompaniesHouseClient
+from uk_data.api.filings import get_filing_history
+from uk_data.api.search import search_companies
 from uk_data.models import Entity, Event
+from uk_data.transformers import EntityTransformer, EventTransformer
+from uk_data.utils.http import _USER_AGENT
+from uk_data.utils.timeseries import date_to_utc_datetime
 
 logger = logging.getLogger(__name__)
 
@@ -107,15 +114,11 @@ def _stream_to_tempfile(url: str) -> str:
     Raises:
         urllib.error.URLError: On network errors.
     """
-    from uk_data.utils.http import _USER_AGENT
-
     logger.info("Downloading %s", url)
     req = urllib.request.Request(url, headers={"User-Agent": _USER_AGENT})
     fd, tmp_path_str = tempfile.mkstemp(suffix=".zip")
     tmp_path = Path(tmp_path_str)
     try:
-        import os
-
         with (
             urllib.request.urlopen(req, timeout=_DOWNLOAD_TIMEOUT) as resp,
             os.fdopen(fd, "wb") as tmp_file,
@@ -315,9 +318,6 @@ class CompaniesHouseAdapter(BaseAdapter):
         first matching company is returned; when you need full control,
         use ``uk_data.api.search.search_companies`` directly.
         """
-        from uk_data.api.client import CompaniesHouseClient
-        from uk_data.api.search import search_companies
-
         query = entity_id
         if entity_id.startswith("companies_house:"):
             query = entity_id.split(":", 1)[1]
@@ -354,9 +354,6 @@ class CompaniesHouseAdapter(BaseAdapter):
         **kwargs: object,
     ) -> list[Event]:
         """Fetch canonical filing events for a Companies House entity."""
-        from uk_data.api.client import CompaniesHouseClient
-        from uk_data.api.filings import get_filing_history
-
         if entity_id is None:
             msg = "CompaniesHouseAdapter.fetch_events requires entity_id"
             raise ValueError(msg)
@@ -408,9 +405,6 @@ class CompaniesHouseAdapter(BaseAdapter):
             return fetch_sic_codes()
 
         if kind == "entity":
-            from uk_data.api.client import CompaniesHouseClient
-            from uk_data.api.search import search_companies
-
             entity_id = str(kwargs.get("entity_id", ""))
             query = entity_id.split(":", 1)[-1] if ":" in entity_id else entity_id
             results = search_companies(CompaniesHouseClient(), query, items_per_page=1)
@@ -420,9 +414,6 @@ class CompaniesHouseAdapter(BaseAdapter):
             return results[0].model_dump()
 
         if kind == "events":
-            from uk_data.api.client import CompaniesHouseClient
-            from uk_data.api.filings import get_filing_history
-
             entity_id = str(kwargs.get("entity_id", ""))
             company_number = entity_id.split(":", maxsplit=1)[-1]
             category = str(kwargs["category"]) if kwargs.get("category") else None
@@ -449,11 +440,6 @@ class CompaniesHouseAdapter(BaseAdapter):
         - list[dict] (``extract("events")``) → list of canonical
           :class:`~uk_data.models.Event`.
         """
-        from datetime import datetime as _datetime
-
-        from uk_data.transformers import EntityTransformer, EventTransformer
-        from uk_data.utils.timeseries import date_to_utc_datetime
-
         if isinstance(raw, pl.DataFrame):
             return raw
 
@@ -477,10 +463,10 @@ class CompaniesHouseAdapter(BaseAdapter):
                     continue
                 if isinstance(ts, str):
                     try:
-                        ts = _datetime.fromisoformat(ts)
+                        ts = datetime.fromisoformat(ts)
                     except ValueError:
                         continue
-                if not isinstance(ts, _datetime):
+                if not isinstance(ts, datetime):
                     ts = date_to_utc_datetime(ts)
                 events.append(
                     EventTransformer.from_dict(

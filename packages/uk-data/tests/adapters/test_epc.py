@@ -4,7 +4,12 @@ from __future__ import annotations
 
 import pytest
 
-from uk_data.adapters.epc import EPCAdapter
+from uk_data.adapters.epc import (
+    EPCAdapter,
+    clean_epc_data,
+    fetch_epc_lodgement_events,
+    load_epc_data,
+)
 from uk_data.client import UKDataClient
 
 
@@ -28,11 +33,6 @@ class TestEPCAdapterEventTypes:
 
 
 def test_epc_clean_and_event_conversion(tmp_path):
-    from uk_data.adapters.epc import (
-        clean_epc_data,
-        fetch_epc_lodgement_events,
-        load_epc_data,
-    )
 
     csv_path = tmp_path / "epc.csv"
     csv_path.write_text(

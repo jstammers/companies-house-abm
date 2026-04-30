@@ -3,15 +3,31 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from fastapi import FastAPI
-
-if TYPE_CHECKING:
-    from companies_house_abm.abm.config import ModelConfig
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from companies_house_abm.abm.config import (
+    BankBehaviorConfig,
+    BankConfig,
+    CreditMarketConfig,
+    FirmBehaviorConfig,
+    FirmConfig,
+    FiscalRuleConfig,
+    GoodsMarketConfig,
+    HouseholdBehaviorConfig,
+    HouseholdConfig,
+    HousingMarketConfig,
+    LaborMarketConfig,
+    ModelConfig,
+    MortgageConfig,
+    SimulationConfig,
+    TaylorRuleConfig,
+    TransfersConfig,
+    load_config,
+)
+from companies_house_abm.abm.model import Simulation
 from companies_house_abm.webapp.models import (
     DefaultsResponse,
     PeriodData,
@@ -50,8 +66,6 @@ def _config_to_params(cfg: object) -> SimulationParams:
     Values are clamped to the Pydantic field bounds where the YAML config
     contains larger values than the web UI supports (e.g. 50 000 firms).
     """
-    from companies_house_abm.abm.config import ModelConfig
-
     if not isinstance(cfg, ModelConfig):
         return SimulationParams()
 
@@ -130,25 +144,6 @@ def _config_to_params(cfg: object) -> SimulationParams:
 
 def _params_to_config(params: SimulationParams) -> ModelConfig:
     """Convert a flat :class:`SimulationParams` to a :class:`ModelConfig`."""
-    from companies_house_abm.abm.config import (
-        BankBehaviorConfig,
-        BankConfig,
-        CreditMarketConfig,
-        FirmBehaviorConfig,
-        FirmConfig,
-        FiscalRuleConfig,
-        GoodsMarketConfig,
-        HouseholdBehaviorConfig,
-        HouseholdConfig,
-        HousingMarketConfig,
-        LaborMarketConfig,
-        ModelConfig,
-        MortgageConfig,
-        SimulationConfig,
-        TaylorRuleConfig,
-        TransfersConfig,
-    )
-
     return ModelConfig(
         simulation=SimulationConfig(
             periods=params.periods,
@@ -243,8 +238,6 @@ def _params_to_config(params: SimulationParams) -> ModelConfig:
 @app.get("/api/defaults", response_model=DefaultsResponse)
 def get_defaults() -> DefaultsResponse:
     """Return the default simulation parameters loaded from the config file."""
-    from companies_house_abm.abm.config import load_config
-
     cfg = load_config()
     return DefaultsResponse(params=_config_to_params(cfg))
 
@@ -256,8 +249,6 @@ def run_simulation(params: SimulationParams) -> SimulationResponse:
     The simulation is configured from the supplied parameters and run
     synchronously.  Results include one record per simulated quarter.
     """
-    from companies_house_abm.abm.model import Simulation
-
     config = _params_to_config(params)
     sim = Simulation(config)
     sim.initialize_agents()

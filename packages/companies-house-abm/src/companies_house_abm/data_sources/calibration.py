@@ -28,6 +28,16 @@ from companies_house_abm.abm.config import (
     TransfersConfig,
     load_config,
 )
+from companies_house_abm.data_sources.input_output import fetch_input_output_table
+from uk_data.adapters.hmrc import get_corporation_tax_rate, get_income_tax_bands
+from uk_data.adapters.land_registry import fetch_uk_average_price
+from uk_data.workflows.boe import fetch_lending_rates, get_aggregate_capital_ratio
+from uk_data.workflows.ons import (
+    fetch_affordability_ratio,
+    fetch_labour_market,
+    fetch_savings_ratio,
+    fetch_tenure_distribution,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -63,11 +73,6 @@ def calibrate_households(
         >>> cfg.income_mean > 0
         True
     """
-    from uk_data.workflows.ons import (
-        fetch_labour_market,
-        fetch_savings_ratio,
-    )
-
     if base is None:
         base = HouseholdConfig()
 
@@ -143,11 +148,6 @@ def calibrate_banks(
         >>> 0.05 < cfg.capital_requirement < 0.30
         True
     """
-    from uk_data.workflows.boe import (
-        fetch_lending_rates,
-        get_aggregate_capital_ratio,
-    )
-
     if base_config is None:
         base_config = BankConfig()
     if base_behavior is None:
@@ -212,11 +212,6 @@ def calibrate_government(
         >>> fiscal.tax_rate_corporate == 0.25
         True
     """
-    from uk_data.adapters.hmrc import (
-        get_corporation_tax_rate,
-        get_income_tax_bands,
-    )
-
     if base_fiscal is None:
         base_fiscal = FiscalRuleConfig()
     if base_transfers is None:
@@ -279,10 +274,6 @@ def calibrate_io_sectors() -> dict[str, Any]:
         >>> "sectors" in data and "use_coefficients" in data
         True
     """
-    from companies_house_abm.data_sources.input_output import (
-        fetch_input_output_table,
-    )
-
     io_data = fetch_input_output_table()
     sectors = io_data["sectors"]
     use_coeff = io_data["use_coefficients"]
@@ -331,14 +322,6 @@ def calibrate_housing(
     Returns:
         Tuple of updated ``(PropertyConfig, HousingMarketConfig)``.
     """
-    from uk_data.adapters.land_registry import (
-        fetch_uk_average_price,
-    )
-    from uk_data.workflows.ons import (
-        fetch_affordability_ratio,
-        fetch_tenure_distribution,
-    )
-
     if base_properties is None:
         base_properties = PropertyConfig()
     if base_market is None:

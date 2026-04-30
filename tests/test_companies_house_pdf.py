@@ -9,6 +9,11 @@ from unittest.mock import MagicMock, patch
 import polars as pl
 import pytest
 
+from companies_house.ingest.pdf import (
+    extract_filing_with_llm,
+    extract_text_from_pdf_bytes,
+    ingest_pdf_bytes,
+)
 from companies_house.schema import CompanyFiling
 
 
@@ -25,8 +30,6 @@ class TestExtractTextFromPdf:
             patch.dict("sys.modules", {"kreuzberg": mock_kreuzberg}),
             patch("asyncio.run", return_value=mock_result),
         ):
-            from companies_house.ingest.pdf import extract_text_from_pdf_bytes
-
             text = extract_text_from_pdf_bytes(b"fake pdf bytes")
             assert "Balance Sheet" in text
 
@@ -50,8 +53,6 @@ class TestExtractFilingWithLlm:
         mock_litellm.completion.return_value = mock_response
 
         with patch.dict("sys.modules", {"litellm": mock_litellm}):
-            from companies_house.ingest.pdf import extract_filing_with_llm
-
             filing = extract_filing_with_llm("document text", "01873499")
             assert isinstance(filing, CompanyFiling)
             assert filing.company_id == "01873499"
@@ -65,11 +66,11 @@ class TestExtractFilingWithLlm:
         mock_litellm = MagicMock()
         mock_litellm.completion.return_value = mock_response
 
-        with patch.dict("sys.modules", {"litellm": mock_litellm}):
-            from companies_house.ingest.pdf import extract_filing_with_llm
-
-            with pytest.raises(ValueError, match="empty"):
-                extract_filing_with_llm("text", "01873499")
+        with (
+            patch.dict("sys.modules", {"litellm": mock_litellm}),
+            pytest.raises(ValueError, match="empty"),
+        ):
+            extract_filing_with_llm("text", "01873499")
 
     def test_invalid_json_raises(self):
         mock_response = MagicMock()
@@ -79,11 +80,11 @@ class TestExtractFilingWithLlm:
         mock_litellm = MagicMock()
         mock_litellm.completion.return_value = mock_response
 
-        with patch.dict("sys.modules", {"litellm": mock_litellm}):
-            from companies_house.ingest.pdf import extract_filing_with_llm
-
-            with pytest.raises(ValueError, match="not valid JSON"):
-                extract_filing_with_llm("text", "01873499")
+        with (
+            patch.dict("sys.modules", {"litellm": mock_litellm}),
+            pytest.raises(ValueError, match="not valid JSON"),
+        ):
+            extract_filing_with_llm("text", "01873499")
 
     def test_company_id_fallback(self):
         """If LLM omits company_id, the provided one is used."""
@@ -99,8 +100,6 @@ class TestExtractFilingWithLlm:
         mock_litellm.completion.return_value = mock_response
 
         with patch.dict("sys.modules", {"litellm": mock_litellm}):
-            from companies_house.ingest.pdf import extract_filing_with_llm
-
             filing = extract_filing_with_llm("text", "99999999")
             assert filing.company_id == "99999999"
 
@@ -130,8 +129,6 @@ class TestIngestPdfBytes:
             ),
             patch.dict("sys.modules", {"litellm": mock_litellm}),
         ):
-            from companies_house.ingest.pdf import ingest_pdf_bytes
-
             df = ingest_pdf_bytes(b"fake pdf", "01873499")
             assert isinstance(df, pl.DataFrame)
             assert len(df) == 1

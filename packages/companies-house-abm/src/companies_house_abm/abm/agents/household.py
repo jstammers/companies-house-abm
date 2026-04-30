@@ -8,9 +8,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from mesa import Agent
-
-from companies_house_abm.abm.agents.base import BaseAgent
+from mesa import Agent, Model
 
 if TYPE_CHECKING:
     from typing import Any
@@ -261,7 +259,8 @@ class Household(Agent):
     def get_state(self) -> dict[str, Any]:
         """Return a snapshot of the household's state."""
         return {
-            "agent_id": self.unique_id,
+            "unique_id": self.unique_id,
+            "agent_type": type(self).__name__.lower(),
             "income": self.income,
             "expected_income": self.expected_income,
             "wealth": self.wealth,

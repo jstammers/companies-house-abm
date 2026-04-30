@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import json
 import logging
+import urllib.parse
 from collections.abc import Callable
 from functools import lru_cache
 from importlib import resources
@@ -158,8 +159,6 @@ def _iadb_quarterly_last(
 
 def _fetch_hpi_live(start: str, end: str) -> list[dict[str, Any]] | None:
     try:
-        import urllib.parse
-
         _uk = "http://landregistry.data.gov.uk/id/region/united-kingdom"
         query = f"""
         PREFIX ukhpi: <http://landregistry.data.gov.uk/def/ukhpi/>

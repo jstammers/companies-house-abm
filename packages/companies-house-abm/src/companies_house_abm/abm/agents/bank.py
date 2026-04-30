@@ -6,6 +6,7 @@ and must satisfy regulatory capital and reserve requirements.
 
 from __future__ import annotations
 
+import random
 from typing import TYPE_CHECKING
 
 from mesa import Agent, Model
@@ -343,8 +344,6 @@ class Bank(Agent):
         )
         rate_type = "fixed"
         if self._mortgage_config:
-            import random
-
             rate_type = (
                 "fixed"
                 if random.random() < self._mortgage_config.fixed_rate_share
@@ -353,7 +352,7 @@ class Bank(Agent):
 
         mortgage = Mortgage(
             borrower_id=borrower_id,
-            lender_id=self.agent_id,
+            lender_id=str(self.unique_id),
             property_id=property_id,
             principal=loan_amount,
             outstanding=loan_amount,
@@ -414,8 +413,8 @@ class Bank(Agent):
     def get_state(self) -> dict[str, Any]:
         """Return a snapshot of the bank's state."""
         return {
-            "agent_id": self.agent_id,
-            "agent_type": self.agent_type,
+            "unique_id": self.unique_id,
+            "agent_type": type(self).__name__.lower(),
             "capital": self.capital,
             "reserves": self.reserves,
             "loans": self.loans,

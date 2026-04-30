@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import numpy as np
+from mesa import Model
 
 from companies_house_abm.abm.agents.bank import Bank
 from companies_house_abm.abm.agents.household import Household
@@ -15,6 +16,10 @@ from companies_house_abm.abm.config import (
 from companies_house_abm.abm.markets.housing import HousingMarket
 
 
+def _model() -> Model:
+    return Model()
+
+
 def _make_bank(
     capital: float = 10_000_000.0,
     reserves: float = 1_000_000.0,
@@ -24,6 +29,7 @@ def _make_bank(
     mortgage_config: MortgageConfig | None = None,
 ) -> Bank:
     bank = Bank(
+        _model(),
         capital=capital,
         reserves=reserves,
         loans=loans,
@@ -38,7 +44,7 @@ def _make_bank(
 
 
 def _make_buyer(wealth=50_000.0, wage=3_000.0, employed=True):
-    hh = Household(income=wage, wealth=wealth, mpc=0.8)
+    hh = Household(_model(), income=wage, wealth=wealth, mpc=0.8)
     hh.employed = employed
     hh.wage = wage
     hh.tenure = "renter"
@@ -47,7 +53,7 @@ def _make_buyer(wealth=50_000.0, wage=3_000.0, employed=True):
 
 
 def _make_owner(property_id="p1", wealth=20_000.0, wage=3_000.0):
-    hh = Household(income=wage, wealth=wealth)
+    hh = Household(_model(), income=wage, wealth=wealth)
     hh.employed = True
     hh.wage = wage
     hh.tenure = "owner_occupier"
@@ -91,7 +97,7 @@ class TestHousingMarketBasics:
     def test_clear_no_buyers(self):
         hm = HousingMarket()
         props = [_make_listed_property()]
-        hh = Household()  # renter but doesn't want to buy
+        hh = Household(_model())  # renter but doesn't want to buy
         hm.set_agents(props, [hh], [_make_bank()], [])
         result = hm.clear()
         assert result["transactions"] == 0
@@ -125,10 +131,10 @@ class TestBilateralMatching:
 
         bank = _make_bank()
         buyer = _make_buyer(wealth=50_000.0, wage=4_000.0)
+        seller = _make_owner(wealth=100_000.0)
         prop = _make_listed_property(price=200_000.0)
-        prop.owner_id = "seller_1"
-        seller = _make_owner(property_id=prop.property_id, wealth=100_000.0)
-        seller.agent_id = "seller_1"
+        prop.owner_id = str(seller.unique_id)
+        seller.property_id = prop.property_id
         seller.wants_to_sell = True
 
         hm.set_agents([prop], [buyer, seller], [bank], [], rng=rng)
@@ -174,7 +180,7 @@ class TestStatistics:
     def test_homeownership_rate(self):
         hm = HousingMarket()
         owner = _make_owner()
-        renter = Household()
+        renter = Household(_model())
         renter.tenure = "renter"
         hm.set_agents([], [owner, renter], [], [])
         hm.clear()

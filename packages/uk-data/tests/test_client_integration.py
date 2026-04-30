@@ -14,6 +14,8 @@ import urllib.request
 import pytest
 
 from uk_data import UKDataClient
+from uk_data.registry import CONCEPT_REGISTRY
+from uk_data.utils.http import clear_cache
 
 pytestmark = pytest.mark.integration
 
@@ -47,7 +49,6 @@ class TestUKDataClientConceptResolutionIntegration:
 
     def test_get_series_gdp_live(self) -> None:
         _skip_if_cannot_reach(_ONS_URL)
-        from uk_data.utils.http import clear_cache
 
         clear_cache()
         client = UKDataClient()
@@ -78,10 +79,8 @@ class TestUKDataClientConceptResolutionIntegration:
 
     def test_all_concepts_resolvable(self) -> None:
         """Every concept in CONCEPT_REGISTRY must be resolvable without error."""
-        from uk_data.registry import CONCEPT_REGISTRY
 
         _skip_if_cannot_reach(_ONS_URL)
-        from uk_data.utils.http import clear_cache
 
         clear_cache()
         client = UKDataClient()
@@ -91,7 +90,6 @@ class TestUKDataClientConceptResolutionIntegration:
 
     def test_get_series_accepts_window_and_limit_together(self) -> None:
         _skip_if_cannot_reach(_ONS_URL)
-        from uk_data.utils.http import clear_cache
 
         clear_cache()
         client = UKDataClient()

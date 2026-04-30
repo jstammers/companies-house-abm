@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import json
 from datetime import UTC, date, datetime
 from unittest.mock import MagicMock, patch
@@ -29,14 +30,12 @@ from uk_data.utils.timeseries import _parse_timestamp
 
 class TestEncodeBasicAuth:
     def test_encodes_user_and_password(self) -> None:
-        import base64
 
         result = encode_basic_auth("user", "pass")
         expected = base64.b64encode(b"user:pass").decode()
         assert result == expected
 
     def test_empty_password(self) -> None:
-        import base64
 
         result = encode_basic_auth("apikey", "")
         expected = base64.b64encode(b"apikey:").decode()

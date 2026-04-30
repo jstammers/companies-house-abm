@@ -13,6 +13,8 @@ import urllib.request
 import pytest
 
 from uk_data import UKDataClient
+from uk_data.adapters.companies_house import CompaniesHouseAdapter
+from uk_data.models import Entity, Event
 
 pytestmark = pytest.mark.integration
 
@@ -31,8 +33,6 @@ class TestCompaniesHouseAdapterEntityIntegration:
 
     def test_fetch_entity_returns_company(self) -> None:
         _skip_if_cannot_reach(_CH_API_URL)
-        from uk_data.adapters.companies_house import CompaniesHouseAdapter
-        from uk_data.models import Entity
 
         adapter = CompaniesHouseAdapter()
         entity = adapter.fetch_entity("BBC")
@@ -44,7 +44,6 @@ class TestCompaniesHouseAdapterEntityIntegration:
 
     def test_get_entity_via_client(self) -> None:
         _skip_if_cannot_reach(_CH_API_URL)
-        from uk_data.models import Entity
 
         client = UKDataClient()
         entity = client.get_entity("BBC")
@@ -53,7 +52,6 @@ class TestCompaniesHouseAdapterEntityIntegration:
 
     def test_fetch_entity_attributes_present(self) -> None:
         _skip_if_cannot_reach(_CH_API_URL)
-        from uk_data.adapters.companies_house import CompaniesHouseAdapter
 
         adapter = CompaniesHouseAdapter()
         entity = adapter.fetch_entity("BBC")
@@ -61,7 +59,6 @@ class TestCompaniesHouseAdapterEntityIntegration:
 
     def test_fetch_entity_not_found_raises(self) -> None:
         _skip_if_cannot_reach(_CH_API_URL)
-        from uk_data.adapters.companies_house import CompaniesHouseAdapter
 
         adapter = CompaniesHouseAdapter()
         with pytest.raises(ValueError, match="No Companies House entity found"):
@@ -73,8 +70,6 @@ class TestCompaniesHouseAdapterEventsIntegration:
 
     def test_fetch_events_returns_filings(self) -> None:
         _skip_if_cannot_reach(_CH_API_URL)
-        from uk_data.adapters.companies_house import CompaniesHouseAdapter
-        from uk_data.models import Event
 
         adapter = CompaniesHouseAdapter()
         # BBC's company number: 00101498
@@ -88,7 +83,6 @@ class TestCompaniesHouseAdapterEventsIntegration:
             assert event.entity_id == "companies_house:00101498"
 
     def test_fetch_events_requires_entity_id(self) -> None:
-        from uk_data.adapters.companies_house import CompaniesHouseAdapter
 
         adapter = CompaniesHouseAdapter()
         with pytest.raises(ValueError, match="entity_id"):
@@ -96,7 +90,6 @@ class TestCompaniesHouseAdapterEventsIntegration:
 
     def test_get_events_via_client(self) -> None:
         _skip_if_cannot_reach(_CH_API_URL)
-        from uk_data.models import Event
 
         client = UKDataClient()
         events = client.get_events(

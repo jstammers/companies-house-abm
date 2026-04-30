@@ -10,6 +10,7 @@ import pytest
 
 from companies_house.schema import COMPANIES_HOUSE_SCHEMA
 from companies_house.storage.db import CompaniesHouseDB
+from companies_house.storage.migrations import migrate_parquet_to_duckdb
 
 
 def _make_filing_row(**overrides):
@@ -182,7 +183,6 @@ class TestCompaniesHouseDB:
 
 class TestMigrateParquetToDuckdb:
     def test_migrate(self, tmp_path):
-        from companies_house.storage.migrations import migrate_parquet_to_duckdb
 
         parquet = tmp_path / "source.parquet"
         _make_df(
@@ -196,7 +196,6 @@ class TestMigrateParquetToDuckdb:
         assert count == 2
 
     def test_missing_parquet(self, tmp_path):
-        from companies_house.storage.migrations import migrate_parquet_to_duckdb
 
         with pytest.raises(FileNotFoundError):
             migrate_parquet_to_duckdb(tmp_path / "nonexistent.parquet")

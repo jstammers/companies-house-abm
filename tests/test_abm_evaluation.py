@@ -10,15 +10,21 @@ import pytest
 if TYPE_CHECKING:
     from pathlib import Path
 
+import json
+
+from typer.testing import CliRunner
+
 from companies_house_abm.abm.evaluation import (
     DEFAULT_TARGETS,
     EvaluationReport,
+    HistoricalEvaluationReport,
     StatResult,
     TargetStat,
     compute_simulation_stats,
     evaluate_simulation,
 )
 from companies_house_abm.abm.model import PeriodRecord, SimulationResult
+from companies_house_abm.cli import app
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -249,9 +255,6 @@ class TestEvaluateSimulation:
 
 class TestRunSimulationCli:
     def test_run_simulation_creates_csv(self, tmp_path: Path) -> None:
-        from typer.testing import CliRunner
-
-        from companies_house_abm.cli import app
 
         runner = CliRunner()
         result = runner.invoke(
@@ -273,9 +276,6 @@ class TestRunSimulationCli:
         assert len(lines) == 6  # header + 5 data rows
 
     def test_run_simulation_with_evaluate(self, tmp_path: Path) -> None:
-        from typer.testing import CliRunner
-
-        from companies_house_abm.cli import app
 
         runner = CliRunner()
         result = runner.invoke(
@@ -297,11 +297,6 @@ class TestRunSimulationCli:
         assert eval_file.exists()
 
     def test_run_simulation_json_format(self, tmp_path: Path) -> None:
-        import json
-
-        from typer.testing import CliRunner
-
-        from companies_house_abm.cli import app
 
         runner = CliRunner()
         result = runner.invoke(
@@ -323,9 +318,6 @@ class TestRunSimulationCli:
         assert len(data) == 3
 
     def test_invalid_format_exits_with_error(self, tmp_path: Path) -> None:
-        from typer.testing import CliRunner
-
-        from companies_house_abm.cli import app
 
         runner = CliRunner()
         result = runner.invoke(
@@ -452,7 +444,6 @@ class TestEvaluateSimulationEdgeCases:
 class TestHistoricalEvaluationReportEdgeCases:
     def test_summary_without_cross_sectional(self) -> None:
         """HistoricalEvaluationReport.summary should work when cross_sectional is None."""  # noqa: E501
-        from companies_house_abm.abm.evaluation import HistoricalEvaluationReport
 
         report = HistoricalEvaluationReport(
             scenario_name="no_cross",
@@ -471,7 +462,6 @@ class TestHistoricalEvaluationReportEdgeCases:
 
     def test_as_dict_without_cross_sectional(self) -> None:
         """HistoricalEvaluationReport.as_dict should omit cross_sectional when None."""
-        from companies_house_abm.abm.evaluation import HistoricalEvaluationReport
 
         report = HistoricalEvaluationReport(
             scenario_name="no_cross",

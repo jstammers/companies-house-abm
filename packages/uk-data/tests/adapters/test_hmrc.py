@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from uk_data.adapters.hmrc import HMRCAdapter
+from uk_data.adapters.hmrc import HMRCAdapter, supported_tax_years
 
 
 class TestHMRCAdapterAvailableSeries:
@@ -22,7 +22,6 @@ class TestHMRCAdapterAvailableSeries:
         assert expected_2024 <= set(series)
 
     def test_advertises_multiple_tax_years(self) -> None:
-        from uk_data.adapters.hmrc import supported_tax_years
 
         adapter = HMRCAdapter()
         series = adapter.available_series()

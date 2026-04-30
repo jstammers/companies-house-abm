@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import math
 from unittest.mock import MagicMock, patch
 
@@ -14,6 +15,7 @@ from companies_house_abm.abm.calibration import (
     sensitivity_analysis,
 )
 from companies_house_abm.abm.evaluation import EvaluationReport, StatResult
+from companies_house_abm.abm.model import PeriodRecord, SimulationResult
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -54,7 +56,6 @@ def _make_sweep_result(score: float = 0.5, **params: object) -> SweepResult:
 
 def _make_mock_sim() -> MagicMock:
     """Build a mock Simulation whose run() returns a plausible SimulationResult."""
-    from companies_house_abm.abm.model import PeriodRecord, SimulationResult
 
     records = [
         PeriodRecord(
@@ -240,8 +241,6 @@ class TestParameterSweep:
     def test_verbose_logs_progress(self) -> None:
         def factory(**_kw: object) -> object:
             return _make_mock_sim()
-
-        import logging
 
         with patch.object(
             logging.getLogger("companies_house_abm.abm.calibration"),

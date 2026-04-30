@@ -24,7 +24,7 @@ def pytest_sessionstart(session: pytest.Session) -> None:
     branches where ``uk_data`` is absent.
     """
     try:
-        from uk_data.api import models as uk_models
+        from uk_data.api import models as uk_models  # noqa: PLC0415
     except ImportError:
         return
 

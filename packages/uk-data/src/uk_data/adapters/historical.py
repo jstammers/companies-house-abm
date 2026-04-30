@@ -33,13 +33,13 @@ from functools import lru_cache
 from importlib import resources
 from typing import Any
 
-from uk_data._http import get_json, get_text, retry
 from uk_data.adapters.boe import (
     _BANK_RATE_SERIES,
     _HOUSEHOLD_LENDING_SERIES,
     _build_iadb_url,
     _parse_iadb_csv,
 )
+from uk_data.utils.http import get_json, get_text, retry
 
 logger = logging.getLogger(__name__)
 

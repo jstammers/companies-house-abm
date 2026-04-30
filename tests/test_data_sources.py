@@ -208,7 +208,7 @@ class TestHmrcEffectiveTaxWedge:
 
 class TestBoeFetchBankRate:
     def test_returns_list_when_api_succeeds(self) -> None:
-        from uk_data import _http
+        from uk_data.utils import http as _http
 
         fake_csv = "Date,Value\n01 Jan 2024,5.25\n01 Feb 2024,5.25\n"
         _http.clear_cache()
@@ -224,7 +224,7 @@ class TestBoeFetchBankRate:
     def test_returns_empty_on_network_error(self) -> None:
         import urllib.error
 
-        from uk_data import _http
+        from uk_data.utils import http as _http
 
         _http.clear_cache()
         with patch(
@@ -237,7 +237,7 @@ class TestBoeFetchBankRate:
         assert obs == []
 
     def test_current_rate_falls_back_on_empty(self) -> None:
-        from uk_data import _http
+        from uk_data.utils import http as _http
 
         _http.clear_cache()
         with patch(
@@ -250,7 +250,7 @@ class TestBoeFetchBankRate:
         assert 0.0 <= rate <= 0.25
 
     def test_current_rate_parses_csv_value(self) -> None:
-        from uk_data import _http
+        from uk_data.utils import http as _http
 
         _http.clear_cache()
         with patch(
@@ -265,7 +265,7 @@ class TestBoeFetchBankRate:
 
 class TestBoeLendingRates:
     def test_returns_expected_keys(self) -> None:
-        from uk_data import _http
+        from uk_data.utils import http as _http
 
         _http.clear_cache()
         with (
@@ -288,7 +288,7 @@ class TestBoeLendingRates:
         assert "business_spread" in rates
 
     def test_spreads_are_non_negative(self) -> None:
-        from uk_data import _http
+        from uk_data.utils import http as _http
 
         _http.clear_cache()
         with (
@@ -339,7 +339,7 @@ _FAKE_ONS_MONTHLY_RESPONSE: dict[str, Any] = {
 
 class TestOnsGdp:
     def test_returns_list_on_success(self) -> None:
-        from uk_data import _http
+        from uk_data.utils import http as _http
 
         _http.clear_cache()
         with patch(
@@ -353,7 +353,7 @@ class TestOnsGdp:
         assert len(obs) == 4
 
     def test_returns_empty_on_api_failure(self) -> None:
-        from uk_data import _http
+        from uk_data.utils import http as _http
 
         _http.clear_cache()
         with patch(
@@ -366,7 +366,7 @@ class TestOnsGdp:
         assert obs == []
 
     def test_limit_is_respected(self) -> None:
-        from uk_data import _http
+        from uk_data.utils import http as _http
 
         _http.clear_cache()
         with patch(
@@ -381,7 +381,7 @@ class TestOnsGdp:
 
 class TestOnsHouseholdIncome:
     def test_returns_list(self) -> None:
-        from uk_data import _http
+        from uk_data.utils import http as _http
 
         _http.clear_cache()
         with patch(
@@ -396,7 +396,7 @@ class TestOnsHouseholdIncome:
 
 class TestOnsSavingsRatio:
     def test_returns_list(self) -> None:
-        from uk_data import _http
+        from uk_data.utils import http as _http
 
         _http.clear_cache()
         with patch(
@@ -411,7 +411,7 @@ class TestOnsSavingsRatio:
 
 class TestOnsLabourMarket:
     def test_returns_expected_keys(self) -> None:
-        from uk_data import _http
+        from uk_data.utils import http as _http
 
         _http.clear_cache()
         with patch(
@@ -425,7 +425,7 @@ class TestOnsLabourMarket:
         assert "average_weekly_earnings" in data
 
     def test_returns_none_on_api_failure(self) -> None:
-        from uk_data import _http
+        from uk_data.utils import http as _http
 
         _http.clear_cache()
         with patch(
@@ -441,7 +441,7 @@ class TestOnsLabourMarket:
 
 class TestOnsInputOutputTable:
     def test_returns_expected_keys(self) -> None:
-        from uk_data import _http
+        from uk_data.utils import http as _http
 
         _http.clear_cache()
         with patch(
@@ -458,7 +458,7 @@ class TestOnsInputOutputTable:
         assert "final_demand_shares" in io
 
     def test_sectors_match_abm_config(self) -> None:
-        from uk_data import _http
+        from uk_data.utils import http as _http
 
         _http.clear_cache()
         with patch(
@@ -488,7 +488,7 @@ class TestOnsInputOutputTable:
         assert set(io["sectors"]) == expected_sectors
 
     def test_final_demand_shares_sum_to_approximately_one(self) -> None:
-        from uk_data import _http
+        from uk_data.utils import http as _http
 
         _http.clear_cache()
         with patch(
@@ -504,7 +504,7 @@ class TestOnsInputOutputTable:
         assert total == pytest.approx(1.0, abs=0.05)
 
     def test_use_coefficients_are_between_zero_and_one(self) -> None:
-        from uk_data import _http
+        from uk_data.utils import http as _http
 
         _http.clear_cache()
         with patch(
@@ -530,7 +530,7 @@ class TestOnsInputOutputTable:
 
 class TestCalibrateHouseholds:
     def test_returns_household_config(self) -> None:
-        from uk_data import _http
+        from uk_data.utils import http as _http
 
         _http.clear_cache()
         with patch(
@@ -548,7 +548,7 @@ class TestCalibrateHouseholds:
 
     def test_falls_back_to_defaults_on_api_failure(self) -> None:
         from companies_house_abm.abm.config import HouseholdConfig
-        from uk_data import _http
+        from uk_data.utils import http as _http
 
         _http.clear_cache()
         default = HouseholdConfig()
@@ -566,7 +566,7 @@ class TestCalibrateHouseholds:
         assert cfg.income_distribution == default.income_distribution
 
     def test_updates_mpc_from_savings_ratio(self) -> None:
-        from uk_data import _http
+        from uk_data.utils import http as _http
 
         _http.clear_cache()
         fake_savings = {"quarters": [{"value": "8.0"}]}  # 8% savings ratio
@@ -596,7 +596,7 @@ class TestCalibrateHouseholds:
 
 class TestCalibrateBanks:
     def test_returns_config_and_behavior(self) -> None:
-        from uk_data import _http
+        from uk_data.utils import http as _http
 
         _http.clear_cache()
         with (
@@ -618,7 +618,7 @@ class TestCalibrateBanks:
         assert isinstance(beh, BankBehaviorConfig)
 
     def test_capital_requirement_from_cet1(self) -> None:
-        from uk_data import _http
+        from uk_data.utils import http as _http
 
         _http.clear_cache()
         with (
@@ -665,7 +665,7 @@ class TestCalibrateGovernment:
 
 class TestCalibrateIoSectors:
     def test_returns_expected_keys(self) -> None:
-        from uk_data import _http
+        from uk_data.utils import http as _http
 
         _http.clear_cache()
         with patch(
@@ -683,7 +683,7 @@ class TestCalibrateIoSectors:
         assert "output_multipliers" in data
 
     def test_output_multipliers_are_above_one(self) -> None:
-        from uk_data import _http
+        from uk_data.utils import http as _http
 
         _http.clear_cache()
         with patch(
@@ -702,7 +702,7 @@ class TestCalibrateIoSectors:
 
 class TestCalibrateModel:
     def test_returns_model_config(self) -> None:
-        from uk_data import _http
+        from uk_data.utils import http as _http
 
         _http.clear_cache()
         with (
@@ -731,7 +731,7 @@ class TestCalibrateModel:
         assert isinstance(cfg, ModelConfig)
 
     def test_corporation_tax_calibrated(self) -> None:
-        from uk_data import _http
+        from uk_data.utils import http as _http
 
         _http.clear_cache()
         with (
@@ -765,7 +765,7 @@ class TestCalibrateModel:
 
 class TestHttpCache:
     def test_clear_cache_empties_dict(self) -> None:
-        from uk_data._http import _CACHE, clear_cache
+        from uk_data.utils.http import _CACHE, clear_cache
 
         _CACHE["test_key"] = "test_value"
         clear_cache()
@@ -774,7 +774,7 @@ class TestHttpCache:
 
 class TestHttpRetry:
     def test_succeeds_on_first_attempt(self) -> None:
-        from uk_data._http import retry
+        from uk_data.utils.http import retry
 
         result = retry(lambda: 42)
         assert result == 42
@@ -782,7 +782,7 @@ class TestHttpRetry:
     def test_retries_on_failure(self) -> None:
         import urllib.error
 
-        from uk_data._http import retry
+        from uk_data.utils.http import retry
 
         call_count = 0
 
@@ -800,7 +800,7 @@ class TestHttpRetry:
     def test_raises_after_all_retries_exhausted(self) -> None:
         import urllib.error
 
-        from uk_data._http import retry
+        from uk_data.utils.http import retry
 
         def always_fails() -> None:
             raise urllib.error.URLError("permanent failure")
@@ -1098,7 +1098,7 @@ class TestFetchDataCli:
         from typer.testing import CliRunner
 
         from companies_house_abm.cli import app
-        from uk_data import _http
+        from uk_data.utils import http as _http
 
         _http.clear_cache()
 

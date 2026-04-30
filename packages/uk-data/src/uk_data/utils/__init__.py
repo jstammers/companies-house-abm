@@ -11,6 +11,7 @@ Example usage::
     from uk_data.utils.timeseries import date_to_utc_datetime
 """
 
+from uk_data.transformers.timeseries import point_timeseries, series_from_observations
 from uk_data.utils.http import (
     _USER_AGENT,
     clear_cache,
@@ -21,11 +22,7 @@ from uk_data.utils.http import (
     request_bytes,
     retry,
 )
-from uk_data.utils.timeseries import (
-    date_to_utc_datetime,
-    point_timeseries,
-    series_from_observations,
-)
+from uk_data.utils.timeseries import date_to_utc_datetime
 
 __all__ = [
     "_USER_AGENT",

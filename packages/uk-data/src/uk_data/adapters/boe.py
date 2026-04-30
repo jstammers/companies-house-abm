@@ -30,9 +30,9 @@ from __future__ import annotations
 import logging
 from datetime import date, datetime
 
-from uk_data._http import get_text, retry
 from uk_data.adapters.base import BaseAdapter
 from uk_data.models import point_timeseries, series_from_observations
+from uk_data.utils.http import get_text, retry
 from uk_data.utils.timeseries import filter_observations_by_date_window
 
 logger = logging.getLogger(__name__)
@@ -59,6 +59,21 @@ _DEFAULT_IADB_FROM_YEAR = 2013
 
 
 def _year_from_bound(value: object) -> int | None:
+    """Extract the calendar year from a date-like bound value.
+
+    Accepts ISO date strings (``"2024-01-01"``), bare 4-digit year strings
+    (``"2013"``), ``datetime.date``, ``datetime.datetime``, or ``None``.
+    Returns ``None`` when *value* is ``None``, empty, or unrecognisable.
+
+    Example::
+
+        >>> _year_from_bound("2024-03-15")
+        2024
+        >>> _year_from_bound(date(2013, 1, 1))
+        2013
+        >>> _year_from_bound(None) is None
+        True
+    """
     if value is None:
         return None
     if isinstance(value, str):
@@ -68,6 +83,7 @@ def _year_from_bound(value: object) -> int | None:
         try:
             return datetime.fromisoformat(stripped.replace("Z", "+00:00")).year
         except ValueError:
+            # Allow bare 4-digit year strings such as "2013".
             return int(stripped[:4]) if len(stripped) >= 4 else None
     if isinstance(value, datetime):
         return value.year
@@ -165,7 +181,20 @@ def _fetch_bank_rate(
     from_year: int | None = None,
     to_year: int | None = None,
 ) -> list[dict[str, str]]:
-    """Fetch Bank Rate observations from the BoE IADB (internal helper)."""
+    """Fetch Bank Rate observations from the BoE IADB (internal helper).
+
+    Args:
+        num_observations: If non-negative, truncate the result to the most
+            recent *num_observations* rows **after** the IADB range has been
+            downloaded.  When both *num_observations* and *from_year* /
+            *to_year* are supplied, the year range determines which data is
+            fetched from the API; *num_observations* then further trims the
+            tail.  Pass ``None`` to return all rows in the fetched range.
+        from_year: First calendar year of history to request (default
+            :data:`_DEFAULT_IADB_FROM_YEAR`).
+        to_year: Last calendar year of history to request (inclusive).
+            Defaults to the current year when omitted.
+    """
     url = _build_iadb_url(_BANK_RATE_SERIES, from_year=from_year, to_year=to_year)
     try:
         text = retry(get_text, url)
@@ -218,7 +247,19 @@ def _fetch_lending_rates() -> dict[str, float]:
 
 
 def _get_aggregate_capital_ratio() -> float:
-    """Return the aggregate CET1 capital ratio (internal helper)."""
+    """Return the aggregate CET1 capital ratio (internal helper).
+
+    Currently returns a hardcoded fallback sourced from the BoE Financial
+    Stability Report (July 2023).
+
+    .. todo::
+
+        Fetch live data from the BoE Statistical Interactive Database
+        (series ``LNMVNZL``) via :func:`_build_iadb_url` and fall back to
+        :data:`_FALLBACK_CAPITAL_RATIO` only when the endpoint is unavailable.
+        The IADB CSV endpoint currently returns HTTP 403 for non-browser
+        clients, so this is blocked on that access issue.
+    """
     # Source: Bank of England Financial Stability Report, July 2023.
     return _FALLBACK_CAPITAL_RATIO
 

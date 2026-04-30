@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from uk_data._http import clear_cache
+from uk_data.utils.http import clear_cache
 
 if TYPE_CHECKING:
     from collections.abc import Iterator

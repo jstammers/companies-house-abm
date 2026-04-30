@@ -41,7 +41,7 @@ class TestOnsGdpIntegration:
 
     def test_returns_nonempty_list(self) -> None:
         _skip_if_offline()
-        from uk_data._http import clear_cache
+        from uk_data.utils.http import clear_cache
         from uk_data.workflows.ons import fetch_gdp
 
         clear_cache()
@@ -51,7 +51,7 @@ class TestOnsGdpIntegration:
 
     def test_observations_have_date_and_value_keys(self) -> None:
         _skip_if_offline()
-        from uk_data._http import clear_cache
+        from uk_data.utils.http import clear_cache
         from uk_data.workflows.ons import fetch_gdp
 
         clear_cache()
@@ -62,7 +62,7 @@ class TestOnsGdpIntegration:
 
     def test_values_are_numeric_strings(self) -> None:
         _skip_if_offline()
-        from uk_data._http import clear_cache
+        from uk_data.utils.http import clear_cache
         from uk_data.workflows.ons import fetch_gdp
 
         clear_cache()
@@ -72,7 +72,7 @@ class TestOnsGdpIntegration:
 
     def test_limit_respected(self) -> None:
         _skip_if_offline()
-        from uk_data._http import clear_cache
+        from uk_data.utils.http import clear_cache
         from uk_data.workflows.ons import fetch_gdp
 
         clear_cache()
@@ -85,7 +85,7 @@ class TestOnsHouseholdIncomeIntegration:
 
     def test_returns_nonempty_list(self) -> None:
         _skip_if_offline()
-        from uk_data._http import clear_cache
+        from uk_data.utils.http import clear_cache
         from uk_data.workflows.ons import fetch_household_income
 
         clear_cache()
@@ -95,7 +95,7 @@ class TestOnsHouseholdIncomeIntegration:
 
     def test_observations_have_date_and_value(self) -> None:
         _skip_if_offline()
-        from uk_data._http import clear_cache
+        from uk_data.utils.http import clear_cache
         from uk_data.workflows.ons import fetch_household_income
 
         clear_cache()
@@ -111,7 +111,7 @@ class TestOnsSavingsRatioIntegration:
 
     def test_returns_nonempty_list(self) -> None:
         _skip_if_offline()
-        from uk_data._http import clear_cache
+        from uk_data.utils.http import clear_cache
         from uk_data.workflows.ons import fetch_savings_ratio
 
         clear_cache()
@@ -122,7 +122,7 @@ class TestOnsSavingsRatioIntegration:
     def test_saving_ratio_plausible_range(self) -> None:
         """Household saving ratio should be between -20% and 35%."""
         _skip_if_offline()
-        from uk_data._http import clear_cache
+        from uk_data.utils.http import clear_cache
         from uk_data.workflows.ons import fetch_savings_ratio
 
         clear_cache()
@@ -137,7 +137,7 @@ class TestOnsLabourMarketIntegration:
 
     def test_returns_expected_keys(self) -> None:
         _skip_if_offline()
-        from uk_data._http import clear_cache
+        from uk_data.utils.http import clear_cache
         from uk_data.workflows.ons import fetch_labour_market
 
         clear_cache()
@@ -147,7 +147,7 @@ class TestOnsLabourMarketIntegration:
 
     def test_unemployment_rate_is_numeric(self) -> None:
         _skip_if_offline()
-        from uk_data._http import clear_cache
+        from uk_data.utils.http import clear_cache
         from uk_data.workflows.ons import fetch_labour_market
 
         clear_cache()
@@ -159,7 +159,7 @@ class TestOnsLabourMarketIntegration:
 
     def test_average_weekly_earnings_positive(self) -> None:
         _skip_if_offline()
-        from uk_data._http import clear_cache
+        from uk_data.utils.http import clear_cache
         from uk_data.workflows.ons import fetch_labour_market
 
         clear_cache()
@@ -287,7 +287,7 @@ class TestBoeFetchBankRateIntegration:
     """fetch_bank_rate() — BoE IADB (currently returns [] due to 403)."""
 
     def test_returns_list(self) -> None:
-        from uk_data._http import clear_cache
+        from uk_data.utils.http import clear_cache
         from uk_data.workflows.boe import fetch_bank_rate
 
         clear_cache()
@@ -296,7 +296,7 @@ class TestBoeFetchBankRateIntegration:
         assert isinstance(obs, list)
 
     def test_items_have_date_and_value_when_available(self) -> None:
-        from uk_data._http import clear_cache
+        from uk_data.utils.http import clear_cache
         from uk_data.workflows.boe import fetch_bank_rate
 
         clear_cache()
@@ -311,7 +311,7 @@ class TestBoeFetchBankRateCurrentIntegration:
     """fetch_bank_rate_current() — falls back to hardcoded 4.75%."""
 
     def test_returns_float_in_valid_range(self) -> None:
-        from uk_data._http import clear_cache
+        from uk_data.utils.http import clear_cache
         from uk_data.workflows.boe import fetch_bank_rate_current
 
         clear_cache()
@@ -321,8 +321,8 @@ class TestBoeFetchBankRateCurrentIntegration:
 
     def test_fallback_value_when_iadb_unavailable(self) -> None:
         """Since IADB returns 403, current rate should equal the fallback constant."""
-        from uk_data._http import clear_cache
         from uk_data.adapters.boe import _FALLBACK_BANK_RATE
+        from uk_data.utils.http import clear_cache
         from uk_data.workflows.boe import fetch_bank_rate_current
 
         clear_cache()
@@ -335,7 +335,7 @@ class TestBoeFetchLendingRatesIntegration:
     """fetch_lending_rates() — uses fallback values when IADB is unavailable."""
 
     def test_returns_expected_keys(self) -> None:
-        from uk_data._http import clear_cache
+        from uk_data.utils.http import clear_cache
         from uk_data.workflows.boe import fetch_lending_rates
 
         clear_cache()
@@ -347,7 +347,7 @@ class TestBoeFetchLendingRatesIntegration:
         assert "business_spread" in rates
 
     def test_rates_in_plausible_range(self) -> None:
-        from uk_data._http import clear_cache
+        from uk_data.utils.http import clear_cache
         from uk_data.workflows.boe import fetch_lending_rates
 
         clear_cache()
@@ -357,7 +357,7 @@ class TestBoeFetchLendingRatesIntegration:
             assert 0.0 <= val <= 0.25, f"{key}={val:.4f} outside plausible range"
 
     def test_spreads_are_non_negative(self) -> None:
-        from uk_data._http import clear_cache
+        from uk_data.utils.http import clear_cache
         from uk_data.workflows.boe import fetch_lending_rates
 
         clear_cache()
@@ -386,10 +386,10 @@ class TestLandRegistryUkAveragePriceIntegration:
     """fetch_uk_average_price() — SPARQL endpoint with fallback."""
 
     def test_returns_positive_float(self) -> None:
-        from uk_data._http import clear_cache
         from uk_data.adapters.land_registry import (
             fetch_uk_average_price,
         )
+        from uk_data.utils.http import clear_cache
 
         clear_cache()
         price = fetch_uk_average_price()
@@ -398,10 +398,10 @@ class TestLandRegistryUkAveragePriceIntegration:
 
     def test_price_in_plausible_range(self) -> None:
         """UK average house price should be between £100k and £600k."""
-        from uk_data._http import clear_cache
         from uk_data.adapters.land_registry import (
             fetch_uk_average_price,
         )
+        from uk_data.utils.http import clear_cache
 
         clear_cache()
         price = fetch_uk_average_price()
@@ -414,8 +414,8 @@ class TestLandRegistryRegionalPricesIntegration:
     """fetch_regional_prices() — SPARQL with regional fallback dict."""
 
     def test_returns_dict_of_floats(self) -> None:
-        from uk_data._http import clear_cache
         from uk_data.adapters.land_registry import fetch_regional_prices
+        from uk_data.utils.http import clear_cache
 
         clear_cache()
         prices = fetch_regional_prices()
@@ -427,8 +427,8 @@ class TestLandRegistryRegionalPricesIntegration:
 
     def test_london_higher_than_north_east(self) -> None:
         """London prices should exceed North East prices (robust structural check)."""
-        from uk_data._http import clear_cache
         from uk_data.adapters.land_registry import fetch_regional_prices
+        from uk_data.utils.http import clear_cache
 
         clear_cache()
         prices = fetch_regional_prices()
@@ -527,7 +527,7 @@ class TestOnsFetchTimeseriesUrlConstruction:
         """Return the URLs that _fetch_timeseries would request for each series."""
         from unittest.mock import patch
 
-        from uk_data import _http
+        from uk_data.utils import http as _http
 
         _http.clear_cache()
         captured: list[str] = []

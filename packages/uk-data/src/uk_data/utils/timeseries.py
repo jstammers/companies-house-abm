@@ -1,7 +1,12 @@
 """Time-series utility helpers.
 
-Provides timestamp parsing, canonical series factories, and date coercion
-utilities shared across multiple adapters.
+Provides timestamp parsing, date coercion utilities, and observation
+filtering shared across multiple adapters.
+
+For building canonical :class:`~uk_data.models.TimeSeries` objects, use
+:func:`uk_data.transformers.timeseries.series_from_observations` or
+:func:`uk_data.transformers.timeseries.point_timeseries` directly, or via
+the :class:`~uk_data.transformers.timeseries.TimeSeriesTransformer` API.
 """
 
 from __future__ import annotations
@@ -11,46 +16,7 @@ from typing import Any
 
 import numpy as np
 
-
-def _parse_timestamp(label: str) -> np.datetime64:
-    """Parse a free-form timestamp label into ``np.datetime64``.
-
-    Handles ISO dates, quarter labels (``2024Q1``), month labels
-    (``2024 Jan``, ``Jan 2024``, ``2024-01``), annual labels (``2024``),
-    and falls back to ``NaT`` for unrecognised formats.
-    """
-    normalized = label.strip()
-    if not normalized:
-        return np.datetime64("NaT")
-
-    try:
-        return np.datetime64(datetime.strptime(normalized, "%d %b %Y").date())
-    except ValueError:
-        pass
-
-    if "Q" in normalized and len(normalized) >= 6:
-        year_str, quarter_str = normalized.split("Q", maxsplit=1)
-        month = {"1": 1, "2": 4, "3": 7, "4": 10}.get(quarter_str[:1], 1)
-        return np.datetime64(f"{int(year_str):04d}-{month:02d}-01")
-
-    month_formats = ["%Y %b", "%Y %B", "%b %Y", "%B %Y", "%Y-%m"]
-    for fmt in month_formats:
-        try:
-            dt = datetime.strptime(normalized, fmt)
-            return np.datetime64(f"{dt.year:04d}-{dt.month:02d}-01")
-        except ValueError:
-            continue
-
-    if normalized.isdigit() and len(normalized) == 4:
-        return np.datetime64(f"{normalized}-01-01")
-
-    try:
-        return np.datetime64(normalized)
-    except ValueError:
-        # Upstream APIs occasionally return free-form labels ("Q3 2024", "—")
-        # that don't match any of the formats above.  Returning NaT lets the
-        # caller decide what to do rather than breaking the whole fetch.
-        return np.datetime64("NaT")
+from uk_data.models.timeseries import _parse_timestamp
 
 
 def date_to_utc_datetime(value: date | datetime) -> datetime:
@@ -71,6 +37,40 @@ def date_to_utc_datetime(value: date | datetime) -> datetime:
     if isinstance(value, datetime):
         return value if value.tzinfo else value.replace(tzinfo=UTC)
     return datetime.combine(value, time.min, tzinfo=UTC)
+
+
+def _coerce_date_bound(
+    value: str | date | datetime | None,
+    *,
+    field_name: str = "date",
+) -> date | None:
+    """Coerce a date-like bound to a ``datetime.date``.
+
+    Accepts ISO date strings (``"2024-01-15"``), ``datetime.date``,
+    ``datetime.datetime``, or ``None``.  Raises ``ValueError`` with
+    *field_name* context when the string cannot be parsed.
+
+    Example::
+
+        >>> _coerce_date_bound("2024-03-31")
+        datetime.date(2024, 3, 31)
+        >>> _coerce_date_bound(None) is None
+        True
+    """
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    normalized = value.strip()
+    if not normalized:
+        return None
+    try:
+        return datetime.fromisoformat(normalized.replace("Z", "+00:00")).date()
+    except ValueError as exc:
+        msg = f"Invalid {field_name}: {value!r}"
+        raise ValueError(msg) from exc
 
 
 def _coerce_window_bound(
@@ -150,79 +150,3 @@ def filter_observations_by_date_window(
         filtered.append(observation)
 
     return filtered
-
-
-def series_from_observations(
-    *,
-    series_id: str,
-    name: str,
-    frequency: str,
-    units: str,
-    seasonal_adjustment: str,
-    geography: str,
-    observations: list[dict[str, Any]],
-    source: str,
-    source_series_id: str,
-    metadata: dict[str, Any] | None = None,
-    date_key: str = "date",
-    value_key: str = "value",
-) -> Any:
-    """Build a canonical :class:`~uk_data.models.TimeSeries` from observation dicts.
-
-    Delegates to :func:`uk_data.models.timeseries.series_from_observations`.
-    Importable as ``from uk_data.utils import series_from_observations``.
-    """
-    from uk_data.models.timeseries import (
-        series_from_observations as _series_from_observations,
-    )
-
-    return _series_from_observations(
-        series_id=series_id,
-        name=name,
-        frequency=frequency,
-        units=units,
-        seasonal_adjustment=seasonal_adjustment,
-        geography=geography,
-        observations=observations,
-        source=source,
-        source_series_id=source_series_id,
-        metadata=metadata,
-        date_key=date_key,
-        value_key=value_key,
-    )
-
-
-def point_timeseries(
-    *,
-    series_id: str,
-    name: str,
-    value: float,
-    units: str,
-    source: str,
-    source_series_id: str,
-    frequency: str = "A",
-    seasonal_adjustment: str = "NSA",
-    geography: str = "UK",
-    metadata: dict[str, Any] | None = None,
-    timestamp: datetime | None = None,
-) -> Any:
-    """Build a one-point canonical :class:`~uk_data.models.TimeSeries`.
-
-    Delegates to :func:`uk_data.models.timeseries.point_timeseries`.
-    Imported here so callers can use ``from uk_data.utils import point_timeseries``.
-    """
-    from uk_data.models.timeseries import point_timeseries as _point_timeseries
-
-    return _point_timeseries(
-        series_id=series_id,
-        name=name,
-        value=value,
-        units=units,
-        source=source,
-        source_series_id=source_series_id,
-        frequency=frequency,
-        seasonal_adjustment=seasonal_adjustment,
-        geography=geography,
-        metadata=metadata,
-        timestamp=timestamp,
-    )

@@ -31,7 +31,6 @@ from urllib.parse import urlencode
 if TYPE_CHECKING:
     from uk_data.storage.raw import RawStore
 
-from uk_data._http import get_json
 from uk_data.adapters.base import BaseAdapter
 from uk_data.adapters.ons_models import (
     Observation,
@@ -39,8 +38,11 @@ from uk_data.adapters.ons_models import (
     ONSDatasetVersionInfo,
     ONSObservation,
 )
-from uk_data.models import point_timeseries, series_from_observations
-from uk_data.utils.http import retry
+from uk_data.transformers.timeseries import (
+    TimeSeriesTransformer,
+    series_from_observations,
+)
+from uk_data.utils.http import get_json, retry
 from uk_data.utils.timeseries import filter_observations_by_date_window
 
 logger = logging.getLogger(__name__)
@@ -187,19 +189,6 @@ _SERIES_METADATA: dict[str, dict[str, str]] = {
         "seasonal_adjustment": "NSA",
     },
 }
-
-
-def _normalize_period_bound(value: object) -> str | None:
-    if value is None:
-        return None
-    if isinstance(value, datetime):
-        return value.date().isoformat()
-    if isinstance(value, date):
-        return value.isoformat()
-    if isinstance(value, str):
-        stripped = value.strip()
-        return stripped or None
-    return str(value)
 
 
 def _fetch_timeseries(series_id: str, limit: int = 20) -> list[dict[str, Any]]:
@@ -488,7 +477,7 @@ class ONSAdapter(BaseAdapter):
             )
 
         if series_id == _AFFORDABILITY_SERIES:
-            return point_timeseries(
+            return TimeSeriesTransformer.point(
                 series_id=concept,
                 name=metadata["name"],
                 value=_fetch_affordability_ratio(),
@@ -502,7 +491,7 @@ class ONSAdapter(BaseAdapter):
             )
 
         if series_id == _RENTAL_INDEX_SERIES:
-            return point_timeseries(
+            return TimeSeriesTransformer.point(
                 series_id=concept,
                 name=metadata["name"],
                 value=_fetch_rental_growth(),

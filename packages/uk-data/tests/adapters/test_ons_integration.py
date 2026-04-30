@@ -33,7 +33,7 @@ class TestONSAdapterIntegration:
 
     def test_gdp_series_live(self) -> None:
         _skip_if_cannot_reach(_ONS_URL)
-        from uk_data._http import clear_cache
+        from uk_data.utils.http import clear_cache
 
         clear_cache()
         adapter = ONSAdapter()
@@ -45,7 +45,7 @@ class TestONSAdapterIntegration:
 
     def test_household_income_series_live(self) -> None:
         _skip_if_cannot_reach(_ONS_URL)
-        from uk_data._http import clear_cache
+        from uk_data.utils.http import clear_cache
 
         clear_cache()
         adapter = ONSAdapter()
@@ -55,7 +55,7 @@ class TestONSAdapterIntegration:
 
     def test_savings_ratio_series_live(self) -> None:
         _skip_if_cannot_reach(_ONS_URL)
-        from uk_data._http import clear_cache
+        from uk_data.utils.http import clear_cache
 
         clear_cache()
         adapter = ONSAdapter()
@@ -65,7 +65,7 @@ class TestONSAdapterIntegration:
 
     def test_unemployment_series_live(self) -> None:
         _skip_if_cannot_reach(_ONS_URL)
-        from uk_data._http import clear_cache
+        from uk_data.utils.http import clear_cache
 
         clear_cache()
         adapter = ONSAdapter()
@@ -76,7 +76,7 @@ class TestONSAdapterIntegration:
 
     def test_average_earnings_series_live(self) -> None:
         _skip_if_cannot_reach(_ONS_URL)
-        from uk_data._http import clear_cache
+        from uk_data.utils.http import clear_cache
 
         clear_cache()
         adapter = ONSAdapter()
@@ -87,7 +87,7 @@ class TestONSAdapterIntegration:
 
     def test_affordability_series_live(self) -> None:
         _skip_if_cannot_reach(_ONS_URL)
-        from uk_data._http import clear_cache
+        from uk_data.utils.http import clear_cache
 
         clear_cache()
         adapter = ONSAdapter()
@@ -97,7 +97,7 @@ class TestONSAdapterIntegration:
 
     def test_rental_index_series_live(self) -> None:
         _skip_if_cannot_reach(_ONS_URL)
-        from uk_data._http import clear_cache
+        from uk_data.utils.http import clear_cache
 
         clear_cache()
         adapter = ONSAdapter()
@@ -108,7 +108,7 @@ class TestONSAdapterIntegration:
     def test_all_advertised_series_fetchable_live(self) -> None:
         """Parametric: every series in available_series() must succeed live."""
         _skip_if_cannot_reach(_ONS_URL)
-        from uk_data._http import clear_cache
+        from uk_data.utils.http import clear_cache
 
         clear_cache()
         adapter = ONSAdapter()

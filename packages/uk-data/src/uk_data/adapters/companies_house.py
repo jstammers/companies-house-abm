@@ -107,7 +107,7 @@ def _stream_to_tempfile(url: str) -> str:
     Raises:
         urllib.error.URLError: On network errors.
     """
-    from uk_data._http import _USER_AGENT
+    from uk_data.utils.http import _USER_AGENT
 
     logger.info("Downloading %s", url)
     req = urllib.request.Request(url, headers={"User-Agent": _USER_AGENT})

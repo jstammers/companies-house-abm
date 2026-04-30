@@ -118,7 +118,7 @@ class TestCalibrateHousing:
 
     def test_calibrate_model_includes_housing(self):
         from companies_house_abm.data_sources.calibration import calibrate_model
-        from uk_data import _http
+        from uk_data.utils import http as _http
 
         _http.clear_cache()
         with (

@@ -10,6 +10,7 @@ import httpx
 import numpy as np
 import pytest
 
+from uk_data.transformers.timeseries import point_timeseries, series_from_observations
 from uk_data.utils import (
     clear_cache,
     date_to_utc_datetime,
@@ -19,11 +20,7 @@ from uk_data.utils import (
     get_text,
     retry,
 )
-from uk_data.utils.timeseries import (
-    _parse_timestamp,
-    point_timeseries,
-    series_from_observations,
-)
+from uk_data.utils.timeseries import _parse_timestamp
 
 # ---------------------------------------------------------------------------
 # HTTP helpers

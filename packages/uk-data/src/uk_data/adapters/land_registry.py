@@ -23,7 +23,7 @@ import polars as pl
 from uk_data.adapters.base import BaseAdapter
 from uk_data.models import Event, point_timeseries, series_from_observations
 from uk_data.utils.http import _USER_AGENT, get_json
-from uk_data.utils.timeseries import date_to_utc_datetime
+from uk_data.utils.timeseries import _coerce_date_bound, date_to_utc_datetime
 
 logger = logging.getLogger(__name__)
 
@@ -402,22 +402,6 @@ def fetch_uk_hpi_history(
 ):
     """Convert UK HPI rows for an area into a canonical time series."""
 
-    def _coerce_bound(value: str | date | datetime | None) -> date | None:
-        if value is None:
-            return None
-        if isinstance(value, datetime):
-            return value.date()
-        if isinstance(value, date):
-            return value
-        normalized = value.strip()
-        if not normalized:
-            return None
-        try:
-            return datetime.fromisoformat(normalized.replace("Z", "+00:00")).date()
-        except ValueError as exc:
-            msg = f"Invalid date bound: {value!r}"
-            raise ValueError(msg) from exc
-
     lazy = clean_uk_hpi_data(load_uk_hpi_data(filepath))
     schema_names = lazy.collect_schema().names()
     area_column = next(
@@ -435,8 +419,8 @@ def fetch_uk_hpi_history(
 
     filtered = lazy.filter(pl.col(area_column).str.to_lowercase() == area_name.lower())
 
-    start_bound = _coerce_bound(start_date)
-    end_bound = _coerce_bound(end_date)
+    start_bound = _coerce_date_bound(start_date, field_name="start_date")
+    end_bound = _coerce_date_bound(end_date, field_name="end_date")
     if start_bound is not None:
         filtered = filtered.filter(pl.col("date") >= pl.lit(start_bound))
     if end_bound is not None:
@@ -620,6 +604,9 @@ class LandRegistryAdapter(BaseAdapter):
                 output_path = self._store.root / "raw" / "land_registry" / "uk_hpi.csv"
             else:
                 output_path = Path(str(kwargs.get("output_path", "uk_hpi.csv")))
+            # TODO: The monthly HPI CSV is large and changes only once a month.
+            # Add a cache-invalidation strategy (e.g. skip re-download if the
+            # stored file is < 30 days old) to avoid redundant network traffic.
             path = download_uk_hpi_data(output_path, timeout=timeout)
             passthrough = {
                 k: v for k, v in kwargs.items() if k not in ("timeout", "output_path")
@@ -633,6 +620,9 @@ class LandRegistryAdapter(BaseAdapter):
                 output_path = self._store.root / "raw" / "land_registry" / filename
             else:
                 output_path = Path(str(kwargs.get("output_path", filename)))
+            # TODO: Save the Price Paid data as Parquet via self._store.write()
+            # instead of raw CSV so that subsequent reads use the columnar
+            # format and avoid re-parsing the large CSV each time.
             path = download_price_paid_data(
                 output_path,
                 year=int(year) if year else None,  # type: ignore[arg-type]

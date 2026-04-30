@@ -47,7 +47,7 @@ class TestUKDataClientConceptResolutionIntegration:
 
     def test_get_series_gdp_live(self) -> None:
         _skip_if_cannot_reach(_ONS_URL)
-        from uk_data._http import clear_cache
+        from uk_data.utils.http import clear_cache
 
         clear_cache()
         client = UKDataClient()
@@ -81,7 +81,7 @@ class TestUKDataClientConceptResolutionIntegration:
         from uk_data.registry import CONCEPT_REGISTRY
 
         _skip_if_cannot_reach(_ONS_URL)
-        from uk_data._http import clear_cache
+        from uk_data.utils.http import clear_cache
 
         clear_cache()
         client = UKDataClient()
@@ -91,7 +91,7 @@ class TestUKDataClientConceptResolutionIntegration:
 
     def test_get_series_accepts_window_and_limit_together(self) -> None:
         _skip_if_cannot_reach(_ONS_URL)
-        from uk_data._http import clear_cache
+        from uk_data.utils.http import clear_cache
 
         clear_cache()
         client = UKDataClient()

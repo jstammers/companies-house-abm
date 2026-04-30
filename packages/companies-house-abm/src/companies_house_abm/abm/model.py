@@ -343,7 +343,7 @@ class Simulation(Model):
                 if hh_idx >= len(self.households):
                     break
                 hh = self.households[hh_idx]
-                hh.become_employed(firm.unique_id, firm.wage_rate)
+                hh.become_employed(str(firm.unique_id), firm.wage_rate)
                 hh_idx += 1
             if hh_idx >= len(self.households):
                 break
@@ -352,12 +352,12 @@ class Simulation(Model):
         # household agents assigned.  Random firm sizes and sequential
         # assignment can leave firms with more "employees" than household
         # agents, causing phantom wage payments that drive firms insolvent.
-        actual: dict[str, int] = {f.unique_id: 0 for f in self.firms}
+        actual: dict[str, int] = {str(f.unique_id): 0 for f in self.firms}
         for hh in self.households:
             if hh.employer_id and hh.employer_id in actual:
                 actual[hh.employer_id] += 1
         for firm in self.firms:
-            n = actual[firm.unique_id]
+            n = actual[str(firm.unique_id)]
             firm.employees = n
             firm.wage_bill = n * firm.wage_rate
 

@@ -100,6 +100,8 @@ not-subscriptable = "ignore"
 invalid-method-override = "warn"
 # Optional Rust ABM extension is not built in the default dev environment
 unresolved-import = "warn"
+# ty false positive: confuses Simulation.step override with mesa.Model.step base class
+missing-argument = "warn"
 
 [tool.ty.src]
 exclude = ["tests", "packages/uk-data/tests", "packages/uk-data/tests/adapters"]

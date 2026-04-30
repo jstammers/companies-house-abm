@@ -101,7 +101,7 @@ class LaborMarket(BaseMarket):
         """Separate a household from their employer."""
         if household.employer_id:
             for firm in self._firms:
-                if firm.agent_id == household.employer_id:
+                if str(firm.unique_id) == household.employer_id:
                     firm.fire(1)
                     break
         household.become_unemployed()
@@ -145,7 +145,7 @@ class LaborMarket(BaseMarket):
                     wage = offered_wage
 
                 firm.hire(1, wage)
-                hh.become_employed(firm.agent_id, wage)
+                hh.become_employed(str(firm.unique_id), wage)
                 matches += 1
                 seeker_idx += 1
 

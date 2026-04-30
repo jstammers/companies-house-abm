@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import numpy as np
+from mesa import Model
 
 from companies_house_abm.abm.agents.bank import Bank
 from companies_house_abm.abm.agents.firm import Firm
@@ -23,11 +24,15 @@ from companies_house_abm.abm.markets.labor import LaborMarket
 # ---------------------------------------------------------------------------
 
 
+def _model() -> Model:
+    return Model()
+
+
 def _make_firms(n: int = 3) -> list[Firm]:
     firms = []
-    for i in range(n):
+    for _ in range(n):
         firm = Firm(
-            agent_id=f"firm_{i}",
+            _model(),
             sector="manufacturing",
             employees=10,
             wage_bill=10_000.0,
@@ -45,7 +50,7 @@ def _make_firms(n: int = 3) -> list[Firm]:
 def _make_households(n: int = 10) -> list[Household]:
     return [
         Household(
-            agent_id=f"hh_{i}",
+            _model(),
             income=2000.0,
             wealth=5000.0,
             mpc=0.8,
@@ -58,7 +63,7 @@ def _make_households(n: int = 10) -> list[Household]:
 def _make_banks(n: int = 2) -> list[Bank]:
     return [
         Bank(
-            agent_id=f"bank_{i}",
+            _model(),
             capital=1_000_000.0,
             reserves=100_000.0,
             loans=500_000.0,
@@ -121,7 +126,7 @@ class TestGoodsMarket:
         households = _make_households(3)
         for hh in households:
             hh.consumption = 100.0
-        gov = Government()
+        gov = Government(_model())
         gov.expenditure = 500.0
 
         market = GoodsMarket()
@@ -213,7 +218,7 @@ class TestLaborMarket:
         households = _make_households(8)
         # Make some employed
         for i in range(4):
-            households[i].become_employed(firms[i % 2].agent_id, 1000.0)
+            households[i].become_employed(str(firms[i % 2].unique_id), 1000.0)
 
         rng = np.random.default_rng(42)
         config = LaborMarketConfig(matching_efficiency=0.5, separation_rate=0.1)

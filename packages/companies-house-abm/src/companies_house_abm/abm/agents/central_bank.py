@@ -105,8 +105,8 @@ class CentralBank(Agent):
     def get_state(self) -> dict[str, Any]:
         """Return a snapshot of the central bank's state."""
         return {
-            "agent_id": self.agent_id,
-            "agent_type": self.agent_type,
+            "unique_id": self.unique_id,
+            "agent_type": type(self).__name__.lower(),
             "policy_rate": self.policy_rate,
             "inflation_target": self.inflation_target,
             "current_inflation": self.current_inflation,

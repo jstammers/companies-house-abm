@@ -297,11 +297,11 @@ def create_sector_representative_simulation(
     behavior = cfg.firm_behavior
 
     # ── Create one representative firm per sector ──────────────────────────
-    for i, (sector_name, profile) in enumerate(SECTOR_PROFILES.items()):
+    for sector_name, profile in SECTOR_PROFILES.items():
         # Use sector-specific markup, overriding the global config default
         sector_behavior = dataclasses.replace(behavior, price_markup=profile.markup)
         firm = Firm(
-            agent_id=f"firm_sector_{i:02d}",
+            sim,
             sector=sector_name,
             employees=profile.employees,
             wage_bill=profile.quarterly_wage_bill,
@@ -316,7 +316,7 @@ def create_sector_representative_simulation(
 
     # ── Create households (distributed across sectors by employment share) ──
     hh_behavior = cfg.household_behavior
-    for i in range(n_households):
+    for _ in range(n_households):
         income = float(
             rng.lognormal(
                 np.log(cfg.households.income_mean),
@@ -333,7 +333,7 @@ def create_sector_representative_simulation(
         )
         sim.households.append(
             Household(
-                agent_id=f"hh_{i:06d}",
+                sim,
                 income=income / 4,  # quarterly
                 wealth=wealth,
                 mpc=mpc,
@@ -347,11 +347,11 @@ def create_sector_representative_simulation(
     total_capital = UK_BANK_TOTAL_ASSETS * UK_BANK_CAPITAL_RATIO
     per_bank_capital = total_capital / n_banks
 
-    for i in range(n_banks):
+    for _ in range(n_banks):
         capital = float(rng.lognormal(np.log(per_bank_capital), 0.3))
         sim.banks.append(
             Bank(
-                agent_id=f"bank_{i:02d}",
+                sim,
                 capital=capital,
                 reserves=capital * bank_cfg.reserve_requirement,
                 config=bank_cfg,
@@ -393,7 +393,7 @@ def _assign_employment(sim: Simulation, rng: np.random.Generator) -> None:
             if assigned >= len(hh_pool):
                 break
             hh = sim.households[hh_pool[assigned]]
-            hh.become_employed(firm.agent_id, firm.wage_rate)
+            hh.become_employed(str(firm.unique_id), firm.wage_rate)
             assigned += 1
 
         # Track the number of simulated household agents attached to this firm.

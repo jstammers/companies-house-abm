@@ -159,8 +159,8 @@ class Government(Agent):
     def get_state(self) -> dict[str, Any]:
         """Return a snapshot of the government's state."""
         return {
-            "agent_id": self.agent_id,
-            "agent_type": self.agent_type,
+            "unique_id": self.unique_id,
+            "agent_type": type(self).__name__.lower(),
             "tax_revenue": self.tax_revenue,
             "expenditure": self.expenditure,
             "transfer_spending": self.transfer_spending,

@@ -276,7 +276,8 @@ class Firm(Agent):
     def get_state(self) -> dict[str, Any]:
         """Return a snapshot of the firm's state."""
         return {
-            "agent_id": self.unique_id,
+            "unique_id": self.unique_id,
+            "agent_type": type(self).__name__.lower(),
             "sector": self.sector,
             "employees": self.employees,
             "wage_bill": self.wage_bill,

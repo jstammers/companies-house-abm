@@ -257,7 +257,7 @@ class HousingMarket(BaseMarket):
                 return None
 
             mortgage = bank.originate_mortgage(
-                borrower_id=buyer.agent_id,
+                borrower_id=str(buyer.unique_id),
                 property_id=prop.property_id,
                 loan_amount=loan_needed,
                 property_value=sale_price,
@@ -272,7 +272,7 @@ class HousingMarket(BaseMarket):
         # Transfer ownership
         old_owner_id = prop.owner_id
         prop.sell(
-            new_owner_id=buyer.agent_id,
+            new_owner_id=str(buyer.unique_id),
             sale_price=sale_price,
             period=self._period,
         )
@@ -302,7 +302,7 @@ class HousingMarket(BaseMarket):
                         seller.wealth -= remaining  # pay off mortgage
                         bank_id = seller.mortgage.lender_id
                         for b in self._banks:
-                            if b.agent_id == bank_id:
+                            if str(b.unique_id) == bank_id:
                                 b.record_mortgage_repayment(remaining)
                                 break
                         self._mortgages = [
@@ -331,11 +331,11 @@ class HousingMarket(BaseMarket):
         return None
 
     def _find_household(self, agent_id: str | None) -> Household | None:
-        """Look up a household by agent_id."""
+        """Look up a household by unique_id (as string)."""
         if agent_id is None:
             return None
         for hh in self._households:
-            if hh.agent_id == agent_id:
+            if str(hh.unique_id) == agent_id:
                 return hh
         return None
 

@@ -21,7 +21,7 @@ class TestLandRegistryFallback:
         )
 
         with patch(
-            "uk_data.adapters.land_registry._get_json",
+            "uk_data.adapters.land_registry.get_json",
             side_effect=Exception("offline"),
         ):
             prices = fetch_regional_prices()
@@ -35,7 +35,7 @@ class TestLandRegistryFallback:
         )
 
         with patch(
-            "uk_data.adapters.land_registry._get_json",
+            "uk_data.adapters.land_registry.get_json",
             side_effect=Exception("offline"),
         ):
             price = fetch_uk_average_price()
@@ -103,11 +103,11 @@ class TestCalibrateHousing:
 
         with (
             patch(
-                "uk_data.adapters.land_registry._get_json",
+                "uk_data.adapters.land_registry.get_json",
                 side_effect=Exception("offline"),
             ),
             patch(
-                "uk_data.adapters.ons._get_json",
+                "uk_data.adapters.ons.get_json",
                 side_effect=Exception("offline"),
             ),
         ):
@@ -135,7 +135,7 @@ class TestCalibrateHousing:
                 return_value=[],
             ),
             patch(
-                "uk_data.adapters.land_registry.retry",
+                "uk_data.adapters.land_registry.get_json",
                 side_effect=Exception("api down"),
             ),
         ):

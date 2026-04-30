@@ -14,9 +14,6 @@ from uk_data.adapters.land_registry import LandRegistryAdapter
 from uk_data.adapters.ons import ONSAdapter
 from uk_data.registry import ConceptResolver
 
-# HistoricalAdapter is high-level orchestration, not a low-level AdapterProtocol adapter
-from uk_data.workflows.historical import HistoricalAdapter
-
 if TYPE_CHECKING:
     from datetime import date, datetime
 
@@ -35,7 +32,6 @@ class UKDataClient:
             "land_registry": LandRegistryAdapter(),
             "companies_house": CompaniesHouseAdapter(),
             "epc": EPCAdapter(),
-            "historical": HistoricalAdapter(),  # type: ignore[assignment]  # non-conforming: high-level orchestration, not AdapterProtocol
         }
         self.resolver = ConceptResolver(self.adapters)
         self.canonical_store = canonical_store

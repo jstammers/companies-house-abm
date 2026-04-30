@@ -9,7 +9,7 @@ longer re-exported here — they are implementation details of the ABM
 calibration layer, not part of the canonical client API.
 """
 
-# HistoricalAdapter relocated to uk_data.workflows.historical (not a low-level adapter)
+# HistoricalAdapter: see companies_house_abm.data_sources.historical (ABM orchestration)
 
 from uk_data.adapters.base import AdapterProtocol, BaseAdapter
 from uk_data.adapters.boe import BoEAdapter

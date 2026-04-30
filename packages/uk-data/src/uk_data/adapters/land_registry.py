@@ -20,9 +20,9 @@ from typing import Any
 
 import polars as pl
 
-from uk_data._http import _USER_AGENT, retry
 from uk_data.adapters.base import BaseAdapter
 from uk_data.models import Event, point_timeseries, series_from_observations
+from uk_data.utils.http import _USER_AGENT, get_json
 from uk_data.utils.timeseries import date_to_utc_datetime
 
 logger = logging.getLogger(__name__)
@@ -463,13 +463,6 @@ def fetch_uk_hpi_history(
     )
 
 
-def _get_json(url: str) -> Any:
-    """Fetch JSON from the Land Registry API with retry."""
-    from uk_data._http import get_json
-
-    return retry(get_json, url)
-
-
 def fetch_regional_prices() -> dict[str, float]:
     """Fetch average house prices by UK region."""
     try:
@@ -487,7 +480,7 @@ def fetch_regional_prices() -> dict[str, float]:
         LIMIT 20
         """
         url = f"{_SPARQL_ENDPOINT}?query={_encode_query(query)}&output=json"
-        data = _get_json(url)
+        data = get_json(url)
         results = data.get("results", {}).get("bindings", [])
         if results:
             prices: dict[str, float] = {}

@@ -4,7 +4,7 @@ Verifies that each source adapter satisfies ``AdapterProtocol`` via
 structural (duck-typed) conformance — no inheritance required.
 
 ``HistoricalAdapter`` is intentionally excluded: it is a high-level
-workflow orchestration class (``uk_data.workflows.historical``), not a
+orchestration class (``companies_house_abm.data_sources.historical``), not a
 low-level source adapter.
 """
 

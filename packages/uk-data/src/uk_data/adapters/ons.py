@@ -31,6 +31,7 @@ from urllib.parse import urlencode
 if TYPE_CHECKING:
     from uk_data.storage.raw import RawStore
 
+from uk_data._http import get_json
 from uk_data.adapters.base import BaseAdapter
 from uk_data.adapters.ons_models import (
     Observation,
@@ -201,13 +202,6 @@ def _normalize_period_bound(value: object) -> str | None:
     return str(value)
 
 
-def _get_json(url: str) -> Any:
-    """Fetch *url* and return the parsed JSON body via the cache-aware helper."""
-    from uk_data._http import get_json
-
-    return get_json(url)
-
-
 def _fetch_timeseries(series_id: str, limit: int = 20) -> list[dict[str, Any]]:
     """Fetch the latest *limit* observations for an ONS time series.
 
@@ -232,7 +226,7 @@ def _fetch_timeseries(series_id: str, limit: int = 20) -> list[dict[str, Any]]:
 
     url = f"{_ONS_API}/data?uri={urllib.parse.quote(content_uri, safe='/')}"
     try:
-        data = retry(_get_json, url)
+        data = retry(get_json, url)
     except Exception:
         logger.warning("ONS API unavailable for series %s, returning []", series_id)
         return []
@@ -394,7 +388,7 @@ class ONSAdapter(BaseAdapter):
         if dataset_type is not None:
             params["type"] = dataset_type
         url = self._build_dataset_url("datasets", params=params)
-        payload = _get_json(url)
+        payload = get_json(url)
         raw_items = payload.get("items", []) if isinstance(payload, dict) else payload
         result = [ONSDatasetInfo.model_validate(item) for item in raw_items]
         self._datasets_cache[cache_key] = result
@@ -406,7 +400,7 @@ class ONSAdapter(BaseAdapter):
 
     def get_dataset(self, dataset_id: str) -> ONSDatasetInfo:
         """Return typed metadata for a single ONS dataset."""
-        payload = _get_json(self._build_dataset_url(f"datasets/{dataset_id}"))
+        payload = get_json(self._build_dataset_url(f"datasets/{dataset_id}"))
         if not isinstance(payload, dict):
             msg = f"Malformed ONS dataset payload for {dataset_id!r}"
             raise ValueError(msg)
@@ -419,7 +413,7 @@ class ONSAdapter(BaseAdapter):
         version: str | int,
     ) -> ONSDatasetVersionInfo:
         """Return typed metadata for a specific dataset edition/version."""
-        payload = _get_json(
+        payload = get_json(
             self._build_dataset_url(
                 f"datasets/{dataset_id}/editions/{edition}/versions/{version}"
             )
@@ -438,7 +432,7 @@ class ONSAdapter(BaseAdapter):
         )
         params = {k: v for k, v in dimensions.items() if isinstance(v, str)}
         full_url = f"{url}?{urlencode(params)}" if params else url
-        payload = _get_json(full_url)
+        payload = get_json(full_url)
         return ONSObservation.model_validate(payload)
 
     def available_series(self) -> list[str]:

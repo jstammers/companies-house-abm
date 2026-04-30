@@ -32,6 +32,7 @@ from companies_house_abm.data_sources.calibration import (
 from companies_house_abm.data_sources.firm_distributions import (
     run_profile_pipeline,
 )
+from companies_house_abm.data_sources.historical import HistoricalAdapter
 from companies_house_abm.data_sources.input_output import fetch_input_output_table
 from uk_data.adapters.companies_house import fetch_sic_codes
 from uk_data.adapters.historical import (
@@ -73,6 +74,7 @@ from uk_data.workflows.ons import (
 __all__ = [
     "Entity",
     "Event",
+    "HistoricalAdapter",
     "TimeSeries",
     "UKDataClient",
     "calibrate_banks",

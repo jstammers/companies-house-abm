@@ -1,4 +1,4 @@
-# HistoricalAdapter has been relocated to uk_data.workflows.historical
+# HistoricalAdapter has been relocated to companies_house_abm.data_sources.historical
 
 """Historical quarterly time-series data fetchers for UK housing simulation.
 

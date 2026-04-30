@@ -25,9 +25,7 @@ class TestONSDatasetAPI:
                 }
             ]
         }
-        with patch(
-            "uk_data.adapters.ons._get_json", return_value=payload
-        ) as mocked_get:
+        with patch("uk_data.adapters.ons.get_json", return_value=payload) as mocked_get:
             adapter = ONSAdapter()
 
             first = adapter.list_datasets(limit=20, offset=0, dataset_type="timeseries")
@@ -47,9 +45,7 @@ class TestONSDatasetAPI:
             "links": {"self": {"href": "/datasets/cpih01"}},
         }
 
-        with patch(
-            "uk_data.adapters.ons._get_json", return_value=payload
-        ) as mocked_get:
+        with patch("uk_data.adapters.ons.get_json", return_value=payload) as mocked_get:
             adapter = ONSAdapter()
             dataset = adapter.get_dataset("cpih01")
 
@@ -69,9 +65,7 @@ class TestONSDatasetAPI:
             },
         }
 
-        with patch(
-            "uk_data.adapters.ons._get_json", return_value=payload
-        ) as mocked_get:
+        with patch("uk_data.adapters.ons.get_json", return_value=payload) as mocked_get:
             adapter = ONSAdapter()
             version = adapter.get_version("cpih01", "time-series", "2")
 
@@ -93,9 +87,7 @@ class TestONSDatasetAPI:
             ]
         }
 
-        with patch(
-            "uk_data.adapters.ons._get_json", return_value=payload
-        ) as mocked_get:
+        with patch("uk_data.adapters.ons.get_json", return_value=payload) as mocked_get:
             adapter = ONSAdapter()
             obs = adapter.get_observation(
                 "cpih01",
@@ -133,7 +125,7 @@ class TestONSDatasetAPI:
             ]
         }
 
-        with patch("uk_data.adapters.ons._get_json", return_value=payload):
+        with patch("uk_data.adapters.ons.get_json", return_value=payload):
             adapter = ONSAdapter()
             series = adapter.get_observation_series(
                 "cpih01",

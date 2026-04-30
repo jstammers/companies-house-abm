@@ -25,7 +25,6 @@ class TestUKDataClientListSources:
             "land_registry",
             "companies_house",
             "epc",
-            "historical",
         }
         assert names == expected
 

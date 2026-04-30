@@ -84,7 +84,7 @@ class HistoricalScenario:
     @property
     def quarter_labels(self) -> list[str]:
         """Return the calendar quarter label for each period."""
-        from companies_house_abm.data_sources.historical import QUARTERS
+        from uk_data.adapters.historical import QUARTERS
 
         try:
             start_idx = QUARTERS.index(self.start_quarter)
@@ -134,7 +134,7 @@ def build_uk_2013_2024() -> HistoricalScenario:
     Returns:
         A fully populated :class:`HistoricalScenario`.
     """
-    from companies_house_abm.data_sources.historical import (
+    from uk_data.adapters.historical import (
         QUARTERS,
         fetch_bank_rate_quarterly,
         fetch_earnings_index_quarterly,

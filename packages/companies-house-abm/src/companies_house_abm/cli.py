@@ -450,7 +450,7 @@ def fetch_data(
     # ----------------------------------------------- Historical time-series
     if fetch_all or "historical" in requested:
         typer.echo("Fetching historical quarterly time-series data...")
-        from companies_house_abm.data_sources.historical import (
+        from uk_data.adapters.historical import (
             fetch_all_historical,
         )
 

@@ -719,7 +719,7 @@ class TestCalibrateModel:
                 return_value=[],
             ),
             patch(
-                "uk_data.adapters.land_registry.retry",
+                "uk_data.adapters.land_registry.get_json",
                 side_effect=Exception("api down"),
             ),
         ):
@@ -748,7 +748,7 @@ class TestCalibrateModel:
                 return_value=[],
             ),
             patch(
-                "uk_data.adapters.land_registry.retry",
+                "uk_data.adapters.land_registry.get_json",
                 side_effect=Exception("api down"),
             ),
         ):

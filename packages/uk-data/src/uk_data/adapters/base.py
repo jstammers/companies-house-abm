@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from abc import ABC
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
@@ -50,7 +51,7 @@ class AdapterProtocol(Protocol):
         ...
 
 
-class BaseAdapter:
+class BaseAdapter(ABC):  # noqa: B024
     """Concrete base class for UK data source adapters.
 
     Subclasses declare ``_source_name`` and implement:

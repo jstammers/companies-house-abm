@@ -21,7 +21,7 @@ class TestHistoricalFallbacks:
         )
 
         with patch(
-            "uk_data.adapters.historical.retry",
+            "uk_data.adapters.historical.get_json",
             side_effect=Exception("offline"),
         ):
             data = fetch_hpi_quarterly()
@@ -36,7 +36,7 @@ class TestHistoricalFallbacks:
         )
 
         with patch(
-            "uk_data.adapters.historical.retry",
+            "uk_data.adapters.historical.get_json",
             side_effect=Exception("offline"),
         ):
             data = fetch_hpi_quarterly()
@@ -52,7 +52,7 @@ class TestHistoricalFallbacks:
         )
 
         with patch(
-            "uk_data.adapters.historical.retry",
+            "uk_data.adapters.historical.get_json",
             side_effect=Exception("offline"),
         ):
             data = fetch_bank_rate_quarterly()
@@ -71,7 +71,7 @@ class TestHistoricalFallbacks:
         )
 
         with patch(
-            "uk_data.adapters.historical.retry",
+            "uk_data.adapters.historical.get_json",
             side_effect=Exception("offline"),
         ):
             data = fetch_mortgage_rate_quarterly()
@@ -85,7 +85,7 @@ class TestHistoricalFallbacks:
         )
 
         with patch(
-            "uk_data.adapters.historical.retry",
+            "uk_data.adapters.historical.get_json",
             side_effect=Exception("offline"),
         ):
             data = fetch_earnings_index_quarterly()
@@ -113,7 +113,7 @@ class TestHistoricalFallbacks:
         )
 
         with patch(
-            "uk_data.adapters.historical.retry",
+            "uk_data.adapters.historical.get_json",
             side_effect=Exception("offline"),
         ):
             data = fetch_mortgage_approvals_quarterly()
@@ -133,7 +133,7 @@ class TestDateFiltering:
         )
 
         with patch(
-            "uk_data.adapters.historical.retry",
+            "uk_data.adapters.historical.get_json",
             side_effect=Exception("offline"),
         ):
             data = fetch_hpi_quarterly(start="2020Q1", end="2022Q4")
@@ -147,7 +147,7 @@ class TestDateFiltering:
         )
 
         with patch(
-            "uk_data.adapters.historical.retry",
+            "uk_data.adapters.historical.get_json",
             side_effect=Exception("offline"),
         ):
             data = fetch_bank_rate_quarterly(start="2023Q3", end="2023Q3")
@@ -167,7 +167,7 @@ class TestFetchAllHistorical:
         )
 
         with patch(
-            "uk_data.adapters.historical.retry",
+            "uk_data.adapters.historical.get_json",
             side_effect=Exception("offline"),
         ):
             result = fetch_all_historical()
@@ -335,7 +335,7 @@ class TestFetchWithMockedSuccess:
         }
 
         with patch(
-            "uk_data.adapters.historical.retry",
+            "uk_data.adapters.historical.get_json",
             return_value=mock_response,
         ):
             data = fetch_hpi_quarterly(start="2020Q1", end="2020Q2")
@@ -356,7 +356,7 @@ class TestFetchWithMockedSuccess:
         mock_response = {"results": {"bindings": []}}
 
         with patch(
-            "uk_data.adapters.historical.retry",
+            "uk_data.adapters.historical.get_json",
             return_value=mock_response,
         ):
             data = fetch_hpi_quarterly(start="2020Q1", end="2020Q1")
@@ -376,7 +376,7 @@ class TestFetchWithMockedSuccess:
         )
 
         with patch(
-            "uk_data.adapters.historical.retry",
+            "uk_data.adapters.historical.get_json",
             return_value=csv_text,
         ):
             data = fetch_bank_rate_quarterly(start="2020Q1", end="2020Q1")
@@ -394,7 +394,7 @@ class TestFetchWithMockedSuccess:
 
         # CSV with no parseable data → falls back to hardcoded
         with patch(
-            "uk_data.adapters.historical.retry",
+            "uk_data.adapters.historical.get_text",
             return_value="Date,Rate\nno data here\n",
         ):
             data = fetch_bank_rate_quarterly(start="2020Q1", end="2020Q1")
@@ -414,7 +414,7 @@ class TestFetchWithMockedSuccess:
         )
 
         with patch(
-            "uk_data.adapters.historical.retry",
+            "uk_data.adapters.historical.get_json",
             return_value=csv_text,
         ):
             data = fetch_mortgage_rate_quarterly(start="2020Q1", end="2020Q1")
@@ -431,7 +431,7 @@ class TestFetchWithMockedSuccess:
         )
 
         with patch(
-            "uk_data.adapters.historical.retry",
+            "uk_data.adapters.historical.get_text",
             return_value="no valid csv",
         ):
             data = fetch_mortgage_rate_quarterly(start="2020Q1", end="2020Q1")
@@ -454,7 +454,7 @@ class TestFetchWithMockedSuccess:
         }
 
         with patch(
-            "uk_data.adapters.historical.retry",
+            "uk_data.adapters.historical.get_json",
             return_value=mock_response,
         ):
             data = fetch_earnings_index_quarterly(start="2020Q1", end="2020Q1")
@@ -473,7 +473,7 @@ class TestFetchWithMockedSuccess:
         mock_response = {"months": []}
 
         with patch(
-            "uk_data.adapters.historical.retry",
+            "uk_data.adapters.historical.get_json",
             return_value=mock_response,
         ):
             data = fetch_earnings_index_quarterly(start="2020Q1", end="2020Q1")
@@ -495,7 +495,7 @@ class TestFetchWithMockedSuccess:
         }
 
         with patch(
-            "uk_data.adapters.historical.retry",
+            "uk_data.adapters.historical.get_json",
             return_value=mock_response,
         ):
             data = fetch_earnings_index_quarterly(start="2020Q1", end="2020Q1")
@@ -516,7 +516,7 @@ class TestFetchWithMockedSuccess:
         )
 
         with patch(
-            "uk_data.adapters.historical.retry",
+            "uk_data.adapters.historical.get_text",
             return_value=csv_text,
         ):
             data = fetch_mortgage_approvals_quarterly(start="2020Q1", end="2020Q1")
@@ -534,7 +534,7 @@ class TestFetchWithMockedSuccess:
         )
 
         with patch(
-            "uk_data.adapters.historical.retry",
+            "uk_data.adapters.historical.get_text",
             return_value="no valid data",
         ):
             data = fetch_mortgage_approvals_quarterly(start="2020Q1", end="2020Q1")

@@ -71,7 +71,7 @@ class TestOnsHousing:
         from uk_data.workflows.ons import fetch_affordability_ratio
 
         with patch(
-            "uk_data.adapters.ons.retry",
+            "uk_data.adapters.ons.get_json",
             side_effect=Exception("offline"),
         ):
             ratio = fetch_affordability_ratio()
@@ -81,7 +81,7 @@ class TestOnsHousing:
         from uk_data.workflows.ons import fetch_rental_growth
 
         with patch(
-            "uk_data.adapters.ons.retry",
+            "uk_data.adapters.ons.get_json",
             side_effect=Exception("offline"),
         ):
             growth = fetch_rental_growth()
@@ -123,11 +123,15 @@ class TestCalibrateHousing:
         _http.clear_cache()
         with (
             patch(
-                "uk_data.adapters.ons.retry",
+                "uk_data.adapters.ons.get_json",
                 side_effect=Exception("api down"),
             ),
             patch(
-                "uk_data.adapters.boe.retry",
+                "uk_data.adapters.ons.retry",
+                side_effect=lambda fn, *args, **kw: fn(*args, **kw),
+            ),
+            patch(
+                "uk_data.adapters.boe.get_text",
                 side_effect=Exception("api down"),
             ),
             patch(

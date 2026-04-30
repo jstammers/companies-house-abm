@@ -213,7 +213,7 @@ class TestBoeFetchBankRate:
         fake_csv = "Date,Value\n01 Jan 2024,5.25\n01 Feb 2024,5.25\n"
         _http.clear_cache()
         with patch(
-            "uk_data.adapters.boe.retry",
+            "uk_data.adapters.boe.get_text",
             return_value=fake_csv,
         ):
             from uk_data.workflows.boe import fetch_bank_rate
@@ -228,7 +228,7 @@ class TestBoeFetchBankRate:
 
         _http.clear_cache()
         with patch(
-            "uk_data.adapters.boe.retry",
+            "uk_data.adapters.boe.get_text",
             side_effect=urllib.error.URLError("connection refused"),
         ):
             from uk_data.workflows.boe import fetch_bank_rate
@@ -274,7 +274,7 @@ class TestBoeLendingRates:
                 return_value=[{"date": "01 Jan 2024", "value": "5.25"}],
             ),
             patch(
-                "uk_data.adapters.boe.retry",
+                "uk_data.adapters.boe.get_text",
                 side_effect=Exception("no network"),
             ),
         ):
@@ -297,7 +297,7 @@ class TestBoeLendingRates:
                 return_value=[],
             ),
             patch(
-                "uk_data.adapters.boe.retry",
+                "uk_data.adapters.boe.get_text",
                 side_effect=Exception("no network"),
             ),
         ):
@@ -444,9 +444,15 @@ class TestOnsInputOutputTable:
         from uk_data.utils import http as _http
 
         _http.clear_cache()
-        with patch(
-            "uk_data.adapters.ons.retry",
-            side_effect=Exception("api down"),
+        with (
+            patch(
+                "uk_data.adapters.ons.get_json",
+                side_effect=Exception("api down"),
+            ),
+            patch(
+                "uk_data.adapters.ons.retry",
+                side_effect=lambda fn, *args, **kw: fn(*args, **kw),
+            ),
         ):
             from companies_house_abm.data_sources.input_output import (
                 fetch_input_output_table,
@@ -461,9 +467,15 @@ class TestOnsInputOutputTable:
         from uk_data.utils import http as _http
 
         _http.clear_cache()
-        with patch(
-            "uk_data.adapters.ons.retry",
-            side_effect=Exception("api down"),
+        with (
+            patch(
+                "uk_data.adapters.ons.get_json",
+                side_effect=Exception("api down"),
+            ),
+            patch(
+                "uk_data.adapters.ons.retry",
+                side_effect=lambda fn, *args, **kw: fn(*args, **kw),
+            ),
         ):
             from companies_house_abm.data_sources.input_output import (
                 fetch_input_output_table,
@@ -491,9 +503,15 @@ class TestOnsInputOutputTable:
         from uk_data.utils import http as _http
 
         _http.clear_cache()
-        with patch(
-            "uk_data.adapters.ons.retry",
-            side_effect=Exception("api down"),
+        with (
+            patch(
+                "uk_data.adapters.ons.get_json",
+                side_effect=Exception("api down"),
+            ),
+            patch(
+                "uk_data.adapters.ons.retry",
+                side_effect=lambda fn, *args, **kw: fn(*args, **kw),
+            ),
         ):
             from companies_house_abm.data_sources.input_output import (
                 fetch_input_output_table,
@@ -507,9 +525,15 @@ class TestOnsInputOutputTable:
         from uk_data.utils import http as _http
 
         _http.clear_cache()
-        with patch(
-            "uk_data.adapters.ons.retry",
-            side_effect=Exception("api down"),
+        with (
+            patch(
+                "uk_data.adapters.ons.get_json",
+                side_effect=Exception("api down"),
+            ),
+            patch(
+                "uk_data.adapters.ons.retry",
+                side_effect=lambda fn, *args, **kw: fn(*args, **kw),
+            ),
         ):
             from companies_house_abm.data_sources.input_output import (
                 fetch_input_output_table,
@@ -533,9 +557,15 @@ class TestCalibrateHouseholds:
         from uk_data.utils import http as _http
 
         _http.clear_cache()
-        with patch(
-            "uk_data.adapters.ons.retry",
-            side_effect=Exception("api down"),
+        with (
+            patch(
+                "uk_data.adapters.ons.get_json",
+                side_effect=Exception("api down"),
+            ),
+            patch(
+                "uk_data.adapters.ons.retry",
+                side_effect=lambda fn, *args, **kw: fn(*args, **kw),
+            ),
         ):
             from companies_house_abm.data_sources.calibration import (
                 calibrate_households,
@@ -552,9 +582,15 @@ class TestCalibrateHouseholds:
 
         _http.clear_cache()
         default = HouseholdConfig()
-        with patch(
-            "uk_data.adapters.ons.retry",
-            side_effect=Exception("api down"),
+        with (
+            patch(
+                "uk_data.adapters.ons.get_json",
+                side_effect=Exception("api down"),
+            ),
+            patch(
+                "uk_data.adapters.ons.retry",
+                side_effect=lambda fn, *args, **kw: fn(*args, **kw),
+            ),
         ):
             from companies_house_abm.data_sources.calibration import (
                 calibrate_households,
@@ -601,7 +637,7 @@ class TestCalibrateBanks:
         _http.clear_cache()
         with (
             patch(
-                "uk_data.adapters.boe.retry",
+                "uk_data.adapters.boe.get_text",
                 side_effect=Exception("no network"),
             ),
             patch(
@@ -665,12 +701,15 @@ class TestCalibrateGovernment:
 
 class TestCalibrateIoSectors:
     def test_returns_expected_keys(self) -> None:
-        from uk_data.utils import http as _http
-
-        _http.clear_cache()
-        with patch(
-            "uk_data.adapters.ons.retry",
-            side_effect=Exception("api down"),
+        with (
+            patch(
+                "uk_data.adapters.ons.get_json",
+                side_effect=Exception("api down"),
+            ),
+            patch(
+                "uk_data.adapters.ons.retry",
+                side_effect=lambda fn, *args, **kw: fn(*args, **kw),
+            ),
         ):
             from companies_house_abm.data_sources.calibration import (
                 calibrate_io_sectors,
@@ -686,9 +725,15 @@ class TestCalibrateIoSectors:
         from uk_data.utils import http as _http
 
         _http.clear_cache()
-        with patch(
-            "uk_data.adapters.ons.retry",
-            side_effect=Exception("api down"),
+        with (
+            patch(
+                "uk_data.adapters.ons.get_json",
+                side_effect=Exception("api down"),
+            ),
+            patch(
+                "uk_data.adapters.ons.retry",
+                side_effect=lambda fn, *args, **kw: fn(*args, **kw),
+            ),
         ):
             from companies_house_abm.data_sources.calibration import (
                 calibrate_io_sectors,
@@ -707,11 +752,15 @@ class TestCalibrateModel:
         _http.clear_cache()
         with (
             patch(
-                "uk_data.adapters.ons.retry",
+                "uk_data.adapters.ons.get_json",
                 side_effect=Exception("api down"),
             ),
             patch(
-                "uk_data.adapters.boe.retry",
+                "uk_data.adapters.ons.retry",
+                side_effect=lambda fn, *args, **kw: fn(*args, **kw),
+            ),
+            patch(
+                "uk_data.adapters.boe.get_text",
                 side_effect=Exception("api down"),
             ),
             patch(
@@ -736,11 +785,15 @@ class TestCalibrateModel:
         _http.clear_cache()
         with (
             patch(
-                "uk_data.adapters.ons.retry",
+                "uk_data.adapters.ons.get_json",
                 side_effect=Exception("api down"),
             ),
             patch(
-                "uk_data.adapters.boe.retry",
+                "uk_data.adapters.ons.retry",
+                side_effect=lambda fn, *args, **kw: fn(*args, **kw),
+            ),
+            patch(
+                "uk_data.adapters.boe.get_text",
                 side_effect=Exception("api down"),
             ),
             patch(
@@ -1107,11 +1160,15 @@ class TestFetchDataCli:
         # Patch all network calls to return empty/minimal data
         with (
             patch(
-                "uk_data.adapters.ons.retry",
+                "uk_data.adapters.ons.get_json",
                 side_effect=Exception("no network"),
             ),
             patch(
-                "uk_data.adapters.boe.retry",
+                "uk_data.adapters.ons.retry",
+                side_effect=lambda fn, *args, **kw: fn(*args, **kw),
+            ),
+            patch(
+                "uk_data.adapters.boe.get_text",
                 side_effect=Exception("no network"),
             ),
             patch(

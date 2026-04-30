@@ -250,7 +250,7 @@ class HistoricalSimulation:
             #  propagation and then correct the mortgage rate afterward)
 
             # 5. Run the simulation step
-            sim.run_for(1)
+            sim.step()
             record = sim.latest_record
 
             # 6. Post-step mortgage rate correction: if the scenario provides

@@ -140,8 +140,9 @@ class Simulation(Model):
         self.firms: list[Firm] = []
         self.households: list[Household] = []
         self.banks: list[Bank] = []
-        self.central_bank = CentralBank(taylor_rule=self.config.taylor_rule)
+        self.central_bank = CentralBank(model=self, taylor_rule=self.config.taylor_rule)
         self.government = Government(
+            model=self,
             fiscal_rule=self.config.fiscal_rule,
             transfers=self.config.transfers,
         )
@@ -259,7 +260,7 @@ class Simulation(Model):
             self.firms = [
                 self._attach_model(
                     Firm(
-                        agent_id=f"firm_{i:05d}",
+                        self,
                         sector=sectors[i],
                         employees=int(employees[i]),
                         wage_bill=float(wage_bills[i]),
@@ -293,7 +294,7 @@ class Simulation(Model):
             self.households = [
                 self._attach_model(
                     Household(
-                        agent_id=f"hh_{i:05d}",
+                        model=self,
                         income=float(incomes[i] / 4),  # quarterly
                         wealth=float(wealths[i]),
                         mpc=float(mpcs[i]),
@@ -309,7 +310,7 @@ class Simulation(Model):
             self.banks = [
                 self._attach_model(
                     Bank(
-                        agent_id=f"bank_{i:02d}",
+                        model=self,
                         capital=float(bank_capital[i]),
                         reserves=float(bank_capital[i] * 0.1),
                         config=cfg.banks,
@@ -342,7 +343,7 @@ class Simulation(Model):
                 if hh_idx >= len(self.households):
                     break
                 hh = self.households[hh_idx]
-                hh.become_employed(firm.agent_id, firm.wage_rate)
+                hh.become_employed(firm.unique_id, firm.wage_rate)
                 hh_idx += 1
             if hh_idx >= len(self.households):
                 break
@@ -351,12 +352,12 @@ class Simulation(Model):
         # household agents assigned.  Random firm sizes and sequential
         # assignment can leave firms with more "employees" than household
         # agents, causing phantom wage payments that drive firms insolvent.
-        actual: dict[str, int] = {f.agent_id: 0 for f in self.firms}
+        actual: dict[str, int] = {f.unique_id: 0 for f in self.firms}
         for hh in self.households:
             if hh.employer_id and hh.employer_id in actual:
                 actual[hh.employer_id] += 1
         for firm in self.firms:
-            n = actual[firm.agent_id]
+            n = actual[firm.unique_id]
             firm.employees = n
             firm.wage_bill = n * firm.wage_rate
 
@@ -423,7 +424,7 @@ class Simulation(Model):
         for i in range(n_owners):
             hh = self.households[i]
             prop = self.properties[prop_indices[i]]
-            prop.owner_id = hh.agent_id
+            prop.owner_id = hh.unique_id
             hh.tenure = "owner_occupier"
             hh.property_id = prop.property_id
             hh.housing_wealth = prop.market_value
@@ -440,7 +441,7 @@ class Simulation(Model):
                 ]
                 rental_prop = self.properties[rental_idx]
                 rental_prop.is_rented = True
-                rental_prop.tenant_id = hh.agent_id
+                rental_prop.tenant_id = hh.unique_id
                 hh.rent = rental_prop.rental_value
 
         # List vacant (unowned, unrented) properties for sale
@@ -456,9 +457,9 @@ class Simulation(Model):
             Number of foreclosures this period.
         """
         count = 0
-        banks_by_id = {bank.agent_id: bank for bank in self.banks}
+        banks_by_id = {bank.unique_id: bank for bank in self.banks}
         households_by_id = {
-            household.agent_id: household for household in self.households
+            household.unique_id: household for household in self.households
         }
         properties_by_id = {prop.property_id: prop for prop in self.properties}
         for mortgage in list(self.mortgages):
@@ -516,7 +517,7 @@ class Simulation(Model):
         result = SimulationResult()
 
         for _ in range(n):
-            self.run_for(1)
+            self.step()
             result.records.append(self.latest_record)
 
             if collect_micro:

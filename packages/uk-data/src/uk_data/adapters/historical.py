@@ -39,7 +39,7 @@ from uk_data.adapters.boe import (
     _build_iadb_url,
     _parse_iadb_csv,
 )
-from uk_data.utils.http import get_json, get_text, retry
+from uk_data.utils.http import get_json, get_text
 
 logger = logging.getLogger(__name__)
 
@@ -149,7 +149,7 @@ def _iadb_quarterly_last(
     """Shared live-fetch for BoE IADB series that take the last value per quarter."""
     try:
         url = _build_iadb_url(series, from_year=2013)
-        text = retry(get_text, url)
+        text = get_text(url)
         rows = _parse_iadb_csv(text)
         return _quarterly_last(rows, start, end) or None
     except Exception:
@@ -178,7 +178,7 @@ def _fetch_hpi_live(start: str, end: str) -> list[dict[str, Any]] | None:
             "https://landregistry.data.gov.uk/landregistry/query"
             f"?query={urllib.parse.quote(query.strip())}&output=json"
         )
-        data = retry(get_json, url)
+        data = get_json(url)
         bindings = data.get("results", {}).get("bindings", [])
         if not bindings:
             return None
@@ -202,7 +202,7 @@ def _fetch_hpi_live(start: str, end: str) -> list[dict[str, Any]] | None:
 def _fetch_earnings_index_live(start: str, end: str) -> list[dict[str, Any]] | None:
     try:
         url = "https://api.ons.gov.uk/v1/timeseries/KAB9/dataset/lms/data"
-        data = retry(get_json, url)
+        data = get_json(url)
         months = data.get("months", [])
         if not months:
             return None
@@ -232,7 +232,7 @@ def _fetch_earnings_index_live(start: str, end: str) -> list[dict[str, Any]] | N
 def _fetch_mortgage_approvals_live(start: str, end: str) -> list[dict[str, Any]] | None:
     try:
         url = _build_iadb_url(_MORTGAGE_APPROVALS_SERIES, from_year=2013)
-        text = retry(get_text, url)
+        text = get_text(url)
         rows = _parse_iadb_csv(text)
         by_quarter: dict[str, float] = {}
         for row in rows:

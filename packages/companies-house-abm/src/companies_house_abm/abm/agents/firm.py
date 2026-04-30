@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from companies_house_abm.abm.agents.base import BaseAgent
+from mesa import Agent, Model
 
 if TYPE_CHECKING:
     from typing import Any
@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from companies_house_abm.abm.config import FirmBehaviorConfig
 
 
-class Firm(BaseAgent):
+class Firm(Agent):
     """A firm agent initialised from financial data.
 
     Attributes:
@@ -40,7 +40,7 @@ class Firm(BaseAgent):
 
     def __init__(
         self,
-        agent_id: str | None = None,
+        model: Model,
         *,
         sector: str = "other_services",
         employees: int = 0,
@@ -52,7 +52,7 @@ class Firm(BaseAgent):
         equity: float = 0.0,
         behavior: FirmBehaviorConfig | None = None,
     ) -> None:
-        super().__init__(agent_id)
+        super().__init__(model)
         self.sector = sector
         self.employees = employees
         self.wage_bill = wage_bill
@@ -276,8 +276,7 @@ class Firm(BaseAgent):
     def get_state(self) -> dict[str, Any]:
         """Return a snapshot of the firm's state."""
         return {
-            "agent_id": self.agent_id,
-            "agent_type": self.agent_type,
+            "agent_id": self.unique_id,
             "sector": self.sector,
             "employees": self.employees,
             "wage_bill": self.wage_bill,

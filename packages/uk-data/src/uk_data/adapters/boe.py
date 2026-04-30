@@ -32,7 +32,7 @@ from datetime import date, datetime
 
 from uk_data.adapters.base import BaseAdapter
 from uk_data.models import point_timeseries, series_from_observations
-from uk_data.utils.http import get_text, retry
+from uk_data.utils.http import get_text
 from uk_data.utils.timeseries import filter_observations_by_date_window
 
 logger = logging.getLogger(__name__)
@@ -197,7 +197,7 @@ def _fetch_bank_rate(
     """
     url = _build_iadb_url(_BANK_RATE_SERIES, from_year=from_year, to_year=to_year)
     try:
-        text = retry(get_text, url)
+        text = get_text(url)
         rows = _parse_iadb_csv(text)
     except Exception:
         logger.warning("BoE IADB unavailable for Bank Rate; returning []")
@@ -226,7 +226,7 @@ def _fetch_lending_rates() -> dict[str, float]:
     def _fetch_rate(series: str, fallback: float) -> float:
         url = _build_iadb_url(series)
         try:
-            text = retry(get_text, url)
+            text = get_text(url)
             rows = _parse_iadb_csv(text)
             if rows:
                 return float(rows[-1]["value"]) / 100.0

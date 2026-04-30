@@ -23,7 +23,7 @@ import polars as pl
 from uk_data.adapters.base import BaseAdapter
 from uk_data.models import Event, point_timeseries, series_from_observations
 from uk_data.utils.http import _USER_AGENT, get_json
-from uk_data.utils.timeseries import _coerce_date_bound, date_to_utc_datetime
+from uk_data.utils.timeseries import coerce_date, date_to_utc_datetime
 
 logger = logging.getLogger(__name__)
 
@@ -419,8 +419,8 @@ def fetch_uk_hpi_history(
 
     filtered = lazy.filter(pl.col(area_column).str.to_lowercase() == area_name.lower())
 
-    start_bound = _coerce_date_bound(start_date, field_name="start_date")
-    end_bound = _coerce_date_bound(end_date, field_name="end_date")
+    start_bound = coerce_date(start_date, field_name="start_date")
+    end_bound = coerce_date(end_date, field_name="end_date")
     if start_bound is not None:
         filtered = filtered.filter(pl.col("date") >= pl.lit(start_bound))
     if end_bound is not None:

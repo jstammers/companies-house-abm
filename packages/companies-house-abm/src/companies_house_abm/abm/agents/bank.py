@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from companies_house_abm.abm.agents.base import BaseAgent
+from mesa import Agent, Model
 
 if TYPE_CHECKING:
     from typing import Any
@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     )
 
 
-class Bank(BaseAgent):
+class Bank(Agent):
     """A bank agent.
 
     Attributes:
@@ -38,7 +38,7 @@ class Bank(BaseAgent):
 
     def __init__(
         self,
-        agent_id: str | None = None,
+        model: Model,
         *,
         capital: float = 0.0,
         reserves: float = 0.0,
@@ -48,7 +48,7 @@ class Bank(BaseAgent):
         behavior: BankBehaviorConfig | None = None,
         mortgage_config: MortgageConfig | None = None,
     ) -> None:
-        super().__init__(agent_id)
+        super().__init__(model)
         self.capital = capital
         self.reserves = reserves
         self.loans = loans

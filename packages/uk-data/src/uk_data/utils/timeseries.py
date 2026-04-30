@@ -39,46 +39,12 @@ def date_to_utc_datetime(value: date | datetime) -> datetime:
     return datetime.combine(value, time.min, tzinfo=UTC)
 
 
-def _coerce_date_bound(
-    value: str | date | datetime | None,
-    *,
-    field_name: str = "date",
-) -> date | None:
-    """Coerce a date-like bound to a ``datetime.date``.
-
-    Accepts ISO date strings (``"2024-01-15"``), ``datetime.date``,
-    ``datetime.datetime``, or ``None``.  Raises ``ValueError`` with
-    *field_name* context when the string cannot be parsed.
-
-    Example::
-
-        >>> _coerce_date_bound("2024-03-31")
-        datetime.date(2024, 3, 31)
-        >>> _coerce_date_bound(None) is None
-        True
-    """
-    if value is None:
-        return None
-    if isinstance(value, datetime):
-        return value.date()
-    if isinstance(value, date):
-        return value
-    normalized = value.strip()
-    if not normalized:
-        return None
-    try:
-        return datetime.fromisoformat(normalized.replace("Z", "+00:00")).date()
-    except ValueError as exc:
-        msg = f"Invalid {field_name}: {value!r}"
-        raise ValueError(msg) from exc
-
-
-def _coerce_window_bound(
+def coerce_date(
     value: str | date | datetime | None,
     *,
     field_name: str,
 ) -> np.datetime64 | None:
-    """Coerce a date-window bound to ``np.datetime64``.
+    """Coerce a date to ``np.datetime64``.
 
     Raises ``ValueError`` with ``field_name`` context when coercion fails.
     """
@@ -116,8 +82,8 @@ def filter_observations_by_date_window(
     The window semantics are inclusive: ``start_date <= observation_date <= end_date``.
     Observations with missing/invalid dates are excluded from the filtered result.
     """
-    start = _coerce_window_bound(start_date, field_name="start_date")
-    end = _coerce_window_bound(end_date, field_name="end_date")
+    start = coerce_date(start_date, field_name="start_date")
+    end = coerce_date(end_date, field_name="end_date")
 
     if start is not None and end is not None and start > end:
         msg = "Invalid date window: start_date must be <= end_date"

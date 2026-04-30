@@ -59,16 +59,6 @@ def _epc_headers(
     }
 
 
-def _request_bytes(
-    url: str,
-    *,
-    headers: dict[str, str],
-    params: dict[str, str | int] | None = None,
-    timeout: int = 60,
-) -> bytes:
-    return request_bytes(url, headers=headers, params=params, timeout=timeout)
-
-
 def download_epc_data(
     output_path: str | Path,
     *,
@@ -83,7 +73,7 @@ def download_epc_data(
         logger.info("Using existing EPC data file %s", destination)
         return destination
 
-    payload = _request_bytes(
+    payload = request_bytes(
         _EPC_FILES_DOWNLOAD.format(file_name=bulk_file),
         headers=_epc_headers(
             api_user=api_user,
@@ -137,7 +127,7 @@ def search_epc_data(
             params["postcode"] = postcode
         for page in range(max_pages):
             params["search-after"] = page * _EPC_PAGE_SIZE
-            payload = _request_bytes(
+            payload = request_bytes(
                 _EPC_DOMESTIC_SEARCH,
                 headers=_epc_headers(
                     api_user=api_user,

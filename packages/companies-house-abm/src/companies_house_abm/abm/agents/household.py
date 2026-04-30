@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from mesa import Agent
+
 from companies_house_abm.abm.agents.base import BaseAgent
 
 if TYPE_CHECKING:
@@ -17,7 +19,7 @@ if TYPE_CHECKING:
     from companies_house_abm.abm.config import HouseholdBehaviorConfig
 
 
-class Household(BaseAgent):
+class Household(Agent):
     """A household agent.
 
     Attributes:
@@ -32,7 +34,7 @@ class Household(BaseAgent):
 
     def __init__(
         self,
-        agent_id: str | None = None,
+        model: Model,
         *,
         income: float = 0.0,
         wealth: float = 0.0,
@@ -42,7 +44,7 @@ class Household(BaseAgent):
         wage: float = 0.0,
         behavior: HouseholdBehaviorConfig | None = None,
     ) -> None:
-        super().__init__(agent_id)
+        super().__init__(model)
         self.income = income
         self.wealth = wealth
         self.mpc = mpc
@@ -259,8 +261,7 @@ class Household(BaseAgent):
     def get_state(self) -> dict[str, Any]:
         """Return a snapshot of the household's state."""
         return {
-            "agent_id": self.agent_id,
-            "agent_type": self.agent_type,
+            "agent_id": self.unique_id,
             "income": self.income,
             "expected_income": self.expected_income,
             "wealth": self.wealth,

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from companies_house_abm.abm.agents.base import BaseAgent
+from mesa import Agent, Model
 
 if TYPE_CHECKING:
     from typing import Any
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from companies_house_abm.abm.config import TaylorRuleConfig
 
 
-class CentralBank(BaseAgent):
+class CentralBank(Agent):
     """The central bank agent.
 
     Attributes:
@@ -29,11 +29,11 @@ class CentralBank(BaseAgent):
 
     def __init__(
         self,
-        agent_id: str | None = None,
+        model: Model,
         *,
         taylor_rule: TaylorRuleConfig | None = None,
     ) -> None:
-        super().__init__(agent_id or "central_bank")
+        super().__init__(model)
         self._taylor = taylor_rule
 
         target = self._taylor.inflation_target if self._taylor else 0.02

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from companies_house_abm.abm.agents.base import BaseAgent
+from mesa import Agent, Model
 
 if TYPE_CHECKING:
     from typing import Any
@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     )
 
 
-class Government(BaseAgent):
+class Government(Agent):
     """The government agent.
 
     Attributes:
@@ -32,12 +32,12 @@ class Government(BaseAgent):
 
     def __init__(
         self,
-        agent_id: str | None = None,
+        model: Model,
         *,
         fiscal_rule: FiscalRuleConfig | None = None,
         transfers: TransfersConfig | None = None,
     ) -> None:
-        super().__init__(agent_id or "government")
+        super().__init__(model)
         self._fiscal = fiscal_rule
         self._transfers = transfers
 

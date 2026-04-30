@@ -22,6 +22,7 @@ import polars as pl
 
 from uk_data.adapters.base import BaseAdapter
 from uk_data.models import Event, point_timeseries, series_from_observations
+from uk_data.transformers import EventTransformer, TimeSeriesTransformer
 from uk_data.utils.http import _USER_AGENT, get_json
 from uk_data.utils.timeseries import coerce_date, date_to_utc_datetime
 
@@ -654,8 +655,6 @@ class LandRegistryAdapter(BaseAdapter):
             Canonical :class:`~uk_data.models.TimeSeries` for ``"uk_hpi"``,
             or ``list[Event]`` for ``"price_paid"``.
         """
-        from uk_data.transformers import EventTransformer, TimeSeriesTransformer
-
         kind = raw["kind"]
         filepath = Path(raw["path"])
 

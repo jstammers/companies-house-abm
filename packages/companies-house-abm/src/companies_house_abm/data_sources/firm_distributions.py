@@ -32,12 +32,16 @@ attributes are:
 
 from __future__ import annotations
 
+import datetime
 import json
 import logging
 from dataclasses import asdict, dataclass, field
 from typing import TYPE_CHECKING
 
+import numpy as np
 import polars as pl
+import yaml
+from scipy import stats
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -532,9 +536,6 @@ def fit_distribution(
         The best-fitting distribution, or ``None`` when there are
         fewer than :data:`MIN_OBSERVATIONS` data points.
     """
-    import numpy as np
-    from scipy import stats
-
     clean = values.drop_nulls().to_numpy().astype(np.float64)
     clean = clean[np.isfinite(clean)]
 
@@ -689,8 +690,6 @@ def build_summary(
     Returns:
         A :class:`FirmDistributionSummary` ready for serialisation.
     """
-    import datetime
-
     sectors = sorted({p.sector for p in parameters})
     years = sorted({p.financial_year for p in parameters})
 
@@ -715,8 +714,6 @@ def save_parameters_yaml(summary: FirmDistributionSummary, path: Path) -> None:
         summary: The complete distribution summary.
         path: Output file path.
     """
-    import yaml
-
     path.parent.mkdir(parents=True, exist_ok=True)
     data = _summary_to_dict(summary)
     path.write_text(

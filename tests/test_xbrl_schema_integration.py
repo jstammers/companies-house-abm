@@ -24,6 +24,7 @@ These cover both XBRL format variants handled by stream_read_xbrl_zip.
 
 from __future__ import annotations
 
+import datetime
 import zipfile
 from decimal import Decimal
 from pathlib import Path
@@ -209,7 +210,6 @@ class TestExelHTMLFixture:
         ).all()
 
     def test_balance_sheet_date(self, exel_df: pl.DataFrame):
-        import datetime
 
         assert (exel_df["balance_sheet_date"] == datetime.date(2023, 1, 31)).all()
 
@@ -229,7 +229,6 @@ class TestExelHTMLFixture:
 
     def test_current_year_turnover(self, exel_df: pl.DataFrame):
         """Current-year turnover must match the parquet value exactly."""
-        import datetime
 
         row = exel_df.filter(
             (pl.col("period_start") == datetime.date(2022, 2, 1))
@@ -239,7 +238,6 @@ class TestExelHTMLFixture:
         assert row["turnover_gross_operating_revenue"][0] == Decimal("9281499")
 
     def test_current_year_profit_for_period(self, exel_df: pl.DataFrame):
-        import datetime
 
         row = exel_df.filter(
             (pl.col("period_start") == datetime.date(2022, 2, 1))
@@ -248,7 +246,6 @@ class TestExelHTMLFixture:
         assert row["profit_loss_for_period"][0] == Decimal("1468342")
 
     def test_current_year_profit_before_tax(self, exel_df: pl.DataFrame):
-        import datetime
 
         row = exel_df.filter(
             (pl.col("period_start") == datetime.date(2022, 2, 1))
@@ -259,7 +256,6 @@ class TestExelHTMLFixture:
         )
 
     def test_current_year_tax(self, exel_df: pl.DataFrame):
-        import datetime
 
         row = exel_df.filter(
             (pl.col("period_start") == datetime.date(2022, 2, 1))
@@ -270,7 +266,6 @@ class TestExelHTMLFixture:
         )
 
     def test_current_year_gross_profit(self, exel_df: pl.DataFrame):
-        import datetime
 
         row = exel_df.filter(
             (pl.col("period_start") == datetime.date(2022, 2, 1))
@@ -279,7 +274,6 @@ class TestExelHTMLFixture:
         assert row["gross_profit_loss"][0] == Decimal("3467967")
 
     def test_current_year_cost_of_sales(self, exel_df: pl.DataFrame):
-        import datetime
 
         row = exel_df.filter(
             (pl.col("period_start") == datetime.date(2022, 2, 1))
@@ -288,7 +282,6 @@ class TestExelHTMLFixture:
         assert row["cost_sales"][0] == Decimal("5813532")
 
     def test_current_year_operating_profit(self, exel_df: pl.DataFrame):
-        import datetime
 
         row = exel_df.filter(
             (pl.col("period_start") == datetime.date(2022, 2, 1))
@@ -297,7 +290,6 @@ class TestExelHTMLFixture:
         assert row["operating_profit_loss"][0] == Decimal("1488283")
 
     def test_current_year_admin_expenses(self, exel_df: pl.DataFrame):
-        import datetime
 
         row = exel_df.filter(
             (pl.col("period_start") == datetime.date(2022, 2, 1))
@@ -306,7 +298,6 @@ class TestExelHTMLFixture:
         assert row["administrative_expenses"][0] == Decimal("1979684")
 
     def test_current_year_staff_costs(self, exel_df: pl.DataFrame):
-        import datetime
 
         row = exel_df.filter(
             (pl.col("period_start") == datetime.date(2022, 2, 1))
@@ -317,7 +308,6 @@ class TestExelHTMLFixture:
     # --- Current balance sheet (instant: period_start == period_end == 2023-01-31) ---
 
     def test_balance_sheet_tangible_assets(self, exel_df: pl.DataFrame):
-        import datetime
 
         row = exel_df.filter(
             (pl.col("period_start") == datetime.date(2023, 1, 31))
@@ -326,7 +316,6 @@ class TestExelHTMLFixture:
         assert row["tangible_fixed_assets"][0] == Decimal("905613")
 
     def test_balance_sheet_debtors(self, exel_df: pl.DataFrame):
-        import datetime
 
         row = exel_df.filter(
             (pl.col("period_start") == datetime.date(2023, 1, 31))
@@ -335,7 +324,6 @@ class TestExelHTMLFixture:
         assert row["debtors"][0] == Decimal("5095688")
 
     def test_balance_sheet_cash(self, exel_df: pl.DataFrame):
-        import datetime
 
         row = exel_df.filter(
             (pl.col("period_start") == datetime.date(2023, 1, 31))
@@ -344,7 +332,6 @@ class TestExelHTMLFixture:
         assert row["cash_bank_in_hand"][0] == Decimal("1947590")
 
     def test_balance_sheet_current_assets(self, exel_df: pl.DataFrame):
-        import datetime
 
         row = exel_df.filter(
             (pl.col("period_start") == datetime.date(2023, 1, 31))
@@ -353,7 +340,6 @@ class TestExelHTMLFixture:
         assert row["current_assets"][0] == Decimal("7046278")
 
     def test_balance_sheet_net_current_assets(self, exel_df: pl.DataFrame):
-        import datetime
 
         row = exel_df.filter(
             (pl.col("period_start") == datetime.date(2023, 1, 31))
@@ -362,7 +348,6 @@ class TestExelHTMLFixture:
         assert row["net_current_assets_liabilities"][0] == Decimal("1766208")
 
     def test_balance_sheet_net_assets(self, exel_df: pl.DataFrame):
-        import datetime
 
         row = exel_df.filter(
             (pl.col("period_start") == datetime.date(2023, 1, 31))
@@ -379,7 +364,6 @@ class TestExelHTMLFixture:
 
     def test_prior_year_pl_row_exists(self, exel_df: pl.DataFrame):
         """Prior-year P&L row (FY ending 2022-01-31) must be present."""
-        import datetime
 
         rows = exel_df.filter(
             (pl.col("period_start") == datetime.date(2021, 2, 1))
@@ -388,7 +372,6 @@ class TestExelHTMLFixture:
         assert len(rows) == 1
 
     def test_prior_year_turnover(self, exel_df: pl.DataFrame):
-        import datetime
 
         row = exel_df.filter(
             (pl.col("period_start") == datetime.date(2021, 2, 1))
@@ -397,7 +380,6 @@ class TestExelHTMLFixture:
         assert row["turnover_gross_operating_revenue"][0] == Decimal("9129706")
 
     def test_prior_year_profit_for_period(self, exel_df: pl.DataFrame):
-        import datetime
 
         row = exel_df.filter(
             (pl.col("period_start") == datetime.date(2021, 2, 1))
@@ -452,26 +434,22 @@ class TestNalderXMLFixture:
         ).all()
 
     def test_balance_sheet_date(self, nalder_df: pl.DataFrame):
-        import datetime
 
         assert (nalder_df["balance_sheet_date"] == datetime.date(2009, 7, 31)).all()
 
     # --- Current year row (period = 2009-07-31 instant) ---
 
     def test_current_debtors(self, nalder_df: pl.DataFrame):
-        import datetime
 
         row = nalder_df.filter(pl.col("period_start") == datetime.date(2009, 7, 31))
         assert row["debtors"][0] == Decimal("25853")
 
     def test_current_current_assets(self, nalder_df: pl.DataFrame):
-        import datetime
 
         row = nalder_df.filter(pl.col("period_start") == datetime.date(2009, 7, 31))
         assert row["current_assets"][0] == Decimal("25853")
 
     def test_current_net_current_assets(self, nalder_df: pl.DataFrame):
-        import datetime
 
         row = nalder_df.filter(pl.col("period_start") == datetime.date(2009, 7, 31))
         assert row["net_current_assets_liabilities"][0] == Decimal("25853")
@@ -479,32 +457,27 @@ class TestNalderXMLFixture:
     def test_current_total_assets_less_current_liabilities(
         self, nalder_df: pl.DataFrame
     ):
-        import datetime
 
         row = nalder_df.filter(pl.col("period_start") == datetime.date(2009, 7, 31))
         assert row["total_assets_less_current_liabilities"][0] == Decimal("25853")
 
     def test_current_net_assets(self, nalder_df: pl.DataFrame):
-        import datetime
 
         row = nalder_df.filter(pl.col("period_start") == datetime.date(2009, 7, 31))
         val = row["net_assets_liabilities_including_pension_asset_liability"][0]
         assert val == Decimal("25853")
 
     def test_current_called_up_share_capital(self, nalder_df: pl.DataFrame):
-        import datetime
 
         row = nalder_df.filter(pl.col("period_start") == datetime.date(2009, 7, 31))
         assert row["called_up_share_capital"][0] == Decimal("25000")
 
     def test_current_profit_loss_reserve(self, nalder_df: pl.DataFrame):
-        import datetime
 
         row = nalder_df.filter(pl.col("period_start") == datetime.date(2009, 7, 31))
         assert row["profit_loss_account_reserve"][0] == Decimal("853")
 
     def test_current_shareholder_funds(self, nalder_df: pl.DataFrame):
-        import datetime
 
         row = nalder_df.filter(pl.col("period_start") == datetime.date(2009, 7, 31))
         assert row["shareholder_funds"][0] == Decimal("25853")
@@ -516,7 +489,6 @@ class TestNalderXMLFixture:
 
     def test_prior_year_row_present(self, nalder_df: pl.DataFrame):
         """Prior comparative period (2008-07-31 instant) must appear."""
-        import datetime
 
         rows = nalder_df.filter(pl.col("period_start") == datetime.date(2008, 7, 31))
         assert len(rows) == 1

@@ -12,7 +12,48 @@ remain valid as the underlying datasets are updated over time.
 
 from __future__ import annotations
 
+import urllib.request
+from datetime import date
+from unittest.mock import patch
+
 import pytest
+
+from companies_house_abm.abm.config import ModelConfig
+from companies_house_abm.data_sources.calibration import calibrate_model
+from companies_house_abm.data_sources.input_output import fetch_input_output_table
+from uk_data.adapters.boe import _FALLBACK_BANK_RATE, _build_iadb_url, _parse_iadb_csv
+from uk_data.adapters.hmrc import (
+    compute_income_tax,
+    effective_tax_wedge,
+    get_corporation_tax_rate,
+    get_income_tax_bands,
+    get_vat_rate,
+)
+from uk_data.adapters.land_registry import fetch_regional_prices, fetch_uk_average_price
+from uk_data.adapters.ons import (
+    _DEFAULT_URI_TEMPLATE,
+    _FALLBACK_AFFORDABILITY,
+    _FALLBACK_RENTAL_GROWTH,
+    _SERIES_URI,
+    _fetch_timeseries,
+)
+from uk_data.utils import http as _http
+from uk_data.utils.http import clear_cache
+from uk_data.workflows.boe import (
+    fetch_bank_rate,
+    fetch_bank_rate_current,
+    fetch_lending_rates,
+    get_aggregate_capital_ratio,
+)
+from uk_data.workflows.ons import (
+    fetch_affordability_ratio,
+    fetch_gdp,
+    fetch_household_income,
+    fetch_labour_market,
+    fetch_rental_growth,
+    fetch_savings_ratio,
+    fetch_tenure_distribution,
+)
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -23,7 +64,6 @@ pytestmark = pytest.mark.integration  # applied to every test in this module
 
 def _skip_if_offline() -> None:
     """Raise a skip if the network is not reachable (best-effort check)."""
-    import urllib.request
 
     try:
         urllib.request.urlopen("https://api.ons.gov.uk/v1", timeout=5)
@@ -41,8 +81,6 @@ class TestOnsGdpIntegration:
 
     def test_returns_nonempty_list(self) -> None:
         _skip_if_offline()
-        from uk_data.utils.http import clear_cache
-        from uk_data.workflows.ons import fetch_gdp
 
         clear_cache()
         obs = fetch_gdp(limit=8)
@@ -51,8 +89,6 @@ class TestOnsGdpIntegration:
 
     def test_observations_have_date_and_value_keys(self) -> None:
         _skip_if_offline()
-        from uk_data.utils.http import clear_cache
-        from uk_data.workflows.ons import fetch_gdp
 
         clear_cache()
         obs = fetch_gdp(limit=4)
@@ -62,8 +98,6 @@ class TestOnsGdpIntegration:
 
     def test_values_are_numeric_strings(self) -> None:
         _skip_if_offline()
-        from uk_data.utils.http import clear_cache
-        from uk_data.workflows.ons import fetch_gdp
 
         clear_cache()
         obs = fetch_gdp(limit=4)
@@ -72,8 +106,6 @@ class TestOnsGdpIntegration:
 
     def test_limit_respected(self) -> None:
         _skip_if_offline()
-        from uk_data.utils.http import clear_cache
-        from uk_data.workflows.ons import fetch_gdp
 
         clear_cache()
         obs = fetch_gdp(limit=3)
@@ -85,8 +117,6 @@ class TestOnsHouseholdIncomeIntegration:
 
     def test_returns_nonempty_list(self) -> None:
         _skip_if_offline()
-        from uk_data.utils.http import clear_cache
-        from uk_data.workflows.ons import fetch_household_income
 
         clear_cache()
         obs = fetch_household_income(limit=8)
@@ -95,8 +125,6 @@ class TestOnsHouseholdIncomeIntegration:
 
     def test_observations_have_date_and_value(self) -> None:
         _skip_if_offline()
-        from uk_data.utils.http import clear_cache
-        from uk_data.workflows.ons import fetch_household_income
 
         clear_cache()
         obs = fetch_household_income(limit=4)
@@ -111,8 +139,6 @@ class TestOnsSavingsRatioIntegration:
 
     def test_returns_nonempty_list(self) -> None:
         _skip_if_offline()
-        from uk_data.utils.http import clear_cache
-        from uk_data.workflows.ons import fetch_savings_ratio
 
         clear_cache()
         obs = fetch_savings_ratio(limit=8)
@@ -122,8 +148,6 @@ class TestOnsSavingsRatioIntegration:
     def test_saving_ratio_plausible_range(self) -> None:
         """Household saving ratio should be between -20% and 35%."""
         _skip_if_offline()
-        from uk_data.utils.http import clear_cache
-        from uk_data.workflows.ons import fetch_savings_ratio
 
         clear_cache()
         obs = fetch_savings_ratio(limit=4)
@@ -137,8 +161,6 @@ class TestOnsLabourMarketIntegration:
 
     def test_returns_expected_keys(self) -> None:
         _skip_if_offline()
-        from uk_data.utils.http import clear_cache
-        from uk_data.workflows.ons import fetch_labour_market
 
         clear_cache()
         data = fetch_labour_market()
@@ -147,8 +169,6 @@ class TestOnsLabourMarketIntegration:
 
     def test_unemployment_rate_is_numeric(self) -> None:
         _skip_if_offline()
-        from uk_data.utils.http import clear_cache
-        from uk_data.workflows.ons import fetch_labour_market
 
         clear_cache()
         data = fetch_labour_market()
@@ -159,8 +179,6 @@ class TestOnsLabourMarketIntegration:
 
     def test_average_weekly_earnings_positive(self) -> None:
         _skip_if_offline()
-        from uk_data.utils.http import clear_cache
-        from uk_data.workflows.ons import fetch_labour_market
 
         clear_cache()
         data = fetch_labour_market()
@@ -174,7 +192,6 @@ class TestOnsAffordabilityRatioIntegration:
     """fetch_affordability_ratio() — uses fallback (HP7A not on Zebedee API)."""
 
     def test_returns_positive_float(self) -> None:
-        from uk_data.workflows.ons import fetch_affordability_ratio
 
         ratio = fetch_affordability_ratio()
         assert isinstance(ratio, float)
@@ -182,8 +199,6 @@ class TestOnsAffordabilityRatioIntegration:
 
     def test_falls_back_to_known_value(self) -> None:
         """With HP7A unavailable via Zebedee, should return the hardcoded fallback."""
-        from uk_data.adapters.ons import _FALLBACK_AFFORDABILITY
-        from uk_data.workflows.ons import fetch_affordability_ratio
 
         ratio = fetch_affordability_ratio()
         # Either live data (in range 5-15) or the static fallback (8.3)
@@ -196,14 +211,11 @@ class TestOnsRentalGrowthIntegration:
     """fetch_rental_growth() — uses fallback (D7RA not on Zebedee API)."""
 
     def test_returns_float(self) -> None:
-        from uk_data.workflows.ons import fetch_rental_growth
 
         growth = fetch_rental_growth()
         assert isinstance(growth, float)
 
     def test_falls_back_to_known_value(self) -> None:
-        from uk_data.adapters.ons import _FALLBACK_RENTAL_GROWTH
-        from uk_data.workflows.ons import fetch_rental_growth
 
         growth = fetch_rental_growth()
         # Since D7RA is not on Zebedee, expect the fallback
@@ -214,20 +226,17 @@ class TestOnsTenureDistributionIntegration:
     """fetch_tenure_distribution() — always uses English Housing Survey fallback."""
 
     def test_returns_three_tenure_types(self) -> None:
-        from uk_data.workflows.ons import fetch_tenure_distribution
 
         dist = fetch_tenure_distribution()
         assert set(dist.keys()) == {"owner_occupier", "private_renter", "social_renter"}
 
     def test_shares_sum_to_one(self) -> None:
-        from uk_data.workflows.ons import fetch_tenure_distribution
 
         dist = fetch_tenure_distribution()
         total = sum(dist.values())
         assert total == pytest.approx(1.0, abs=1e-6)
 
     def test_all_shares_positive(self) -> None:
-        from uk_data.workflows.ons import fetch_tenure_distribution
 
         dist = fetch_tenure_distribution()
         for k, v in dist.items():
@@ -238,9 +247,6 @@ class TestOnsInputOutputTableIntegration:
     """fetch_input_output_table() — static coefficients enriched by live GVA."""
 
     def test_returns_expected_keys(self) -> None:
-        from companies_house_abm.data_sources.input_output import (
-            fetch_input_output_table,
-        )
 
         result = fetch_input_output_table()
         assert "sectors" in result
@@ -249,26 +255,17 @@ class TestOnsInputOutputTableIntegration:
         assert "sector_sic_mapping" in result
 
     def test_has_thirteen_sectors(self) -> None:
-        from companies_house_abm.data_sources.input_output import (
-            fetch_input_output_table,
-        )
 
         result = fetch_input_output_table()
         assert len(result["sectors"]) == 13
 
     def test_final_demand_shares_sum_to_one(self) -> None:
-        from companies_house_abm.data_sources.input_output import (
-            fetch_input_output_table,
-        )
 
         result = fetch_input_output_table()
         total = sum(result["final_demand_shares"].values())
         assert total == pytest.approx(1.0, abs=1e-6)
 
     def test_use_coefficients_between_zero_and_one(self) -> None:
-        from companies_house_abm.data_sources.input_output import (
-            fetch_input_output_table,
-        )
 
         result = fetch_input_output_table()
         for sector, row in result["use_coefficients"].items():
@@ -287,8 +284,6 @@ class TestBoeFetchBankRateIntegration:
     """fetch_bank_rate() — BoE IADB (currently returns [] due to 403)."""
 
     def test_returns_list(self) -> None:
-        from uk_data.utils.http import clear_cache
-        from uk_data.workflows.boe import fetch_bank_rate
 
         clear_cache()
         obs = fetch_bank_rate()
@@ -296,8 +291,6 @@ class TestBoeFetchBankRateIntegration:
         assert isinstance(obs, list)
 
     def test_items_have_date_and_value_when_available(self) -> None:
-        from uk_data.utils.http import clear_cache
-        from uk_data.workflows.boe import fetch_bank_rate
 
         clear_cache()
         obs = fetch_bank_rate()
@@ -311,8 +304,6 @@ class TestBoeFetchBankRateCurrentIntegration:
     """fetch_bank_rate_current() — falls back to hardcoded 4.75%."""
 
     def test_returns_float_in_valid_range(self) -> None:
-        from uk_data.utils.http import clear_cache
-        from uk_data.workflows.boe import fetch_bank_rate_current
 
         clear_cache()
         rate = fetch_bank_rate_current()
@@ -321,9 +312,6 @@ class TestBoeFetchBankRateCurrentIntegration:
 
     def test_fallback_value_when_iadb_unavailable(self) -> None:
         """Since IADB returns 403, current rate should equal the fallback constant."""
-        from uk_data.adapters.boe import _FALLBACK_BANK_RATE
-        from uk_data.utils.http import clear_cache
-        from uk_data.workflows.boe import fetch_bank_rate_current
 
         clear_cache()
         rate = fetch_bank_rate_current()
@@ -335,8 +323,6 @@ class TestBoeFetchLendingRatesIntegration:
     """fetch_lending_rates() — uses fallback values when IADB is unavailable."""
 
     def test_returns_expected_keys(self) -> None:
-        from uk_data.utils.http import clear_cache
-        from uk_data.workflows.boe import fetch_lending_rates
 
         clear_cache()
         rates = fetch_lending_rates()
@@ -347,8 +333,6 @@ class TestBoeFetchLendingRatesIntegration:
         assert "business_spread" in rates
 
     def test_rates_in_plausible_range(self) -> None:
-        from uk_data.utils.http import clear_cache
-        from uk_data.workflows.boe import fetch_lending_rates
 
         clear_cache()
         rates = fetch_lending_rates()
@@ -357,8 +341,6 @@ class TestBoeFetchLendingRatesIntegration:
             assert 0.0 <= val <= 0.25, f"{key}={val:.4f} outside plausible range"
 
     def test_spreads_are_non_negative(self) -> None:
-        from uk_data.utils.http import clear_cache
-        from uk_data.workflows.boe import fetch_lending_rates
 
         clear_cache()
         rates = fetch_lending_rates()
@@ -370,7 +352,6 @@ class TestBoeCapitalRatioIntegration:
     """get_aggregate_capital_ratio() — hardcoded CET1."""
 
     def test_returns_reasonable_value(self) -> None:
-        from uk_data.workflows.boe import get_aggregate_capital_ratio
 
         ratio = get_aggregate_capital_ratio()
         assert isinstance(ratio, float)
@@ -386,10 +367,6 @@ class TestLandRegistryUkAveragePriceIntegration:
     """fetch_uk_average_price() — SPARQL endpoint with fallback."""
 
     def test_returns_positive_float(self) -> None:
-        from uk_data.adapters.land_registry import (
-            fetch_uk_average_price,
-        )
-        from uk_data.utils.http import clear_cache
 
         clear_cache()
         price = fetch_uk_average_price()
@@ -398,10 +375,6 @@ class TestLandRegistryUkAveragePriceIntegration:
 
     def test_price_in_plausible_range(self) -> None:
         """UK average house price should be between £100k and £600k."""
-        from uk_data.adapters.land_registry import (
-            fetch_uk_average_price,
-        )
-        from uk_data.utils.http import clear_cache
 
         clear_cache()
         price = fetch_uk_average_price()
@@ -414,8 +387,6 @@ class TestLandRegistryRegionalPricesIntegration:
     """fetch_regional_prices() — SPARQL with regional fallback dict."""
 
     def test_returns_dict_of_floats(self) -> None:
-        from uk_data.adapters.land_registry import fetch_regional_prices
-        from uk_data.utils.http import clear_cache
 
         clear_cache()
         prices = fetch_regional_prices()
@@ -427,8 +398,6 @@ class TestLandRegistryRegionalPricesIntegration:
 
     def test_london_higher_than_north_east(self) -> None:
         """London prices should exceed North East prices (robust structural check)."""
-        from uk_data.adapters.land_registry import fetch_regional_prices
-        from uk_data.utils.http import clear_cache
 
         clear_cache()
         prices = fetch_regional_prices()
@@ -455,10 +424,6 @@ class TestHmrcFunctionsIntegration:
     """HMRC functions are pure computation; these confirm correct values."""
 
     def test_income_tax_bands_sum_covers_all_incomes(self) -> None:
-        from uk_data.adapters.hmrc import (
-            compute_income_tax,
-            get_income_tax_bands,
-        )
 
         bands = get_income_tax_bands()
         assert len(bands) == 4
@@ -473,7 +438,6 @@ class TestHmrcFunctionsIntegration:
             assert rates[i] <= rates[i + 1], "Effective rate should be non-decreasing"
 
     def test_corporation_tax_thresholds(self) -> None:
-        from uk_data.adapters.hmrc import get_corporation_tax_rate
 
         assert get_corporation_tax_rate(40_000) == pytest.approx(0.19)
         assert get_corporation_tax_rate(300_000) == pytest.approx(0.25)
@@ -482,7 +446,6 @@ class TestHmrcFunctionsIntegration:
         assert 0.19 < marginal < 0.25
 
     def test_effective_tax_wedge_keys_and_types(self) -> None:
-        from uk_data.adapters.hmrc import effective_tax_wedge
 
         result = effective_tax_wedge(35_000)
         expected_keys = {
@@ -499,13 +462,11 @@ class TestHmrcFunctionsIntegration:
             assert isinstance(v, (int, float)), f"{k} is not numeric"
 
     def test_take_home_less_than_gross(self) -> None:
-        from uk_data.adapters.hmrc import effective_tax_wedge
 
         result = effective_tax_wedge(50_000)
         assert result["take_home"] < result["gross_salary"]
 
     def test_vat_rates(self) -> None:
-        from uk_data.adapters.hmrc import get_vat_rate
 
         assert get_vat_rate("standard") == pytest.approx(0.20)
         assert get_vat_rate("reduced") == pytest.approx(0.05)
@@ -525,9 +486,6 @@ class TestOnsFetchTimeseriesUrlConstruction:
 
     def _captured_urls(self, series_ids: list[str]) -> list[str]:
         """Return the URLs that _fetch_timeseries would request for each series."""
-        from unittest.mock import patch
-
-        from uk_data.utils import http as _http
 
         _http.clear_cache()
         captured: list[str] = []
@@ -537,8 +495,6 @@ class TestOnsFetchTimeseriesUrlConstruction:
             return {"quarters": [{"date": "2024 Q4", "value": "100"}]}
 
         with patch("uk_data.adapters.ons.retry", side_effect=_fake_retry):
-            from uk_data.adapters.ons import _fetch_timeseries
-
             for sid in series_ids:
                 _fetch_timeseries(sid, limit=1)
 
@@ -596,19 +552,16 @@ class TestOnsSeriesUriMapping:
     """Verify _SERIES_URI and _DEFAULT_URI_TEMPLATE are internally consistent."""
 
     def test_series_uri_keys_are_uppercase(self) -> None:
-        from uk_data.adapters.ons import _SERIES_URI
 
         for key in _SERIES_URI:
             assert key == key.upper(), f"Key {key!r} should be uppercase"
 
     def test_series_uri_values_start_with_slash(self) -> None:
-        from uk_data.adapters.ons import _SERIES_URI
 
         for sid, uri in _SERIES_URI.items():
             assert uri.startswith("/"), f"URI for {sid!r} should start with /"
 
     def test_series_uri_values_contain_timeseries(self) -> None:
-        from uk_data.adapters.ons import _SERIES_URI
 
         for sid, uri in _SERIES_URI.items():
             assert "timeseries" in uri.lower(), (
@@ -616,7 +569,6 @@ class TestOnsSeriesUriMapping:
             )
 
     def test_default_template_substitution(self) -> None:
-        from uk_data.adapters.ons import _DEFAULT_URI_TEMPLATE
 
         result = _DEFAULT_URI_TEMPLATE.format(sid="abcd")
         assert "abcd" in result
@@ -624,7 +576,6 @@ class TestOnsSeriesUriMapping:
 
     def test_only_confirmed_gva_series_present(self) -> None:
         """Only L2KL, L2N8, L2NC, L2NE should be in _SERIES_URI (confirmed working)."""
-        from uk_data.adapters.ons import _SERIES_URI
 
         confirmed_gva = {"L2KL", "L2N8", "L2NC", "L2NE"}
         removed_gva = {
@@ -649,7 +600,6 @@ class TestOnsSeriesUriMapping:
 
     def test_hp7a_and_d7ra_not_in_series_uri(self) -> None:
         """HP7A and D7RA are not accessible via Zebedee; should not be mapped."""
-        from uk_data.adapters.ons import _SERIES_URI
 
         assert "HP7A" not in _SERIES_URI, "HP7A not available on Zebedee API"
         assert "D7RA" not in _SERIES_URI, "D7RA not available on Zebedee API"
@@ -664,21 +614,16 @@ class TestBoeIadbUrlConstruction:
     """_build_iadb_url generates URLs in the expected format."""
 
     def test_contains_series_code(self) -> None:
-        from uk_data.adapters.boe import _build_iadb_url
 
         url = _build_iadb_url("IUMABEDR")
         assert "IUMABEDR" in url
 
     def test_contains_datefrom_param(self) -> None:
-        from uk_data.adapters.boe import _build_iadb_url
 
         url = _build_iadb_url("IUMABEDR", years_back=5)
         assert "Datefrom" in url
 
     def test_years_back_affects_from_year(self) -> None:
-        from datetime import date
-
-        from uk_data.adapters.boe import _build_iadb_url
 
         url_5 = _build_iadb_url("IUMABEDR", years_back=5)
         url_10 = _build_iadb_url("IUMABEDR", years_back=10)
@@ -688,7 +633,6 @@ class TestBoeIadbUrlConstruction:
         assert expected_year_10 in url_10
 
     def test_csv_format_param_present(self) -> None:
-        from uk_data.adapters.boe import _build_iadb_url
 
         url = _build_iadb_url("IUMABEDR")
         assert "CSVF" in url or "csv" in url.lower()
@@ -698,7 +642,6 @@ class TestBoeParseIadbCsv:
     """_parse_iadb_csv correctly parses valid IADB CSV text."""
 
     def test_parses_date_value_rows(self) -> None:
-        from uk_data.adapters.boe import _parse_iadb_csv
 
         csv_text = (
             "Title,IUMABEDR\n"
@@ -715,7 +658,6 @@ class TestBoeParseIadbCsv:
 
     def test_returns_empty_for_html_response(self) -> None:
         """When IADB returns HTML (403/error page), parser should return []."""
-        from uk_data.adapters.boe import _parse_iadb_csv
 
         html = (
             "<!DOCTYPE html><html><head><title>Error</title></head>"
@@ -725,7 +667,6 @@ class TestBoeParseIadbCsv:
         assert rows == []
 
     def test_skips_header_lines(self) -> None:
-        from uk_data.adapters.boe import _parse_iadb_csv
 
         csv_text = "Title,Bank Rate\nSource,BoE\nUnits,%\n\n01 Nov 2024,4.75\n"
         rows = _parse_iadb_csv(csv_text)
@@ -737,10 +678,6 @@ class TestBoeFallbackBehaviourUnit:
     """fetch_bank_rate_current uses fallback when fetch_bank_rate returns []."""
 
     def test_uses_fallback_when_fetch_returns_empty(self) -> None:
-        from unittest.mock import patch
-
-        from uk_data.adapters.boe import _FALLBACK_BANK_RATE
-        from uk_data.workflows.boe import fetch_bank_rate_current
 
         with patch(
             "uk_data.adapters.boe._fetch_bank_rate",
@@ -750,9 +687,6 @@ class TestBoeFallbackBehaviourUnit:
         assert rate == pytest.approx(_FALLBACK_BANK_RATE)
 
     def test_parses_live_value_when_available(self) -> None:
-        from unittest.mock import patch
-
-        from uk_data.workflows.boe import fetch_bank_rate_current
 
         with patch(
             "uk_data.adapters.boe._fetch_bank_rate",
@@ -763,7 +697,6 @@ class TestBoeFallbackBehaviourUnit:
 
     def test_fallback_is_current_bank_rate(self) -> None:
         """Fallback should reflect the most recently published Bank Rate."""
-        from uk_data.adapters.boe import _FALLBACK_BANK_RATE
 
         assert pytest.approx(0.0475) == _FALLBACK_BANK_RATE
 
@@ -777,28 +710,23 @@ class TestCalibrateModelIntegration:
     """calibrate_model() — end-to-end calibration using live or fallback data."""
 
     def test_returns_model_config(self) -> None:
-        from companies_house_abm.data_sources.calibration import calibrate_model
 
         config = calibrate_model()
         # Import here to avoid issues if mesa not installed
-        from companies_house_abm.abm.config import ModelConfig
 
         assert isinstance(config, ModelConfig)
 
     def test_household_income_mean_positive(self) -> None:
-        from companies_house_abm.data_sources.calibration import calibrate_model
 
         config = calibrate_model()
         assert config.households.income_mean > 0.0
 
     def test_corporation_tax_calibrated_to_main_rate(self) -> None:
-        from companies_house_abm.data_sources.calibration import calibrate_model
 
         config = calibrate_model()
         assert config.fiscal_rule.tax_rate_corporate == pytest.approx(0.25)
 
     def test_capital_requirement_in_range(self) -> None:
-        from companies_house_abm.data_sources.calibration import calibrate_model
 
         config = calibrate_model()
         assert 0.05 < config.banks.capital_requirement < 0.40

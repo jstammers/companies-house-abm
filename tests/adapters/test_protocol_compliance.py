@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import pytest
 
+from uk_data.adapters import AdapterProtocol as AP
 from uk_data.adapters.base import AdapterProtocol
 from uk_data.adapters.boe import BoEAdapter
 from uk_data.adapters.companies_house import CompaniesHouseAdapter
@@ -47,7 +48,6 @@ class TestAdapterProtocolPublicExport:
     """AdapterProtocol must be importable from the public adapter surface."""
 
     def test_adapter_protocol_exported_from_adapters_init(self) -> None:
-        from uk_data.adapters import AdapterProtocol as AP
 
         assert AP is AdapterProtocol
 

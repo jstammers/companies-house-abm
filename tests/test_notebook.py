@@ -9,9 +9,24 @@ These tests verify that:
 from __future__ import annotations
 
 import importlib.util
+import subprocess
 import sys
+from dataclasses import replace as dc_replace
 from pathlib import Path
 from unittest.mock import patch
+
+import matplotlib
+import matplotlib.pyplot as plt
+
+from companies_house_abm.abm.config import (
+    HouseholdConfig,
+    HousingMarketConfig,
+    ModelConfig,
+    PropertyConfig,
+    SimulationConfig,
+)
+from companies_house_abm.abm.historical import HistoricalSimulation
+from companies_house_abm.abm.scenarios import HistoricalScenario, build_uk_2013_2024
 
 NOTEBOOKS_DIR = Path(__file__).parent.parent / "notebooks"
 
@@ -38,7 +53,6 @@ class TestHistoricalSimulationNotebook:
     def test_notebook_has_no_multiple_definition_errors(self):
         """After the fix, the notebook must not trigger MarIMO's
         MultipleDefinitionError on export."""
-        import subprocess
 
         result = subprocess.run(
             [
@@ -59,22 +73,11 @@ class TestHistoricalSimulationNotebook:
     def test_notebook_core_logic_runs(self):
         """Run the core simulation steps that the notebook performs."""
 
-        from companies_house_abm.abm.config import (
-            HouseholdConfig,
-            HousingMarketConfig,
-            ModelConfig,
-            PropertyConfig,
-            SimulationConfig,
-        )
-        from companies_house_abm.abm.historical import HistoricalSimulation
-
         # Use a tiny offline scenario (all network calls mocked to fall back)
         with patch(
             "uk_data.adapters.historical.get_json",
             side_effect=Exception("offline"),
         ):
-            from companies_house_abm.abm.scenarios import build_uk_2013_2024
-
             scenario = build_uk_2013_2024()
 
         # Use a small config so this runs in < 5 s
@@ -87,8 +90,6 @@ class TestHistoricalSimulationNotebook:
                 search_intensity=10,
             ),
         )
-
-        from dataclasses import replace as dc_replace
 
         short_scenario = dc_replace(
             scenario,
@@ -113,19 +114,8 @@ class TestHistoricalSimulationNotebook:
 
     def test_notebook_visualization_code_executes(self):
         """The matplotlib chart-building logic should not crash."""
-        import matplotlib
 
         matplotlib.use("Agg")  # non-interactive backend for CI
-        import matplotlib.pyplot as plt
-
-        from companies_house_abm.abm.config import (
-            HouseholdConfig,
-            ModelConfig,
-            PropertyConfig,
-            SimulationConfig,
-        )
-        from companies_house_abm.abm.historical import HistoricalSimulation
-        from companies_house_abm.abm.scenarios import HistoricalScenario
 
         scenario = HistoricalScenario(
             name="notebook_viz_test",

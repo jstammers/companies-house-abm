@@ -7,7 +7,7 @@ import dataclasses
 import pytest
 from pydantic import ValidationError
 
-from companies_house_abm.abm.config import load_config
+from companies_house_abm.abm.config import ModelConfig, load_config
 from companies_house_abm.webapp.app import _config_to_params, _params_to_config
 from companies_house_abm.webapp.models import SimulationParams
 
@@ -132,8 +132,6 @@ class TestConfigToParams:
         assert params.n_firms <= 100_000
 
     def test_non_model_config_returns_defaults(self) -> None:
-        from companies_house_abm.webapp.app import _config_to_params
-        from companies_house_abm.webapp.models import SimulationParams
 
         result = _config_to_params("not a config")
         assert isinstance(result, SimulationParams)
@@ -144,9 +142,6 @@ class TestParamsToConfig:
     """Tests for _params_to_config helper."""
 
     def test_all_sub_configs_populated(self) -> None:
-        from companies_house_abm.abm.config import ModelConfig
-        from companies_house_abm.webapp.app import _params_to_config
-        from companies_house_abm.webapp.models import SimulationParams
 
         params = SimulationParams(
             periods=40,
@@ -166,8 +161,6 @@ class TestParamsToConfig:
         assert cfg.labor_market.wage_stickiness == pytest.approx(0.6)
 
     def test_markets_wired_correctly(self) -> None:
-        from companies_house_abm.webapp.app import _params_to_config
-        from companies_house_abm.webapp.models import SimulationParams
 
         params = SimulationParams(
             goods_search_intensity=0.7,

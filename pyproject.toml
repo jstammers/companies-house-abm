@@ -73,6 +73,7 @@ select = [
     "PTH",    # flake8-use-pathlib
     "ERA",    # eradicate
     "RUF",    # Ruff-specific rules
+    "PLC",
 ]
 
 [tool.ruff.lint.isort]
@@ -82,7 +83,14 @@ known-first-party = ["companies_house_abm", "companies_house", "uk_data"]
 "tests/**/*.py" = ["ARG001"]
 "packages/companies-house/src/companies_house/schema.py" = ["TCH003"]
 "packages/companies-house/src/companies_house/api/models.py" = ["TCH003"]
-"notebooks/**/*.py" = ["B018", "E501"]
+"notebooks/**/*.py" = ["B018", "E501", "PLC0206", "PLC0415"]
+# CLI commands use lazy imports intentionally (startup time + optional deps)
+"**/cli.py" = ["PLC0415"]
+# Optional-dependency adapters: kreuzberg (pdf), stream-read-xbrl (xbrl)
+"packages/companies-house/src/companies_house/ingest/pdf.py" = ["PLC0415"]
+"packages/companies-house/src/companies_house/ingest/xbrl.py" = ["PLC0415"]
+# bank.py: Mortgage deferred to break circular import (runtime import inside method)
+"packages/companies-house-abm/src/companies_house_abm/abm/agents/bank.py" = ["PLC0415"]
 
 # =============================================================================
 # ty (type checker)

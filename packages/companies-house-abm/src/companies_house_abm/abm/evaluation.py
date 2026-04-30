@@ -27,9 +27,10 @@ import math
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
+from companies_house_abm.abm.model import SimulationResult
+
 if TYPE_CHECKING:
     from companies_house_abm.abm.historical import HistoricalResult
-    from companies_house_abm.abm.model import SimulationResult
 
 
 # ---------------------------------------------------------------------------
@@ -476,8 +477,6 @@ def evaluate_historical(
     Returns:
         A :class:`HistoricalEvaluationReport`.
     """
-    from companies_house_abm.abm.model import SimulationResult
-
     records = result.records
     n = len(records)
 

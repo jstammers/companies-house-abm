@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import date as _date
 from typing import TYPE_CHECKING, Any
 
 import duckdb
@@ -142,8 +143,6 @@ class CanonicalStore:
             FileNotFoundError: If the target Parquet file does not exist.
             ValueError: If *start* or *end* are not valid ISO-8601 date strings.
         """
-        from datetime import date as _date
-
         path = self._canonical_path(relative_path)
         if not path.exists():
             raise FileNotFoundError(f"Canonical file not found: {path}")

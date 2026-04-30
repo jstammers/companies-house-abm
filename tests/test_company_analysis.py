@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import datetime
 from decimal import Decimal
+from pathlib import Path
 
 import polars as pl
 
@@ -500,7 +501,6 @@ class TestOrdinal:
 
 def _make_peers_parquet(tmp_path: object, peers: list[dict]) -> object:
     """Write a parquet containing the target company plus extra peer rows."""
-    from pathlib import Path
 
     p = Path(str(tmp_path)) / "peers.parquet"  # type: ignore[arg-type]
     pl.from_dicts(peers).write_parquet(p)
@@ -851,7 +851,6 @@ class TestComputeSectorBenchmark:
 class TestLoadSicSectorIds:
     def _sic_csv(self, tmp_path, rows: list[tuple[str, str]]) -> object:
         """Write a minimal SIC CSV and return the path."""
-        from pathlib import Path
 
         p = Path(str(tmp_path)) / "sic.csv"
         lines = ["companies_house_registered_number,sic_code"]
@@ -884,14 +883,12 @@ class TestLoadSicSectorIds:
         assert ids is None
 
     def test_returns_none_for_missing_file(self, tmp_path):
-        from pathlib import Path
 
         sector, ids = _load_sic_sector_ids(Path(tmp_path) / "nope.csv", "01873499")
         assert sector is None
         assert ids is None
 
     def test_returns_none_for_wrong_columns(self, tmp_path):
-        from pathlib import Path
 
         p = Path(str(tmp_path)) / "bad.csv"
         p.write_text("foo,bar\n1,2\n")
@@ -900,7 +897,6 @@ class TestLoadSicSectorIds:
         assert ids is None
 
     def test_parquet_format(self, tmp_path):
-        from pathlib import Path
 
         p = Path(str(tmp_path)) / "sic.parquet"
         pl.DataFrame(
@@ -930,7 +926,6 @@ class TestLoadSicSectorIds:
 
 def _make_parquet_with_peers(tmp_path) -> object:
     """Write a parquet with one target company + 20 peer companies."""
-    from pathlib import Path
 
     target = [
         _make_row(
@@ -1029,8 +1024,6 @@ class TestSectorBenchmarkIntegration:
         for i in range(20):
             sic_code = "62020" if i < 10 else "47710"  # half tech, half retail
             sic_rows.append((f"PEER{i:04d}", sic_code))
-
-        from pathlib import Path
 
         sic_path = Path(str(tmp_path)) / "sic.csv"
         lines = ["companies_house_registered_number,sic_code"]

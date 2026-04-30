@@ -26,7 +26,7 @@ from __future__ import annotations
 import logging
 from datetime import date, datetime
 from typing import TYPE_CHECKING, Any
-from urllib.parse import urlencode
+from urllib.parse import quote, urlencode
 
 if TYPE_CHECKING:
     from uk_data.storage.raw import RawStore
@@ -211,9 +211,7 @@ def _fetch_timeseries(series_id: str, limit: int = 20) -> list[dict[str, Any]]:
         sid_upper,
         _DEFAULT_URI_TEMPLATE.format(sid=series_id.lower()),
     )
-    import urllib.parse
-
-    url = f"{_ONS_API}/data?uri={urllib.parse.quote(content_uri, safe='/')}"
+    url = f"{_ONS_API}/data?uri={quote(content_uri, safe='/')}"
     try:
         data = retry(get_json, url)
     except Exception:

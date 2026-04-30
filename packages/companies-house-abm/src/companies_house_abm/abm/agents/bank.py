@@ -6,6 +6,7 @@ and must satisfy regulatory capital and reserve requirements.
 
 from __future__ import annotations
 
+import random
 from typing import TYPE_CHECKING
 
 from mesa import Agent, Model
@@ -343,8 +344,6 @@ class Bank(Agent):
         )
         rate_type = "fixed"
         if self._mortgage_config:
-            import random
-
             rate_type = (
                 "fixed"
                 if random.random() < self._mortgage_config.fixed_rate_share

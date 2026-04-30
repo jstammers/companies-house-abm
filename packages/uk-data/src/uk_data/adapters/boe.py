@@ -115,8 +115,6 @@ def _build_iadb_url(
     """
     if from_year is None:
         if years_back is not None:
-            from datetime import date
-
             from_year = date.today().year - years_back
         else:
             from_year = _DEFAULT_IADB_FROM_YEAR

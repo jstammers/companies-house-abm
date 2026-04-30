@@ -9,6 +9,8 @@ import pytest
 if TYPE_CHECKING:
     from pathlib import Path
 
+from typer.testing import CliRunner
+
 from companies_house_abm.abm.sector_model import (
     SECTOR_PROFILES,
     UK_EMPLOYMENT,
@@ -18,6 +20,7 @@ from companies_house_abm.abm.sector_model import (
     create_sector_representative_simulation,
     get_sector_profiles,
 )
+from companies_house_abm.cli import app
 
 # ---------------------------------------------------------------------------
 # SectorProfile
@@ -197,9 +200,6 @@ class TestCreateSectorRepresentativeSimulation:
 
 class TestRunSectorModelCli:
     def test_creates_csv_output(self, tmp_path: Path) -> None:
-        from typer.testing import CliRunner
-
-        from companies_house_abm.cli import app
 
         runner = CliRunner()
         result = runner.invoke(
@@ -224,9 +224,6 @@ class TestRunSectorModelCli:
         assert len(lines) == 6  # header + 5 periods
 
     def test_sector_summary_in_output(self, tmp_path: Path) -> None:
-        from typer.testing import CliRunner
-
-        from companies_house_abm.cli import app
 
         runner = CliRunner()
         result = runner.invoke(
@@ -249,9 +246,6 @@ class TestRunSectorModelCli:
         assert "financial" in result.output
 
     def test_evaluate_writes_report(self, tmp_path: Path) -> None:
-        from typer.testing import CliRunner
-
-        from companies_house_abm.cli import app
 
         runner = CliRunner()
         result = runner.invoke(

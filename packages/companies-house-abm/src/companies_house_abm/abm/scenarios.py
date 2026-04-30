@@ -20,6 +20,15 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any
 
+from uk_data.adapters.historical import (
+    QUARTERS,
+    fetch_bank_rate_quarterly,
+    fetch_earnings_index_quarterly,
+    fetch_hpi_quarterly,
+    fetch_mortgage_rate_quarterly,
+    fetch_transactions_quarterly,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -84,8 +93,6 @@ class HistoricalScenario:
     @property
     def quarter_labels(self) -> list[str]:
         """Return the calendar quarter label for each period."""
-        from uk_data.adapters.historical import QUARTERS
-
         try:
             start_idx = QUARTERS.index(self.start_quarter)
         except ValueError:
@@ -134,15 +141,6 @@ def build_uk_2013_2024() -> HistoricalScenario:
     Returns:
         A fully populated :class:`HistoricalScenario`.
     """
-    from uk_data.adapters.historical import (
-        QUARTERS,
-        fetch_bank_rate_quarterly,
-        fetch_earnings_index_quarterly,
-        fetch_hpi_quarterly,
-        fetch_mortgage_rate_quarterly,
-        fetch_transactions_quarterly,
-    )
-
     start = "2013Q1"
     end = "2024Q4"
     start_idx = QUARTERS.index(start)

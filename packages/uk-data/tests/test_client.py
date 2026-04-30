@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from uk_data import EntityTypeInfo, EventTypeInfo, SourceInfo, UKDataClient
+from uk_data import EntityTypeInfo, EventTypeInfo, SourceInfo, UKDataClient, cli
 
 
 class TestUKDataClientListSources:
@@ -161,7 +161,6 @@ class TestUKDataClientGetSeries:
 
 class TestCliGetSeriesCommand:
     def test_get_series_cmd_forwards_start_and_end_dates(self, monkeypatch) -> None:
-        from uk_data import cli
 
         class _ClientStub:
             def __init__(self) -> None:
@@ -203,7 +202,6 @@ class TestCliGetSeriesCommand:
         }
 
     def test_get_series_cmd_limit_only_unchanged(self, monkeypatch) -> None:
-        from uk_data import cli
 
         class _ClientStub:
             def __init__(self) -> None:

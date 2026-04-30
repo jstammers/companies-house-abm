@@ -11,7 +11,19 @@ Run selectively with::
 
 from __future__ import annotations
 
+import socket
+
 import pytest
+
+from companies_house_abm.abm.scenarios import build_uk_2013_2024
+from uk_data.adapters.historical import (
+    fetch_all_historical,
+    fetch_bank_rate_quarterly,
+    fetch_earnings_index_quarterly,
+    fetch_hpi_quarterly,
+    fetch_mortgage_approvals_quarterly,
+    fetch_mortgage_rate_quarterly,
+)
 
 pytestmark = pytest.mark.integration
 
@@ -22,7 +34,6 @@ pytestmark = pytest.mark.integration
 
 def _is_network_available() -> bool:
     """Return True if we can reach at least one external host."""
-    import socket
 
     for host in ("api.ons.gov.uk", "www.bankofengland.co.uk"):
         try:
@@ -50,9 +61,6 @@ class TestLiveHpiDownload:
     """Land Registry UK HPI SPARQL endpoint."""
 
     def test_hpi_returns_plausible_data(self):
-        from uk_data.adapters.historical import (
-            fetch_hpi_quarterly,
-        )
 
         data = fetch_hpi_quarterly(start="2020Q1", end="2020Q4")
         # Should return 4 quarters of data
@@ -64,9 +72,6 @@ class TestLiveHpiDownload:
             )
 
     def test_hpi_full_window_48_quarters(self):
-        from uk_data.adapters.historical import (
-            fetch_hpi_quarterly,
-        )
 
         data = fetch_hpi_quarterly()
         # At a minimum we should get near 48 quarters (some early quarters may
@@ -83,9 +88,6 @@ class TestLiveBankRateDownload:
     """BoE IADB Bank Rate series."""
 
     def test_bank_rate_returns_data(self):
-        from uk_data.adapters.historical import (
-            fetch_bank_rate_quarterly,
-        )
 
         data = fetch_bank_rate_quarterly(start="2023Q1", end="2023Q4")
         assert len(data) >= 1
@@ -96,9 +98,6 @@ class TestLiveBankRateDownload:
 
     def test_bank_rate_2020_low(self):
         """Bank Rate was cut to 0.10% in March 2020."""
-        from uk_data.adapters.historical import (
-            fetch_bank_rate_quarterly,
-        )
 
         data = fetch_bank_rate_quarterly(start="2020Q2", end="2020Q2")
         if data:
@@ -108,9 +107,6 @@ class TestLiveBankRateDownload:
             )
 
     def test_bank_rate_full_window(self):
-        from uk_data.adapters.historical import (
-            fetch_bank_rate_quarterly,
-        )
 
         data = fetch_bank_rate_quarterly()
         assert len(data) >= 40
@@ -122,9 +118,6 @@ class TestLiveMortgageRateDownload:
     """BoE IADB household lending rate series."""
 
     def test_mortgage_rate_returns_data(self):
-        from uk_data.adapters.historical import (
-            fetch_mortgage_rate_quarterly,
-        )
 
         data = fetch_mortgage_rate_quarterly(start="2022Q1", end="2022Q4")
         assert len(data) >= 1
@@ -134,9 +127,6 @@ class TestLiveMortgageRateDownload:
             )
 
     def test_mortgage_rate_full_window(self):
-        from uk_data.adapters.historical import (
-            fetch_mortgage_rate_quarterly,
-        )
 
         data = fetch_mortgage_rate_quarterly()
         assert len(data) >= 40
@@ -150,9 +140,6 @@ class TestLiveEarningsDownload:
     """ONS Average Weekly Earnings (KAB9) series."""
 
     def test_earnings_returns_data(self):
-        from uk_data.adapters.historical import (
-            fetch_earnings_index_quarterly,
-        )
 
         data = fetch_earnings_index_quarterly(start="2021Q1", end="2021Q4")
         assert len(data) >= 1
@@ -163,9 +150,6 @@ class TestLiveEarningsDownload:
             )
 
     def test_earnings_grow_over_decade(self):
-        from uk_data.adapters.historical import (
-            fetch_earnings_index_quarterly,
-        )
 
         data = fetch_earnings_index_quarterly()
         if len(data) >= 10:
@@ -179,9 +163,6 @@ class TestLiveMortgageApprovalsDownload:
     """BoE IADB mortgage approvals series."""
 
     def test_approvals_returns_data(self):
-        from uk_data.adapters.historical import (
-            fetch_mortgage_approvals_quarterly,
-        )
 
         data = fetch_mortgage_approvals_quarterly(start="2019Q1", end="2019Q4")
         assert len(data) >= 1
@@ -193,9 +174,6 @@ class TestLiveMortgageApprovalsDownload:
 
     def test_covid_dip_in_approvals(self):
         """Mortgage approvals collapsed in 2020Q2 during lockdown."""
-        from uk_data.adapters.historical import (
-            fetch_mortgage_approvals_quarterly,
-        )
 
         data = fetch_mortgage_approvals_quarterly(start="2020Q1", end="2020Q3")
         if len(data) >= 3:
@@ -210,9 +188,6 @@ class TestLiveFetchAllHistorical:
     """End-to-end: fetch_all_historical returns all six series."""
 
     def test_all_series_present(self):
-        from uk_data.adapters.historical import (
-            fetch_all_historical,
-        )
 
         result = fetch_all_historical()
         expected_keys = {
@@ -226,9 +201,6 @@ class TestLiveFetchAllHistorical:
         assert set(result.keys()) == expected_keys
 
     def test_all_series_non_empty(self):
-        from uk_data.adapters.historical import (
-            fetch_all_historical,
-        )
 
         result = fetch_all_historical()
         for key, series in result.items():
@@ -236,7 +208,6 @@ class TestLiveFetchAllHistorical:
 
     def test_scenario_built_from_live_data(self):
         """build_uk_2013_2024 should succeed with live data."""
-        from companies_house_abm.abm.scenarios import build_uk_2013_2024
 
         scenario = build_uk_2013_2024()
         assert scenario.n_periods == 48

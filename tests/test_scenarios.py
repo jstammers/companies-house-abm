@@ -6,10 +6,17 @@ from unittest.mock import patch
 
 import pytest
 
+from companies_house_abm.abm.scenarios import (
+    HistoricalScenario,
+    RegulatoryEvent,
+    _compute_growth_rates,
+    _series_to_values,
+    build_uk_2013_2024,
+)
+
 
 class TestRegulatoryEvent:
     def test_event_creation(self):
-        from companies_house_abm.abm.scenarios import RegulatoryEvent
 
         event = RegulatoryEvent(
             period=5,
@@ -23,7 +30,6 @@ class TestRegulatoryEvent:
         assert event.housing_overrides == {}
 
     def test_event_frozen(self):
-        from companies_house_abm.abm.scenarios import RegulatoryEvent
 
         event = RegulatoryEvent(period=0, quarter="2013Q1", description="x")
         with pytest.raises(AttributeError):
@@ -32,7 +38,6 @@ class TestRegulatoryEvent:
 
 class TestHistoricalScenario:
     def test_scenario_creation(self):
-        from companies_house_abm.abm.scenarios import HistoricalScenario
 
         scenario = HistoricalScenario(
             name="test",
@@ -48,7 +53,6 @@ class TestHistoricalScenario:
         assert len(scenario.bank_rate_path) == 4
 
     def test_quarter_labels(self):
-        from companies_house_abm.abm.scenarios import HistoricalScenario
 
         scenario = HistoricalScenario(
             name="test",
@@ -74,7 +78,6 @@ class TestBuildUk2013_2024:
             yield
 
     def test_builds_scenario(self):
-        from companies_house_abm.abm.scenarios import build_uk_2013_2024
 
         scenario = build_uk_2013_2024()
         assert scenario.name == "uk_2013_2024"
@@ -82,7 +85,6 @@ class TestBuildUk2013_2024:
         assert scenario.n_periods == 48
 
     def test_bank_rate_path_length(self):
-        from companies_house_abm.abm.scenarios import build_uk_2013_2024
 
         scenario = build_uk_2013_2024()
         assert len(scenario.bank_rate_path) == 48
@@ -90,7 +92,6 @@ class TestBuildUk2013_2024:
         assert all(0 <= r <= 0.10 for r in scenario.bank_rate_path)
 
     def test_mortgage_rate_path(self):
-        from companies_house_abm.abm.scenarios import build_uk_2013_2024
 
         scenario = build_uk_2013_2024()
         assert len(scenario.mortgage_rate_path) == 48
@@ -110,7 +111,6 @@ class TestBuildUk2013_2024:
         assert avg_spread > 0
 
     def test_income_growth_path(self):
-        from companies_house_abm.abm.scenarios import build_uk_2013_2024
 
         scenario = build_uk_2013_2024()
         assert len(scenario.income_growth_path) == 48
@@ -118,14 +118,12 @@ class TestBuildUk2013_2024:
         assert scenario.income_growth_path[0] == pytest.approx(0.0)
 
     def test_actual_hpi(self):
-        from companies_house_abm.abm.scenarios import build_uk_2013_2024
 
         scenario = build_uk_2013_2024()
         assert len(scenario.actual_hpi) == 48
         assert scenario.actual_hpi[0] == pytest.approx(167_000, rel=0.05)
 
     def test_regulatory_events(self):
-        from companies_house_abm.abm.scenarios import build_uk_2013_2024
 
         scenario = build_uk_2013_2024()
         assert len(scenario.regulatory_events) > 0
@@ -136,7 +134,6 @@ class TestBuildUk2013_2024:
         assert all(0 <= e.period < 48 for e in scenario.regulatory_events)
 
     def test_initial_average_price(self):
-        from companies_house_abm.abm.scenarios import build_uk_2013_2024
 
         scenario = build_uk_2013_2024()
         assert scenario.initial_average_price == pytest.approx(167_000, rel=0.05)
@@ -144,7 +141,6 @@ class TestBuildUk2013_2024:
 
 class TestSeriesHelpers:
     def test_series_to_values_fills_forward(self):
-        from companies_house_abm.abm.scenarios import _series_to_values
 
         series = [
             {"quarter": "2020Q1", "value": 100},
@@ -155,7 +151,6 @@ class TestSeriesHelpers:
         assert result == [100.0, 100.0, 200.0, 200.0]
 
     def test_compute_growth_rates(self):
-        from companies_house_abm.abm.scenarios import _compute_growth_rates
 
         levels = [100.0, 110.0, 121.0, 108.9]
         rates = _compute_growth_rates(levels)

@@ -29,6 +29,7 @@ import numpy as np
 from companies_house_abm.abm.agents.bank import Bank
 from companies_house_abm.abm.agents.firm import Firm
 from companies_house_abm.abm.agents.household import Household
+from companies_house_abm.abm.config import load_config
 from companies_house_abm.abm.model import Simulation
 
 if TYPE_CHECKING:
@@ -262,8 +263,6 @@ def create_sector_representative_simulation(
         sim = create_sector_representative_simulation(periods=80)
         result = sim.run()
     """
-    from companies_house_abm.abm.config import load_config
-
     # Start from the YAML config for behavioral parameters
     base_cfg = load_config(config_path)
 

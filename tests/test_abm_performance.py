@@ -15,6 +15,7 @@ Or run it as a standalone script::
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import sys
 import time
@@ -22,6 +23,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
+
+from companies_house_abm.abm.config import ModelConfig
+from companies_house_abm.abm.model import Simulation
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -102,12 +106,10 @@ class BenchmarkResult:
 
 def _build_python_config(n_firms: int, n_households: int, n_banks: int):
     """Return a ModelConfig sized to the given agent counts."""
-    from companies_house_abm.abm.config import ModelConfig
 
     base = ModelConfig()
 
     # Use dataclasses.replace to override the capped counts.
-    import dataclasses
 
     firms_cfg = dataclasses.replace(base.firms, sample_size=n_firms)
     hh_cfg = dataclasses.replace(base.households, count=n_households)
@@ -125,7 +127,6 @@ def _build_python_config(n_firms: int, n_households: int, n_banks: int):
 
 def _time_python(n_firms: int, n_households: int, n_banks: int, periods: int) -> float:
     """Run one Python simulation and return wall-clock seconds."""
-    from companies_house_abm.abm.model import Simulation
 
     cfg = _build_python_config(n_firms, n_households, n_banks)
     sim = Simulation(cfg)
@@ -142,7 +143,7 @@ def _time_rust(n_firms: int, n_households: int, n_banks: int, periods: int) -> f
     Returns ``float('nan')`` if the Rust extension is not installed.
     """
     try:
-        import companies_house_abm._rust_abm as rust_abm  # type: ignore[import]
+        import companies_house_abm._rust_abm as rust_abm  # type: ignore[import]  # noqa: PLC0415
     except ImportError:
         return float("nan")
 

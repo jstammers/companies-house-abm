@@ -19,7 +19,9 @@ from companies_house_abm.abm.config import (
     SimulationConfig,
     TaylorRuleConfig,
 )
+from companies_house_abm.abm.evaluation import evaluate_historical
 from companies_house_abm.abm.historical import HistoricalResult, HistoricalSimulation
+from companies_house_abm.abm.model import PeriodRecord
 from companies_house_abm.abm.scenarios import HistoricalScenario, RegulatoryEvent
 
 
@@ -113,7 +115,6 @@ class TestHistoricalResult:
         sim_prices: list[float],
         actual_prices: list[float],
     ) -> HistoricalResult:
-        from companies_house_abm.abm.model import PeriodRecord
 
         records = [
             PeriodRecord(period=i, average_house_price=p)
@@ -184,7 +185,6 @@ class TestHistoricalResult:
         assert math.isnan(result.directional_accuracy())
 
     def test_simulated_transactions_property(self):
-        from companies_house_abm.abm.model import PeriodRecord
 
         records = [
             PeriodRecord(period=0, housing_transactions=10),
@@ -198,7 +198,6 @@ class TestHistoricalResult:
         assert math.isnan(result.price_rmse_pct())
 
     def test_price_rmse_pct_with_zero_mean(self):
-        from companies_house_abm.abm.model import PeriodRecord
 
         records = [PeriodRecord(period=0, average_house_price=100.0)]
         result = HistoricalResult(records=records, actual_hpi=[0.0])
@@ -277,7 +276,6 @@ class TestPearsonEdgeCases:
     """Test edge cases of Pearson correlation via the public price_correlation API."""
 
     def _make_result(self, sim: list[float], actual: list[float]) -> HistoricalResult:
-        from companies_house_abm.abm.model import PeriodRecord
 
         records = [
             PeriodRecord(period=i, average_house_price=p) for i, p in enumerate(sim)
@@ -299,8 +297,6 @@ class TestPearsonEdgeCases:
 
 class TestHistoricalEvaluation:
     def test_evaluate_historical(self):
-        from companies_house_abm.abm.evaluation import evaluate_historical
-        from companies_house_abm.abm.model import PeriodRecord
 
         records = [
             PeriodRecord(
@@ -330,8 +326,6 @@ class TestHistoricalEvaluation:
         assert "Historical Evaluation" in summary
 
     def test_evaluate_historical_report_as_dict(self):
-        from companies_house_abm.abm.evaluation import evaluate_historical
-        from companies_house_abm.abm.model import PeriodRecord
 
         records = [
             PeriodRecord(
@@ -354,8 +348,6 @@ class TestHistoricalEvaluation:
         assert "cross_sectional" in d
 
     def test_evaluate_historical_summary_includes_cross_sectional(self):
-        from companies_house_abm.abm.evaluation import evaluate_historical
-        from companies_house_abm.abm.model import PeriodRecord
 
         records = [
             PeriodRecord(

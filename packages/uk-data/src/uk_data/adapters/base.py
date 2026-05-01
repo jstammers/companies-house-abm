@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from uk_data.models import Entity, Event, TimeSeries
+    from uk_data.storage.canonical import CanonicalStore
     from uk_data.storage.raw import RawStore
 
 
@@ -64,8 +65,14 @@ class BaseAdapter(ABC):  # noqa: B024
 
     _source_name: str = "unknown"
 
-    def __init__(self, store: RawStore | None = None) -> None:
+    def __init__(
+        self,
+        store: RawStore | None = None,
+        *,
+        canonical_store: CanonicalStore | None = None,
+    ) -> None:
         self._store = store
+        self._canonical = canonical_store
 
     # ------------------------------------------------------------------
     # Raw storage helpers

@@ -26,7 +26,7 @@ class UKDataClient:
 
     def __init__(self, *, canonical_store: CanonicalStore | None = None) -> None:
         self.adapters = {
-            "ons": ONSAdapter(),
+            "ons": ONSAdapter(canonical_store=canonical_store),
             "boe": BoEAdapter(),
             "hmrc": HMRCAdapter(),
             "land_registry": LandRegistryAdapter(),

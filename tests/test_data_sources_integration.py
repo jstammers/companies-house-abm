@@ -30,13 +30,7 @@ from uk_data.adapters.hmrc import (
     get_vat_rate,
 )
 from uk_data.adapters.land_registry import fetch_regional_prices, fetch_uk_average_price
-from uk_data.adapters.ons import (
-    _DEFAULT_URI_TEMPLATE,
-    _FALLBACK_AFFORDABILITY,
-    _FALLBACK_RENTAL_GROWTH,
-    _SERIES_URI,
-    _fetch_timeseries,
-)
+from uk_data.adapters.ons import _fetch_timeseries
 from uk_data.utils import http as _http
 from uk_data.utils.http import clear_cache
 from uk_data.workflows.boe import (
@@ -46,6 +40,8 @@ from uk_data.workflows.boe import (
     get_aggregate_capital_ratio,
 )
 from uk_data.workflows.ons import (
+    _FALLBACK_AFFORDABILITY,
+    _FALLBACK_RENTAL_GROWTH,
     fetch_affordability_ratio,
     fetch_gdp,
     fetch_household_income,
@@ -477,132 +473,59 @@ class TestHmrcFunctionsIntegration:
 
 
 # ---------------------------------------------------------------------------
-# ONS _fetch_timeseries URL-construction unit tests
+# ONS _fetch_timeseries URL-construction unit tests (dataset API)
 # ---------------------------------------------------------------------------
 
 
 class TestOnsFetchTimeseriesUrlConstruction:
-    """Verify _fetch_timeseries builds the correct ?uri= URL for each series."""
+    """Verify _fetch_timeseries builds dataset-API URLs for each series."""
 
     def _captured_urls(self, series_ids: list[str]) -> list[str]:
-        """Return the URLs that _fetch_timeseries would request for each series."""
-
         _http.clear_cache()
         captured: list[str] = []
 
-        def _fake_retry(fn: object, url: str) -> dict:  # type: ignore[type-arg]
+        def _fake_get_json(url: str) -> dict:  # type: ignore[type-arg]
             captured.append(url)
-            return {"quarters": [{"date": "2024 Q4", "value": "100"}]}
+            return {
+                "observations": [
+                    {
+                        "dimensions": {"time": {"id": "2024Q4"}},
+                        "observation": "100",
+                    }
+                ]
+            }
 
-        with patch("uk_data.adapters.ons.retry", side_effect=_fake_retry):
+        with patch("uk_data.adapters.ons.get_json", side_effect=_fake_get_json):
             for sid in series_ids:
                 _fetch_timeseries(sid, limit=1)
 
         return captured
 
-    def test_abmi_uses_gdp_topic(self) -> None:
+    def test_url_uses_dataset_observations_endpoint(self) -> None:
+        urls = self._captured_urls(["ABMI", "MGSX", "KAB9"])
+        for url in urls:
+            assert "/datasets/" in url, f"Expected /datasets/ path in {url!r}"
+            assert "/observations" in url, f"Expected /observations endpoint in {url!r}"
+            assert "/v1/data?uri=" not in url, (
+                f"Legacy Zebedee URL pattern still used: {url!r}"
+            )
+
+    def test_abmi_routes_to_ukea_dataset(self) -> None:
         urls = self._captured_urls(["ABMI"])
         assert len(urls) == 1
-        assert "uri=" in urls[0]
-        assert "abmi" in urls[0]
-        assert "ukea" in urls[0]
-        # Must NOT use the old path pattern
-        assert "/timeseries/abmi/dataset/" not in urls[0]
+        assert "/datasets/ukea/" in urls[0]
+        assert "timeseries=ABMI" in urls[0]
 
-    def test_rphq_uses_gdp_topic(self) -> None:
-        urls = self._captured_urls(["RPHQ"])
-        assert "rphq" in urls[0]
-        assert "ukea" in urls[0]
-
-    def test_nrjs_uses_gdp_topic(self) -> None:
-        urls = self._captured_urls(["NRJS"])
-        assert "nrjs" in urls[0]
-        assert "ukea" in urls[0]
-
-    def test_mgsx_uses_lms_topic(self) -> None:
-        urls = self._captured_urls(["MGSX"])
-        assert "mgsx" in urls[0]
-        assert "lms" in urls[0]
-        assert "unemployment" in urls[0]
-
-    def test_kab9_uses_lms_topic(self) -> None:
-        urls = self._captured_urls(["KAB9"])
-        assert "kab9" in urls[0]
-        assert "lms" in urls[0]
-        assert "earnings" in urls[0]
-
-    def test_url_uses_data_endpoint_with_uri_param(self) -> None:
-        """All URLs must use /v1/data?uri= not /v1/timeseries/...."""
-        urls = self._captured_urls(["ABMI", "MGSX", "KAB9", "L2KL"])
+    def test_lms_series_route_to_lms_dataset(self) -> None:
+        urls = self._captured_urls(["MGSX", "KAB9"])
         for url in urls:
-            assert "/v1/data" in url, f"Expected /v1/data endpoint in {url!r}"
-            assert "uri=" in url, f"Expected uri= param in {url!r}"
-            assert "/timeseries/" not in url.split("uri=")[0], (
-                f"Old path-segment style used before uri= in {url!r}"
-            )
+            assert "/datasets/lms/" in url
 
-    def test_gva_series_use_gdp_topic(self) -> None:
-        urls = self._captured_urls(["L2KL", "L2N8", "L2NC", "L2NE"])
-        for url in urls:
-            assert "grossdomesticproductgdp" in url
-            assert "ukea" in url
-
-
-class TestOnsSeriesUriMapping:
-    """Verify _SERIES_URI and _DEFAULT_URI_TEMPLATE are internally consistent."""
-
-    def test_series_uri_keys_are_uppercase(self) -> None:
-
-        for key in _SERIES_URI:
-            assert key == key.upper(), f"Key {key!r} should be uppercase"
-
-    def test_series_uri_values_start_with_slash(self) -> None:
-
-        for sid, uri in _SERIES_URI.items():
-            assert uri.startswith("/"), f"URI for {sid!r} should start with /"
-
-    def test_series_uri_values_contain_timeseries(self) -> None:
-
-        for sid, uri in _SERIES_URI.items():
-            assert "timeseries" in uri.lower(), (
-                f"URI for {sid!r} does not contain 'timeseries': {uri!r}"
-            )
-
-    def test_default_template_substitution(self) -> None:
-
-        result = _DEFAULT_URI_TEMPLATE.format(sid="abcd")
-        assert "abcd" in result
-        assert result.startswith("/")
-
-    def test_only_confirmed_gva_series_present(self) -> None:
-        """Only L2KL, L2N8, L2NC, L2NE should be in _SERIES_URI (confirmed working)."""
-
-        confirmed_gva = {"L2KL", "L2N8", "L2NC", "L2NE"}
-        removed_gva = {
-            "L2KP",
-            "L2ND",
-            "L2NF",
-            "L2NG",
-            "L2NI",
-            "L2NJ",
-            "L2NK",
-            "L2NL",
-            "L2NM",
-        }
-        for sid in confirmed_gva:
-            assert sid in _SERIES_URI, (
-                f"Confirmed GVA series {sid!r} missing from _SERIES_URI"
-            )
-        for sid in removed_gva:
-            assert sid not in _SERIES_URI, (
-                f"Broken GVA series {sid!r} should not be in _SERIES_URI"
-            )
-
-    def test_hp7a_and_d7ra_not_in_series_uri(self) -> None:
-        """HP7A and D7RA are not accessible via Zebedee; should not be mapped."""
-
-        assert "HP7A" not in _SERIES_URI, "HP7A not available on Zebedee API"
-        assert "D7RA" not in _SERIES_URI, "D7RA not available on Zebedee API"
+    def test_unregistered_series_falls_back_to_ukea(self) -> None:
+        """GVA series like L2KL aren't in _SERIES_DATASET; fall back to ukea."""
+        urls = self._captured_urls(["L2KL"])
+        assert "/datasets/ukea/" in urls[0]
+        assert "timeseries=L2KL" in urls[0]
 
 
 # ---------------------------------------------------------------------------

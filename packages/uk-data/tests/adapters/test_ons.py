@@ -2,31 +2,37 @@
 
 from __future__ import annotations
 
+from typing import Any
 from unittest.mock import patch
 
 import pytest
 
-from uk_data.adapters.ons import ONSAdapter
-from uk_data.adapters.ons_models import (
-    Observation,
-    ObservationDimensions,
-    ONSObservation,
-    TimeDimension,
-)
+from uk_data.adapters.ons import _SERIES_DATASET, ONSAdapter
+from uk_data.storage.canonical import CanonicalStore
+from uk_data.storage.raw import RawStore
 
 ONS_SERIES_IDS = ["ABMI", "RPHQ", "NRJS", "MGSX", "KAB9", "HP7A", "D7RA"]
 
 
-def _make_ons_observation(rows: list[dict[str, str]]) -> ONSObservation:
-    """Build an ONSObservation with one Observation per row dict."""
-    return ONSObservation(
-        observations=[
-            Observation(
-                dimensions=ObservationDimensions(time=TimeDimension(id=row["date"])),
-                observation=float(row["value"]),
-            )
+def _raw_payload(rows: list[dict[str, str]]) -> dict[str, Any]:
+    """Build a raw dataset-API observation payload (plain dicts, not pydantic)."""
+    return {
+        "dimensions": {},
+        "observations": [
+            {
+                "dimensions": {"time": {"id": row["date"]}},
+                "observation": row["value"],
+            }
             for row in rows
-        ]
+        ],
+        "limit": len(rows),
+    }
+
+
+def _make_adapter(tmp_path) -> ONSAdapter:
+    return ONSAdapter(
+        store=RawStore(tmp_path),
+        canonical_store=CanonicalStore(tmp_path),
     )
 
 
@@ -51,132 +57,220 @@ class TestONSAdapterAvailableSeries:
         assert len(series) == len(set(series))
 
 
-class TestONSAdapterFetchSeriesOffline:
-    """Mock the dataset observation layer so ONS tests never hit the network."""
+class TestONSAdapterExtract:
+    """Stage 1: extract fetches raw JSON and writes it to the RawStore."""
 
-    def _mock_quarterly_observations(self) -> list[dict[str, str]]:
-        return [
+    def test_extract_writes_raw_payload_and_returns_key(self, tmp_path) -> None:
+        adapter = _make_adapter(tmp_path)
+        rows = [{"date": "2024Q1", "value": "100.0"}]
+        with patch(
+            "uk_data.adapters.ons.get_json",
+            return_value=_raw_payload(rows),
+        ) as mocked:
+            key = adapter.extract(
+                "ukea", "time-series", "latest", timeseries="ABMI", time="*"
+            )
+
+        assert mocked.call_count == 1
+        # The raw payload was persisted under a deterministic key.
+        files = list((tmp_path / "raw" / "ons" / key).glob("*.json"))
+        assert len(files) == 1
+        assert "timeseries=ABMI" in key
+        assert "time=*" in key
+
+    def test_extract_does_not_validate_with_pydantic(self, tmp_path) -> None:
+        """Extract must accept raw payloads that would fail pydantic validation."""
+        adapter = _make_adapter(tmp_path)
+        # Missing 'observations' key entirely; pydantic would still parse, but
+        # we verify get_json is called and payload reaches the store untouched.
+        weird_payload = {"foo": "bar", "garbage": [1, 2, 3]}
+        with patch("uk_data.adapters.ons.get_json", return_value=weird_payload):
+            key = adapter.extract("dataset_x", "time-series", "1")
+
+        files = list((tmp_path / "raw" / "ons" / key).glob("*.json"))
+        assert len(files) == 1
+
+    def test_extract_series_uses_registry(self, tmp_path) -> None:
+        adapter = _make_adapter(tmp_path)
+        rows = [{"date": "2024Q1", "value": "100.0"}]
+        with patch(
+            "uk_data.adapters.ons.get_json",
+            return_value=_raw_payload(rows),
+        ) as mocked:
+            key = adapter.extract_series("ABMI")
+
+        assert mocked.call_count == 1
+        cfg = _SERIES_DATASET["ABMI"]
+        assert cfg["dataset_id"] in mocked.call_args.args[0]
+        assert "timeseries=ABMI" in key
+
+    def test_extract_series_rejects_unknown_series(self, tmp_path) -> None:
+        adapter = _make_adapter(tmp_path)
+        with pytest.raises(ValueError, match="Unsupported ONS series"):
+            adapter.extract_series("NOT_A_SERIES")
+
+
+class TestONSAdapterTransform:
+    """Stage 2: transform validates raw and persists to canonical."""
+
+    def test_transform_round_trips_raw_to_canonical(self, tmp_path) -> None:
+        adapter = _make_adapter(tmp_path)
+        rows = [
             {"date": "2024Q1", "value": "100.0"},
             {"date": "2024Q2", "value": "101.5"},
         ]
+        with patch(
+            "uk_data.adapters.ons.get_json",
+            return_value=_raw_payload(rows),
+        ):
+            key = adapter.extract_series("ABMI")
 
-    def _mock_monthly_observations(self) -> list[dict[str, str]]:
-        return [
-            {"date": "2024-01-01", "value": "4.2"},
-            {"date": "2024-02-01", "value": "4.1"},
+        ts = adapter.transform(key)
+        assert ts.source == "ons"
+        assert ts.source_series_id == "ABMI"
+        assert ts.values.tolist() == pytest.approx([100.0, 101.5])
+
+        canonical_path = tmp_path / "canonical" / "timeseries" / "ons.parquet"
+        assert canonical_path.exists()
+
+    def test_transform_missing_key_raises(self, tmp_path) -> None:
+        adapter = _make_adapter(tmp_path)
+        with pytest.raises(FileNotFoundError):
+            adapter.transform("nonexistent/key")
+
+    def test_transform_invalid_payload_raises(self, tmp_path) -> None:
+        """Pydantic validation surfaces from transform, not extract."""
+        adapter = _make_adapter(tmp_path)
+        # Save a payload whose 'observation' values cannot be coerced to float.
+        bad_payload = {
+            "observations": [
+                {
+                    "dimensions": {"time": {"id": "2024Q1"}},
+                    "observation": "not-a-number",
+                }
+            ]
+        }
+        with patch("uk_data.adapters.ons.get_json", return_value=bad_payload):
+            key = adapter.extract_series("ABMI")
+
+        with pytest.raises(Exception):  # noqa: B017 — pydantic ValidationError
+            adapter.transform(key)
+
+
+class TestONSAdapterFetchSeriesFromCanonical:
+    """Stage 3: fetch_series reads canonical store only — never the network."""
+
+    def test_round_trip_returns_canonical_series(self, tmp_path) -> None:
+        adapter = _make_adapter(tmp_path)
+        rows = [
+            {"date": "2024Q1", "value": "100.0"},
+            {"date": "2024Q2", "value": "101.5"},
         ]
+        with patch(
+            "uk_data.adapters.ons.get_json",
+            return_value=_raw_payload(rows),
+        ):
+            key = adapter.extract_series("ABMI")
+            adapter.transform(key)
 
-    def _patch_get_observation(self, observations: list[dict[str, str]]) -> patch:  # type: ignore[type-arg]
-        return patch(
-            "uk_data.adapters.ons.ONSAdapter.get_observation",
-            return_value=_make_ons_observation(observations),
-        )
-
-    def test_manifest_backed_series_returns_timeseries_for_abmi(self) -> None:
-        with self._patch_get_observation(self._mock_quarterly_observations()):
-            adapter = ONSAdapter()
+        # fetch_series must not hit the network at all.
+        with patch(
+            "uk_data.adapters.ons.get_json",
+            side_effect=AssertionError("fetch_series should not call the API"),
+        ):
             ts = adapter.fetch_series("ABMI")
-            assert ts.source == "ons"
-            assert ts.source_series_id == "ABMI"
-            assert ts.latest_value == pytest.approx(101.5)
 
-    def test_manifest_backed_series_returns_timeseries_for_mgsx(self) -> None:
-        with self._patch_get_observation(self._mock_monthly_observations()):
-            adapter = ONSAdapter()
-            ts = adapter.fetch_series("MGSX")
-            assert ts.source == "ons"
-            assert ts.latest_value == pytest.approx(4.1)
+        assert ts.source == "ons"
+        assert ts.source_series_id == "ABMI"
+        assert ts.values.tolist() == pytest.approx([100.0, 101.5])
+        assert ts.latest_value == pytest.approx(101.5)
 
-    def test_manifest_backed_series_sets_source_and_source_series_id(self) -> None:
-        with self._patch_get_observation(self._mock_quarterly_observations()):
-            adapter = ONSAdapter()
-            ts = adapter.fetch_series("RPHQ")
-            assert ts.source == "ons"
-            assert ts.source_series_id == "RPHQ"
+    def test_fetch_series_raises_when_canonical_missing(self, tmp_path) -> None:
+        adapter = _make_adapter(tmp_path)
+        with pytest.raises(FileNotFoundError):
+            adapter.fetch_series("ABMI")
 
-    def test_manifest_backed_series_converts_dates_and_numeric_values(self) -> None:
-        with self._patch_get_observation(self._mock_quarterly_observations()):
-            adapter = ONSAdapter()
-            ts = adapter.fetch_series("NRJS")
-            assert ts.values.tolist() == pytest.approx([100.0, 101.5])
-            assert str(ts.timestamps[0]) == "2024-01-01T00:00:00.000000000"
-
-    def test_affordability_series_still_uses_fallback_point_series(self) -> None:
-        with patch(
-            "uk_data.adapters.ons._fetch_affordability_ratio",
-            return_value=8.5,
-        ):
-            adapter = ONSAdapter()
-            ts = adapter.fetch_series("HP7A")
-            assert ts.source == "ons"
-            assert ts.latest_value == pytest.approx(8.5)
-
-    def test_rental_growth_series_still_uses_fallback_point_series(self) -> None:
-        with patch(
-            "uk_data.adapters.ons._fetch_rental_growth",
-            return_value=0.03,
-        ):
-            adapter = ONSAdapter()
-            ts = adapter.fetch_series("D7RA")
-            assert ts.source == "ons"
-            assert ts.latest_value == pytest.approx(0.03)
-
-    def test_unsupported_series_raises(self) -> None:
+    def test_fetch_series_raises_without_canonical_store(self) -> None:
         adapter = ONSAdapter()
-        with pytest.raises(ValueError, match="Unsupported ONS series"):
-            adapter.fetch_series("NOTREAL_SERIES_ID")
+        with pytest.raises(FileNotFoundError):
+            adapter.fetch_series("ABMI")
 
-    def test_sdmx_series_applies_inclusive_date_window(self) -> None:
-        observations = [
+    def test_fetch_series_unsupported_id_raises(self, tmp_path) -> None:
+        adapter = _make_adapter(tmp_path)
+        with pytest.raises(ValueError, match="Unsupported ONS series"):
+            adapter.fetch_series("NOT_REAL")
+
+    def test_fetch_series_applies_inclusive_date_window(self, tmp_path) -> None:
+        adapter = _make_adapter(tmp_path)
+        rows = [
             {"date": "2023-12-31", "value": "1.0"},
             {"date": "2024-01-01", "value": "2.0"},
             {"date": "2024-03-31", "value": "3.0"},
             {"date": "2024-04-01", "value": "4.0"},
         ]
-        with self._patch_get_observation(observations):
-            adapter = ONSAdapter()
-            ts = adapter.fetch_series(
-                "ABMI",
-                start_date="2024-01-01",
-                end_date="2024-03-31",
-            )
+        with patch(
+            "uk_data.adapters.ons.get_json",
+            return_value=_raw_payload(rows),
+        ):
+            key = adapter.extract_series("ABMI")
+            adapter.transform(key)
 
+        ts = adapter.fetch_series(
+            "ABMI",
+            start_date="2024-01-01",
+            end_date="2024-03-31",
+        )
         assert ts.values.tolist() == pytest.approx([2.0, 3.0])
 
-    def test_sdmx_series_filters_before_limit(self) -> None:
-        observations = [
+    def test_fetch_series_filters_before_limit(self, tmp_path) -> None:
+        adapter = _make_adapter(tmp_path)
+        rows = [
             {"date": "2024-01-01", "value": "1.0"},
             {"date": "2024-02-01", "value": "2.0"},
             {"date": "2024-03-01", "value": "3.0"},
             {"date": "2024-04-01", "value": "4.0"},
         ]
-        with self._patch_get_observation(observations):
-            adapter = ONSAdapter()
-            ts = adapter.fetch_series(
-                "ABMI",
-                start_date="2024-01-01",
-                end_date="2024-03-01",
-                limit=2,
-            )
+        with patch(
+            "uk_data.adapters.ons.get_json",
+            return_value=_raw_payload(rows),
+        ):
+            key = adapter.extract_series("ABMI")
+            adapter.transform(key)
 
+        ts = adapter.fetch_series(
+            "ABMI",
+            start_date="2024-01-01",
+            end_date="2024-03-01",
+            limit=2,
+        )
         assert ts.values.tolist() == pytest.approx([2.0, 3.0])
 
-    def test_sdmx_series_passes_correct_dimensions_to_get_observation(self) -> None:
+    def test_fetch_series_for_affordability_via_dataset_api(self, tmp_path) -> None:
+        """HP7A flows through the dataset API like every other series."""
+        adapter = _make_adapter(tmp_path)
+        rows = [{"date": "2023", "value": "8.5"}]
         with patch(
-            "uk_data.adapters.ons.ONSAdapter.get_observation",
-            return_value=_make_ons_observation(
-                [{"date": "2024-01-01", "value": "2.0"}]
-            ),
-        ) as mocked_fetch:
-            adapter = ONSAdapter()
-            adapter.fetch_series(
-                "ABMI",
-                start_date="2024-01-01",
-                end_date="2024-03-31",
-                limit=5,
-            )
+            "uk_data.adapters.ons.get_json",
+            return_value=_raw_payload(rows),
+        ):
+            key = adapter.extract_series("HP7A")
+            adapter.transform(key)
 
-        mocked_fetch.assert_called_once()
-        _, kwargs = mocked_fetch.call_args
-        assert kwargs["timeseries"] == "ABMI"
-        assert kwargs["time"] == "*"
+        ts = adapter.fetch_series("HP7A")
+        assert ts.source == "ons"
+        assert ts.source_series_id == "HP7A"
+        assert ts.latest_value == pytest.approx(8.5)
+
+    def test_fetch_series_for_rental_growth_via_dataset_api(self, tmp_path) -> None:
+        """D7RA flows through the dataset API like every other series."""
+        adapter = _make_adapter(tmp_path)
+        rows = [{"date": "2024-01-01", "value": "0.05"}]
+        with patch(
+            "uk_data.adapters.ons.get_json",
+            return_value=_raw_payload(rows),
+        ):
+            key = adapter.extract_series("D7RA")
+            adapter.transform(key)
+
+        ts = adapter.fetch_series("D7RA")
+        assert ts.latest_value == pytest.approx(0.05)

@@ -14,7 +14,7 @@ from uk_data.adapters.ons_models import (
 
 
 class TestONSDatasetAPI:
-    def test_list_datasets_returns_typed_models_and_caches_by_args(self) -> None:
+    def test_get_datasets_returns_typed_models_and_caches_by_args(self) -> None:
         payload = {
             "items": [
                 {
@@ -28,10 +28,8 @@ class TestONSDatasetAPI:
         with patch("uk_data.adapters.ons.get_json", return_value=payload) as mocked_get:
             adapter = ONSAdapter()
 
-            first = adapter.list_datasets(limit=20, offset=0, dataset_type="timeseries")
-            second = adapter.list_datasets(
-                limit=20, offset=0, dataset_type="timeseries"
-            )
+            first = adapter.get_datasets(limit=20, offset=0, dataset_type="timeseries")
+            second = adapter.get_datasets(limit=20, offset=0, dataset_type="timeseries")
 
         assert first == second
         assert isinstance(first[0], ONSDatasetInfo)

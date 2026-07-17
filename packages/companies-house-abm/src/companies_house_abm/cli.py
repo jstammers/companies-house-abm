@@ -303,23 +303,25 @@ def fetch_data(
         companies_house_abm fetch-data --calibrate --output ./calibrated/
     """
 
-    from companies_house_abm.data_sources.boe import (
-        fetch_bank_rate_current,
-        fetch_lending_rates,
-        get_aggregate_capital_ratio,
+    from companies_house_abm.data_sources.input_output import (
+        fetch_input_output_table,
     )
-    from companies_house_abm.data_sources.hmrc import (
+    from uk_data.adapters.hmrc import (
         effective_tax_wedge,
         get_corporation_tax_rate,
         get_income_tax_bands,
         get_national_insurance_rates,
         get_vat_rate,
     )
-    from companies_house_abm.data_sources.ons import (
+    from uk_data.workflows.boe import (
+        fetch_bank_rate_current,
+        fetch_lending_rates,
+        get_aggregate_capital_ratio,
+    )
+    from uk_data.workflows.ons import (
         fetch_affordability_ratio,
         fetch_gdp,
         fetch_household_income,
-        fetch_input_output_table,
         fetch_labour_market,
         fetch_rental_growth,
         fetch_savings_ratio,
@@ -438,7 +440,7 @@ def fetch_data(
     # -------------------------------------------------- SIC codes (Companies House)
     if fetch_all or "sic" in requested:
         typer.echo("Fetching Companies House SIC codes (bulk download ~400 MB)...")
-        from companies_house_abm.data_sources.companies_house import fetch_sic_codes
+        from uk_data.adapters.companies_house import fetch_sic_codes
 
         sic_output = output / "sic_codes.parquet"
         try:
@@ -465,7 +467,7 @@ def fetch_data(
     # ---------------------------------------------------- HM Land Registry
     if fetch_all or "land-registry" in requested:
         typer.echo("Fetching HM Land Registry house price data...")
-        from companies_house_abm.data_sources.land_registry import (
+        from uk_data.adapters.land_registry import (
             fetch_regional_prices,
             fetch_uk_average_price,
         )

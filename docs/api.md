@@ -88,26 +88,9 @@ Reference docs are in `docs/uk-data-api.md`.
       show_source: true
       members_order: source
 
-### ONS
-
-::: companies_house_abm.data_sources.ons
-    options:
-      show_root_heading: true
-      show_source: true
-
-### Bank of England
-
-::: companies_house_abm.data_sources.boe
-    options:
-      show_root_heading: true
-      show_source: true
-
-### HMRC
-
-::: companies_house_abm.data_sources.hmrc
-    options:
-      show_root_heading: true
-      show_source: true
+Raw data fetchers (ONS, Bank of England, HMRC, etc.) live in the `uk-data`
+package — see [UK Data API Reference](uk-data-api.md). The modules below are the
+ABM-specific calibration helpers that consume them.
 
 ### Calibration
 

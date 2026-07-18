@@ -20,7 +20,7 @@ The downloaded file follows the naming pattern::
 The output of :func:`fetch_sic_codes` is a Polars DataFrame with columns
 ``companies_house_registered_number`` and ``sic_code`` that can be passed
 directly to
-:func:`~companies_house_abm.data_sources.firm_distributions.assign_sectors`.
+:func:`~companies_house_abm.calibration.firm_profiles.assign_sectors`.
 
 All data is published under the Companies House licence.
 See https://resources.companieshouse.gov.uk/legal/termsAndConditions.shtml.
@@ -233,7 +233,7 @@ def fetch_sic_codes(
 
     The resulting DataFrame has one row per company and can be passed
     directly to
-    :func:`~companies_house_abm.data_sources.firm_distributions.assign_sectors`
+    :func:`~companies_house_abm.calibration.firm_profiles.assign_sectors`
     via its *sic_path* argument (after saving to Parquet with
     *output_path*).
 

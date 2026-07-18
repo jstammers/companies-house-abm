@@ -15,7 +15,7 @@ The calibration workflow is:
 
 Example::
 
-    from companies_house_abm.abm.calibration import parameter_sweep
+    from companies_house_abm.calibration import parameter_sweep
     from companies_house_abm.abm.sector_model import (
         create_sector_representative_simulation,
     )
@@ -175,7 +175,7 @@ def parameter_sweep(
 
     Example::
 
-        from companies_house_abm.abm.calibration import parameter_sweep
+        from companies_house_abm.calibration import parameter_sweep
         from companies_house_abm.abm.sector_model import (
             create_sector_representative_simulation,
         )
@@ -272,7 +272,7 @@ def sensitivity_analysis(
 
     Example::
 
-        from companies_house_abm.abm.calibration import sensitivity_analysis
+        from companies_house_abm.calibration import sensitivity_analysis
         from companies_house_abm.abm.sector_model import (
             create_sector_representative_simulation,
         )

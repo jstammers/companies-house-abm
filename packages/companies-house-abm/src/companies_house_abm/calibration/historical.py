@@ -37,7 +37,7 @@ class HistoricalAdapter:
 
     Example::
 
-        >>> from companies_house_abm.data_sources.historical import HistoricalAdapter
+        >>> from companies_house_abm.calibration.historical import HistoricalAdapter
         >>> adapter = HistoricalAdapter()
         >>> ts = adapter.fetch_series("bank_rate", start="2020Q1", end="2020Q4")
         >>> ts.source

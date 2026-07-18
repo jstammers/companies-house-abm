@@ -1,4 +1,4 @@
-"""Integration tests for the data_sources module.
+"""Integration tests for the calibration layer and uk_data fetchers.
 
 These tests make REAL network requests to verify that each external data
 source can be correctly loaded.  They are marked with ``pytest.mark.integration``
@@ -19,8 +19,8 @@ from unittest.mock import patch
 import pytest
 
 from companies_house_abm.abm.config import ModelConfig
-from companies_house_abm.data_sources.calibration import calibrate_model
-from companies_house_abm.data_sources.input_output import fetch_input_output_table
+from companies_house_abm.calibration.from_data import calibrate_model
+from companies_house_abm.calibration.input_output import fetch_input_output_table
 from uk_data.adapters.boe import _FALLBACK_BANK_RATE, _build_iadb_url, _parse_iadb_csv
 from uk_data.adapters.hmrc import (
     compute_income_tax,

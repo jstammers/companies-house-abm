@@ -23,9 +23,10 @@ tree.
 3. **`companies_house_abm`** (`packages/companies-house-abm/`) — Agent-Based
    Model of the UK economy calibrated from Companies House data. Depends on
    `companies-house[xbrl,analysis]` and `uk-data`. Contains the ABM
-   agents/markets/simulation, calibration helpers under `data_sources/`
-   (data→`ModelConfig`, firm profiling, input-output), and a FastAPI economy
-   simulator webapp. Raw data retrieval lives in `uk-data`, not here.
+   agents/markets/simulation, a `calibration/` layer (data→`ModelConfig`, firm
+   profiling, input-output, parameter sweeps), a `reporting/` layer (simulation
+   evaluation), and a FastAPI economy simulator webapp. Raw data retrieval lives
+   in `uk-data`, not here.
 
 4. **`companies-house-abm-rust`** (`packages/rust-abm/`) — Optional Rust
    extension built with maturin. Outputs `companies_house_abm._rust_abm`. Not a
@@ -79,11 +80,14 @@ packages/
 │   └── src/companies_house_abm/
 │       ├── __init__.py               # Package version
 │       ├── cli.py                    # ABM CLI: ingest, fetch-data, profile-firms, serve, check-company
-│       ├── data_sources/             # ABM calibration helpers (retrieval lives in uk-data)
-│       │   ├── calibration.py        # Translate fetched data into ModelConfig parameters
-│       │   ├── firm_distributions.py # Firm data profiling and distribution fitting
+│       ├── calibration/             # Data → ModelConfig (retrieval lives in uk-data)
+│       │   ├── from_data.py          # Translate fetched ONS/BoE/HMRC data into ModelConfig
+│       │   ├── firm_profiles.py      # Firm data profiling and distribution fitting
 │       │   ├── input_output.py       # ONS input-output table → sector production relations
-│       │   └── historical.py         # HistoricalAdapter: orchestrates uk_data quarterly fetchers
+│       │   ├── historical.py         # HistoricalAdapter: orchestrates uk_data quarterly fetchers
+│       │   └── sweep.py              # Parameter sweeps + sensitivity analysis
+│       ├── reporting/                # Simulation evaluation vs calibration targets
+│       │   └── evaluation.py         # evaluate_simulation, evaluate_historical, reports
 │       ├── webapp/                   # FastAPI economy simulator
 │       │   ├── app.py                # REST API + static file serving
 │       │   ├── models.py             # Pydantic request/response models

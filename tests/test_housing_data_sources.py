@@ -10,7 +10,7 @@ from unittest.mock import patch
 import pytest
 
 from companies_house_abm.abm.config import HousingMarketConfig, PropertyConfig
-from companies_house_abm.data_sources.calibration import (
+from companies_house_abm.calibration.from_data import (
     calibrate_housing,
     calibrate_model,
 )

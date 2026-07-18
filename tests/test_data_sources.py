@@ -1,4 +1,4 @@
-"""Tests for the data_sources module.
+"""Tests for the calibration layer and uk_data fetchers.
 
 Network calls are mocked with ``unittest.mock`` so that tests run offline
 and deterministically.
@@ -23,15 +23,15 @@ from companies_house_abm.abm.config import (
     HouseholdConfig,
     ModelConfig,
 )
-from companies_house_abm.cli import app
-from companies_house_abm.data_sources.calibration import (
+from companies_house_abm.calibration.from_data import (
     calibrate_banks,
     calibrate_government,
     calibrate_households,
     calibrate_io_sectors,
     calibrate_model,
 )
-from companies_house_abm.data_sources.input_output import fetch_input_output_table
+from companies_house_abm.calibration.input_output import fetch_input_output_table
+from companies_house_abm.cli import app
 from uk_data.adapters.companies_house import (
     _normalise,
     _parse_bulk_zip,

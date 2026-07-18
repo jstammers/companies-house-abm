@@ -303,7 +303,7 @@ def fetch_data(
         companies_house_abm fetch-data --calibrate --output ./calibrated/
     """
 
-    from companies_house_abm.data_sources.input_output import (
+    from companies_house_abm.calibration.input_output import (
         fetch_input_output_table,
     )
     from uk_data.adapters.hmrc import (
@@ -487,7 +487,7 @@ def fetch_data(
     # ----------------------------------------------------------- Calibration
     if calibrate:
         typer.echo("Generating calibrated model parameters...")
-        from companies_house_abm.data_sources.calibration import calibrate_model
+        from companies_house_abm.calibration.from_data import calibrate_model
 
         calibrated = calibrate_model()
         cfg_path = output / "model_parameters_calibrated.yml"
@@ -593,7 +593,7 @@ def profile_firms(
         # Output as JSON
         companies_house_abm profile-firms --format json -o data/params.json
     """
-    from companies_house_abm.data_sources.firm_distributions import (
+    from companies_house_abm.calibration.firm_profiles import (
         run_profile_pipeline,
     )
 

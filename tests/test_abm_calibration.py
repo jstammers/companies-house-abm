@@ -8,14 +8,14 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from companies_house_abm.abm.calibration import (
+from companies_house_abm.abm.evaluation import EvaluationReport, StatResult
+from companies_house_abm.abm.model import PeriodRecord, SimulationResult
+from companies_house_abm.calibration.sweep import (
     SweepResult,
     SweepSummary,
     parameter_sweep,
     sensitivity_analysis,
 )
-from companies_house_abm.abm.evaluation import EvaluationReport, StatResult
-from companies_house_abm.abm.model import PeriodRecord, SimulationResult
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -243,7 +243,7 @@ class TestParameterSweep:
             return _make_mock_sim()
 
         with patch.object(
-            logging.getLogger("companies_house_abm.abm.calibration"),
+            logging.getLogger("companies_house_abm.calibration.sweep"),
             "info",
         ) as mock_log:
             parameter_sweep(
@@ -294,7 +294,7 @@ class TestParameterSweep:
             return _make_mock_sim()
 
         with patch(
-            "companies_house_abm.abm.calibration.evaluate_simulation"
+            "companies_house_abm.calibration.sweep.evaluate_simulation"
         ) as mock_eval:
 
             def side_effect(*_a: object, **_kw: object) -> EvaluationReport:

@@ -24,8 +24,7 @@ import yaml
 from typer.testing import CliRunner
 
 from companies_house_abm.abm.config import FirmConfig
-from companies_house_abm.cli import app
-from companies_house_abm.data_sources.firm_distributions import (
+from companies_house_abm.calibration.firm_profiles import (
     CANDIDATE_DISTRIBUTIONS,
     DEBT_COLUMNS,
     FIRM_FIELD_MAP,
@@ -52,6 +51,7 @@ from companies_house_abm.data_sources.firm_distributions import (
     save_parameters_json,
     save_parameters_yaml,
 )
+from companies_house_abm.cli import app
 
 # =====================================================================
 # Fixtures

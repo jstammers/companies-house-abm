@@ -19,7 +19,10 @@ from companies_house_abm.abm.config import (
     SimulationConfig,
     TaylorRuleConfig,
 )
-from companies_house_abm.abm.historical import HistoricalResult, HistoricalSimulation
+from companies_house_abm.abm.historical_simulation import (
+    HistoricalResult,
+    HistoricalSimulation,
+)
 from companies_house_abm.abm.model import PeriodRecord
 from companies_house_abm.abm.scenarios import HistoricalScenario, RegulatoryEvent
 from companies_house_abm.reporting.evaluation import evaluate_historical

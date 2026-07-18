@@ -72,7 +72,7 @@ class TestBuildUk2013_2024:
     def _mock_apis(self):
         """Mock all external API calls for offline testing."""
         with patch(
-            "uk_data.adapters.historical.get_json",
+            "uk_data.adapters.historical_quarterly.get_json",
             side_effect=Exception("offline"),
         ):
             yield

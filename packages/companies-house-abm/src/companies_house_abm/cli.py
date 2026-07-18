@@ -452,7 +452,7 @@ def fetch_data(
     # ----------------------------------------------- Historical time-series
     if fetch_all or "historical" in requested:
         typer.echo("Fetching historical quarterly time-series data...")
-        from uk_data.adapters.historical import (
+        from uk_data.adapters.historical_quarterly import (
             fetch_all_historical,
         )
 
@@ -487,11 +487,12 @@ def fetch_data(
     # ----------------------------------------------------------- Calibration
     if calibrate:
         typer.echo("Generating calibrated model parameters...")
+        from companies_house_abm.abm.config import save_config
         from companies_house_abm.calibration.from_data import calibrate_model
 
         calibrated = calibrate_model()
         cfg_path = output / "model_parameters_calibrated.yml"
-        _write_calibrated_yaml(calibrated, cfg_path)
+        save_config(calibrated, cfg_path)
         typer.echo(f"  Calibrated config written -> {cfg_path}")
 
     typer.echo("Done.")
@@ -502,27 +503,6 @@ def _write_json(path: Path, data: object) -> None:
     import json as _json
 
     path.write_text(_json.dumps(data, indent=2, default=str), encoding="utf-8")
-
-
-def _write_calibrated_yaml(config: object, path: Path) -> None:
-    """Write a calibrated ModelConfig as a YAML file."""
-    import dataclasses
-
-    import yaml
-
-    def _to_dict(obj: object) -> object:
-        if dataclasses.is_dataclass(obj) and not isinstance(obj, type):
-            return {
-                f.name: _to_dict(getattr(obj, f.name)) for f in dataclasses.fields(obj)
-            }
-        if isinstance(obj, tuple):
-            return list(obj)
-        return obj
-
-    path.write_text(
-        yaml.dump(_to_dict(config), default_flow_style=False, allow_unicode=True),
-        encoding="utf-8",
-    )
 
 
 @app.command(name="profile-firms")
@@ -1030,7 +1010,7 @@ def simulate_historical(
         companies_house_abm housing simulate-historical \\
             --format json --output results/historical
     """
-    from companies_house_abm.abm.historical import HistoricalSimulation
+    from companies_house_abm.abm.historical_simulation import HistoricalSimulation
     from companies_house_abm.abm.scenarios import build_uk_2013_2024
 
     if output_format not in ("csv", "json", "parquet"):

@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 import pytest
 
-from uk_data.adapters.historical import (
+from uk_data.adapters.historical_quarterly import (
     _build_iadb_url,
     _parse_boe_date,
     _parse_iadb_csv,
@@ -33,7 +33,7 @@ class TestHistoricalFallbacks:
     def test_hpi_fallback_returns_48_quarters(self):
 
         with patch(
-            "uk_data.adapters.historical.get_json",
+            "uk_data.adapters.historical_quarterly.get_json",
             side_effect=Exception("offline"),
         ):
             data = fetch_hpi_quarterly()
@@ -45,7 +45,7 @@ class TestHistoricalFallbacks:
     def test_hpi_fallback_prices_plausible(self):
 
         with patch(
-            "uk_data.adapters.historical.get_json",
+            "uk_data.adapters.historical_quarterly.get_json",
             side_effect=Exception("offline"),
         ):
             data = fetch_hpi_quarterly()
@@ -58,7 +58,7 @@ class TestHistoricalFallbacks:
     def test_bank_rate_fallback(self):
 
         with patch(
-            "uk_data.adapters.historical.get_json",
+            "uk_data.adapters.historical_quarterly.get_json",
             side_effect=Exception("offline"),
         ):
             data = fetch_bank_rate_quarterly()
@@ -74,7 +74,7 @@ class TestHistoricalFallbacks:
     def test_mortgage_rate_fallback(self):
 
         with patch(
-            "uk_data.adapters.historical.get_json",
+            "uk_data.adapters.historical_quarterly.get_json",
             side_effect=Exception("offline"),
         ):
             data = fetch_mortgage_rate_quarterly()
@@ -85,7 +85,7 @@ class TestHistoricalFallbacks:
     def test_earnings_index_fallback(self):
 
         with patch(
-            "uk_data.adapters.historical.get_json",
+            "uk_data.adapters.historical_quarterly.get_json",
             side_effect=Exception("offline"),
         ):
             data = fetch_earnings_index_quarterly()
@@ -107,7 +107,7 @@ class TestHistoricalFallbacks:
     def test_mortgage_approvals_fallback(self):
 
         with patch(
-            "uk_data.adapters.historical.get_json",
+            "uk_data.adapters.historical_quarterly.get_json",
             side_effect=Exception("offline"),
         ):
             data = fetch_mortgage_approvals_quarterly()
@@ -124,7 +124,7 @@ class TestDateFiltering:
     def test_custom_start_end(self):
 
         with patch(
-            "uk_data.adapters.historical.get_json",
+            "uk_data.adapters.historical_quarterly.get_json",
             side_effect=Exception("offline"),
         ):
             data = fetch_hpi_quarterly(start="2020Q1", end="2022Q4")
@@ -135,7 +135,7 @@ class TestDateFiltering:
     def test_single_quarter(self):
 
         with patch(
-            "uk_data.adapters.historical.get_json",
+            "uk_data.adapters.historical_quarterly.get_json",
             side_effect=Exception("offline"),
         ):
             data = fetch_bank_rate_quarterly(start="2023Q3", end="2023Q3")
@@ -152,7 +152,7 @@ class TestFetchAllHistorical:
     def test_returns_all_series(self):
 
         with patch(
-            "uk_data.adapters.historical.get_json",
+            "uk_data.adapters.historical_quarterly.get_json",
             side_effect=Exception("offline"),
         ):
             result = fetch_all_historical()
@@ -282,7 +282,7 @@ class TestFetchWithMockedSuccess:
         }
 
         with patch(
-            "uk_data.adapters.historical.get_json",
+            "uk_data.adapters.historical_quarterly.get_json",
             return_value=mock_response,
         ):
             data = fetch_hpi_quarterly(start="2020Q1", end="2020Q2")
@@ -298,7 +298,7 @@ class TestFetchWithMockedSuccess:
         mock_response = {"results": {"bindings": []}}
 
         with patch(
-            "uk_data.adapters.historical.get_json",
+            "uk_data.adapters.historical_quarterly.get_json",
             return_value=mock_response,
         ):
             data = fetch_hpi_quarterly(start="2020Q1", end="2020Q1")
@@ -313,7 +313,7 @@ class TestFetchWithMockedSuccess:
         )
 
         with patch(
-            "uk_data.adapters.historical.get_json",
+            "uk_data.adapters.historical_quarterly.get_json",
             return_value=csv_text,
         ):
             data = fetch_bank_rate_quarterly(start="2020Q1", end="2020Q1")
@@ -326,7 +326,7 @@ class TestFetchWithMockedSuccess:
 
         # CSV with no parseable data → falls back to hardcoded
         with patch(
-            "uk_data.adapters.historical.get_text",
+            "uk_data.adapters.historical_quarterly.get_text",
             return_value="Date,Rate\nno data here\n",
         ):
             data = fetch_bank_rate_quarterly(start="2020Q1", end="2020Q1")
@@ -341,7 +341,7 @@ class TestFetchWithMockedSuccess:
         )
 
         with patch(
-            "uk_data.adapters.historical.get_json",
+            "uk_data.adapters.historical_quarterly.get_json",
             return_value=csv_text,
         ):
             data = fetch_mortgage_rate_quarterly(start="2020Q1", end="2020Q1")
@@ -353,7 +353,7 @@ class TestFetchWithMockedSuccess:
     def test_fetch_mortgage_rate_empty_falls_back(self):
 
         with patch(
-            "uk_data.adapters.historical.get_text",
+            "uk_data.adapters.historical_quarterly.get_text",
             return_value="no valid csv",
         ):
             data = fetch_mortgage_rate_quarterly(start="2020Q1", end="2020Q1")
@@ -371,7 +371,7 @@ class TestFetchWithMockedSuccess:
         }
 
         with patch(
-            "uk_data.adapters.historical.get_json",
+            "uk_data.adapters.historical_quarterly.get_json",
             return_value=mock_response,
         ):
             data = fetch_earnings_index_quarterly(start="2020Q1", end="2020Q1")
@@ -385,7 +385,7 @@ class TestFetchWithMockedSuccess:
         mock_response = {"months": []}
 
         with patch(
-            "uk_data.adapters.historical.get_json",
+            "uk_data.adapters.historical_quarterly.get_json",
             return_value=mock_response,
         ):
             data = fetch_earnings_index_quarterly(start="2020Q1", end="2020Q1")
@@ -402,7 +402,7 @@ class TestFetchWithMockedSuccess:
         }
 
         with patch(
-            "uk_data.adapters.historical.get_json",
+            "uk_data.adapters.historical_quarterly.get_json",
             return_value=mock_response,
         ):
             data = fetch_earnings_index_quarterly(start="2020Q1", end="2020Q1")
@@ -418,7 +418,7 @@ class TestFetchWithMockedSuccess:
         )
 
         with patch(
-            "uk_data.adapters.historical.get_text",
+            "uk_data.adapters.historical_quarterly.get_text",
             return_value=csv_text,
         ):
             data = fetch_mortgage_approvals_quarterly(start="2020Q1", end="2020Q1")
@@ -431,7 +431,7 @@ class TestFetchWithMockedSuccess:
     def test_fetch_mortgage_approvals_empty_falls_back(self):
 
         with patch(
-            "uk_data.adapters.historical.get_text",
+            "uk_data.adapters.historical_quarterly.get_text",
             return_value="no valid data",
         ):
             data = fetch_mortgage_approvals_quarterly(start="2020Q1", end="2020Q1")

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -342,4 +343,37 @@ def load_config(path: Path | None = None) -> ModelConfig:
         properties=PropertyConfig(**properties_raw_d),
         housing_market=HousingMarketConfig(**markets.get("housing", {})),
         mortgage=MortgageConfig(**mortgage_raw),
+    )
+
+
+def config_to_dict(config: ModelConfig) -> dict[str, Any]:
+    """Recursively convert a :class:`ModelConfig` to a plain, YAML-safe dict.
+
+    Nested config dataclasses become nested dicts and tuples become lists, so
+    the result round-trips cleanly through :func:`yaml.dump`.
+    """
+
+    def _convert(obj: object) -> object:
+        if dataclasses.is_dataclass(obj) and not isinstance(obj, type):
+            return {
+                f.name: _convert(getattr(obj, f.name)) for f in dataclasses.fields(obj)
+            }
+        if isinstance(obj, tuple):
+            return list(obj)
+        return obj
+
+    return {
+        f.name: _convert(getattr(config, f.name)) for f in dataclasses.fields(config)
+    }
+
+
+def save_config(config: ModelConfig, path: Path) -> None:
+    """Write a :class:`ModelConfig` to *path* as a YAML file."""
+    path.write_text(
+        yaml.dump(
+            config_to_dict(config),
+            default_flow_style=False,
+            allow_unicode=True,
+        ),
+        encoding="utf-8",
     )

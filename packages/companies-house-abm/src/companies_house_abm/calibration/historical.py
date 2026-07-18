@@ -1,7 +1,7 @@
 """Historical quarterly simulation adapter for the UK economy ABM.
 
 :class:`HistoricalAdapter` coordinates the low-level quarterly fetchers in
-:mod:`uk_data.adapters.historical` to return a
+:mod:`uk_data.adapters.historical_quarterly` to return a
 :class:`~uk_data.models.TimeSeries` for any supported historical series.
 
 This module lives in ``companies_house_abm`` because it performs domain-level
@@ -11,7 +11,7 @@ a single external source.
 
 from __future__ import annotations
 
-from uk_data.adapters.historical import (
+from uk_data.adapters.historical_quarterly import (
     _HISTORICAL_SERIES_IDS,
     _REGISTRY,
     _observations,
@@ -23,7 +23,7 @@ class HistoricalAdapter:
     """Orchestration adapter for historical quarterly simulation data.
 
     Coordinates the low-level quarterly fetchers in
-    :mod:`uk_data.adapters.historical` to return a
+    :mod:`uk_data.adapters.historical_quarterly` to return a
     :class:`~uk_data.models.TimeSeries` for any supported historical series.
 
     Supported series (pass as *series_id*):

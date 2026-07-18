@@ -93,7 +93,7 @@
       show_root_heading: true
       show_source: true
 
-::: uk_data.adapters.historical
+::: uk_data.adapters.historical_quarterly
     options:
       show_root_heading: true
       show_source: true

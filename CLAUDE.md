@@ -16,9 +16,11 @@ packages under `packages/`:
 2. **`uk-data`** — Unified UK data-loading layer (adapters, workflows,
    transformers, typed models, storage, `UKDataClient`). The single home for
    external data retrieval.
-3. **`companies_house_abm`** — Agent-Based Model of the UK economy (agents,
-   markets, simulation), calibration helpers under `data_sources/`, and a
-   FastAPI webapp. Depends on `companies-house[xbrl,analysis]` and `uk-data`.
+3. **`companies_house_abm`** — Agent-Based Model of the UK economy. Four
+   concerns, one subpackage each: `abm/` (modeling), `calibration/`
+   (data→`ModelConfig`, firm profiling, sweeps), `reporting/` (simulation
+   evaluation), and `webapp/` (FastAPI). Depends on `companies-house[xbrl,analysis]`
+   and `uk-data`.
 4. **`companies-house-abm-rust`** (`packages/rust-abm/`) — Optional maturin Rust
    extension; not a uv member, built via `make build-rust`.
 

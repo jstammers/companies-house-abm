@@ -770,7 +770,7 @@ def run_simulation(
 
     # ── Evaluation ────────────────────────────────────────────────────────
     if evaluate:
-        from companies_house_abm.abm.evaluation import evaluate_simulation
+        from companies_house_abm.reporting.evaluation import evaluate_simulation
 
         typer.echo("\nEvaluating against UK calibration targets...")
         report = evaluate_simulation(result, warm_up=warm_up)
@@ -909,7 +909,7 @@ def run_sector_model(
     typer.echo(f"  Results -> {csv_path}")
 
     if evaluate:
-        from companies_house_abm.abm.evaluation import evaluate_simulation
+        from companies_house_abm.reporting.evaluation import evaluate_simulation
 
         typer.echo("\nEvaluating against UK calibration targets...")
         report = evaluate_simulation(result, warm_up=warm_up)
@@ -1132,7 +1132,7 @@ def simulate_historical(
 
     # ── Evaluation ───────────────────────────────────────────────────
     if evaluate:
-        from companies_house_abm.abm.evaluation import evaluate_historical
+        from companies_house_abm.reporting.evaluation import evaluate_historical
 
         typer.echo("\nEvaluating against actual UK housing data...")
         report = evaluate_historical(result, warm_up=4)

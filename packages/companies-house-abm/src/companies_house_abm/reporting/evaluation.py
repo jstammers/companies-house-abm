@@ -12,7 +12,7 @@ simulated time series against actual UK data and produces a
 
 Usage::
 
-    from companies_house_abm.abm.evaluation import evaluate_simulation
+    from companies_house_abm.reporting.evaluation import evaluate_simulation
     from companies_house_abm.abm.model import Simulation
 
     sim = Simulation.from_config()
@@ -355,7 +355,7 @@ def evaluate_simulation(
 
     Example::
 
-        from companies_house_abm.abm.evaluation import evaluate_simulation
+        from companies_house_abm.reporting.evaluation import evaluate_simulation
         from companies_house_abm.abm.model import Simulation
 
         sim = Simulation.from_config()

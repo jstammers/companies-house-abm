@@ -106,6 +106,16 @@ ABM-specific calibration helpers that consume them.
       show_root_heading: true
       show_source: true
 
+## Reporting Module
+
+Simulation evaluation against calibration targets and historical data.
+Company-level financial reporting lives in `companies_house.analysis`.
+
+::: companies_house_abm.reporting.evaluation
+    options:
+      show_root_heading: true
+      show_source: true
+
 ## ABM Module
 
 ### Simulation

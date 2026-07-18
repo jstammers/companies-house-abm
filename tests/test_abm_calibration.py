@@ -8,7 +8,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from companies_house_abm.abm.evaluation import EvaluationReport, StatResult
 from companies_house_abm.abm.model import PeriodRecord, SimulationResult
 from companies_house_abm.calibration.sweep import (
     SweepResult,
@@ -16,6 +15,7 @@ from companies_house_abm.calibration.sweep import (
     parameter_sweep,
     sensitivity_analysis,
 )
+from companies_house_abm.reporting.evaluation import EvaluationReport, StatResult
 
 # ---------------------------------------------------------------------------
 # Helpers

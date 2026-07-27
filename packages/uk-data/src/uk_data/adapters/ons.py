@@ -126,7 +126,7 @@ _SERIES_URI: dict[str, str] = {
     # L2NE: Wholesale & Retail Trade.  Other SIC-division series
     # (L2KP, L2ND, L2NF-L2NM) return 404 from the Zebedee API and are
     # therefore omitted.  These are consumed by the ABM's input-output
-    # table builder (see companies_house_abm.data_sources.input_output).
+    # table builder (see companies_house_abm.calibration.input_output).
     "L2KL": "/economy/grossdomesticproductgdp/timeseries/l2kl/ukea",
     "L2N8": "/economy/grossdomesticproductgdp/timeseries/l2n8/ukea",
     "L2NC": "/economy/grossdomesticproductgdp/timeseries/l2nc/ukea",

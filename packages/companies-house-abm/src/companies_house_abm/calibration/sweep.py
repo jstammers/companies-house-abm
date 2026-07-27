@@ -15,7 +15,7 @@ The calibration workflow is:
 
 Example::
 
-    from companies_house_abm.abm.calibration import parameter_sweep
+    from companies_house_abm.calibration import parameter_sweep
     from companies_house_abm.abm.sector_model import (
         create_sector_representative_simulation,
     )
@@ -44,13 +44,16 @@ import logging
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
-from companies_house_abm.abm.evaluation import EvaluationReport, evaluate_simulation
+from companies_house_abm.reporting.evaluation import (
+    EvaluationReport,
+    evaluate_simulation,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from companies_house_abm.abm.evaluation import TargetStat
     from companies_house_abm.abm.model import Simulation
+    from companies_house_abm.reporting.evaluation import TargetStat
 
 logger = logging.getLogger(__name__)
 
@@ -150,7 +153,7 @@ def parameter_sweep(
        :class:`~companies_house_abm.abm.model.Simulation`.
     2. Runs the simulation for ``periods`` periods.
     3. Evaluates the result with
-       :func:`~companies_house_abm.abm.evaluation.evaluate_simulation`,
+       :func:`~companies_house_abm.reporting.evaluation.evaluate_simulation`,
        skipping the first ``warm_up`` periods.
 
     Args:
@@ -163,9 +166,9 @@ def parameter_sweep(
         warm_up: Number of leading periods to skip when computing evaluation
             statistics.
         targets: Calibration targets passed to
-            :func:`~companies_house_abm.abm.evaluation.evaluate_simulation`.
+            :func:`~companies_house_abm.reporting.evaluation.evaluate_simulation`.
             Defaults to the UK targets in
-            :data:`~companies_house_abm.abm.evaluation.DEFAULT_TARGETS`.
+            :data:`~companies_house_abm.reporting.evaluation.DEFAULT_TARGETS`.
         verbose: If ``True``, log progress at ``INFO`` level.
 
     Returns:
@@ -175,7 +178,7 @@ def parameter_sweep(
 
     Example::
 
-        from companies_house_abm.abm.calibration import parameter_sweep
+        from companies_house_abm.calibration import parameter_sweep
         from companies_house_abm.abm.sector_model import (
             create_sector_representative_simulation,
         )
@@ -272,7 +275,7 @@ def sensitivity_analysis(
 
     Example::
 
-        from companies_house_abm.abm.calibration import sensitivity_analysis
+        from companies_house_abm.calibration import sensitivity_analysis
         from companies_house_abm.abm.sector_model import (
             create_sector_representative_simulation,
         )

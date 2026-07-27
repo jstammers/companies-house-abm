@@ -12,7 +12,7 @@ simulated time series against actual UK data and produces a
 
 Usage::
 
-    from companies_house_abm.abm.evaluation import evaluate_simulation
+    from companies_house_abm.reporting.evaluation import evaluate_simulation
     from companies_house_abm.abm.model import Simulation
 
     sim = Simulation.from_config()
@@ -30,7 +30,7 @@ from typing import TYPE_CHECKING
 from companies_house_abm.abm.model import SimulationResult
 
 if TYPE_CHECKING:
-    from companies_house_abm.abm.historical import HistoricalResult
+    from companies_house_abm.abm.historical_simulation import HistoricalResult
 
 
 # ---------------------------------------------------------------------------
@@ -355,7 +355,7 @@ def evaluate_simulation(
 
     Example::
 
-        from companies_house_abm.abm.evaluation import evaluate_simulation
+        from companies_house_abm.reporting.evaluation import evaluate_simulation
         from companies_house_abm.abm.model import Simulation
 
         sim = Simulation.from_config()
@@ -470,7 +470,7 @@ def evaluate_historical(
 
     Args:
         result: Output from
-            :meth:`~companies_house_abm.abm.historical.HistoricalSimulation.run`.
+            :meth:`~companies_house_abm.abm.historical_simulation.HistoricalSimulation.run`.
         warm_up: Number of leading periods to discard for the
             cross-sectional evaluation.
 

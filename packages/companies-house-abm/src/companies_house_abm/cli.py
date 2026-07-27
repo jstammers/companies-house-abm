@@ -303,23 +303,25 @@ def fetch_data(
         companies_house_abm fetch-data --calibrate --output ./calibrated/
     """
 
-    from companies_house_abm.data_sources.boe import (
-        fetch_bank_rate_current,
-        fetch_lending_rates,
-        get_aggregate_capital_ratio,
+    from companies_house_abm.calibration.input_output import (
+        fetch_input_output_table,
     )
-    from companies_house_abm.data_sources.hmrc import (
+    from uk_data.adapters.hmrc import (
         effective_tax_wedge,
         get_corporation_tax_rate,
         get_income_tax_bands,
         get_national_insurance_rates,
         get_vat_rate,
     )
-    from companies_house_abm.data_sources.ons import (
+    from uk_data.workflows.boe import (
+        fetch_bank_rate_current,
+        fetch_lending_rates,
+        get_aggregate_capital_ratio,
+    )
+    from uk_data.workflows.ons import (
         fetch_affordability_ratio,
         fetch_gdp,
         fetch_household_income,
-        fetch_input_output_table,
         fetch_labour_market,
         fetch_rental_growth,
         fetch_savings_ratio,
@@ -438,7 +440,7 @@ def fetch_data(
     # -------------------------------------------------- SIC codes (Companies House)
     if fetch_all or "sic" in requested:
         typer.echo("Fetching Companies House SIC codes (bulk download ~400 MB)...")
-        from companies_house_abm.data_sources.companies_house import fetch_sic_codes
+        from uk_data.adapters.companies_house import fetch_sic_codes
 
         sic_output = output / "sic_codes.parquet"
         try:
@@ -450,7 +452,7 @@ def fetch_data(
     # ----------------------------------------------- Historical time-series
     if fetch_all or "historical" in requested:
         typer.echo("Fetching historical quarterly time-series data...")
-        from uk_data.adapters.historical import (
+        from uk_data.adapters.historical_quarterly import (
             fetch_all_historical,
         )
 
@@ -465,7 +467,7 @@ def fetch_data(
     # ---------------------------------------------------- HM Land Registry
     if fetch_all or "land-registry" in requested:
         typer.echo("Fetching HM Land Registry house price data...")
-        from companies_house_abm.data_sources.land_registry import (
+        from uk_data.adapters.land_registry import (
             fetch_regional_prices,
             fetch_uk_average_price,
         )
@@ -485,11 +487,12 @@ def fetch_data(
     # ----------------------------------------------------------- Calibration
     if calibrate:
         typer.echo("Generating calibrated model parameters...")
-        from companies_house_abm.data_sources.calibration import calibrate_model
+        from companies_house_abm.abm.config import save_config
+        from companies_house_abm.calibration.from_data import calibrate_model
 
         calibrated = calibrate_model()
         cfg_path = output / "model_parameters_calibrated.yml"
-        _write_calibrated_yaml(calibrated, cfg_path)
+        save_config(calibrated, cfg_path)
         typer.echo(f"  Calibrated config written -> {cfg_path}")
 
     typer.echo("Done.")
@@ -500,27 +503,6 @@ def _write_json(path: Path, data: object) -> None:
     import json as _json
 
     path.write_text(_json.dumps(data, indent=2, default=str), encoding="utf-8")
-
-
-def _write_calibrated_yaml(config: object, path: Path) -> None:
-    """Write a calibrated ModelConfig as a YAML file."""
-    import dataclasses
-
-    import yaml
-
-    def _to_dict(obj: object) -> object:
-        if dataclasses.is_dataclass(obj) and not isinstance(obj, type):
-            return {
-                f.name: _to_dict(getattr(obj, f.name)) for f in dataclasses.fields(obj)
-            }
-        if isinstance(obj, tuple):
-            return list(obj)
-        return obj
-
-    path.write_text(
-        yaml.dump(_to_dict(config), default_flow_style=False, allow_unicode=True),
-        encoding="utf-8",
-    )
 
 
 @app.command(name="profile-firms")
@@ -591,7 +573,7 @@ def profile_firms(
         # Output as JSON
         companies_house_abm profile-firms --format json -o data/params.json
     """
-    from companies_house_abm.data_sources.firm_distributions import (
+    from companies_house_abm.calibration.firm_profiles import (
         run_profile_pipeline,
     )
 
@@ -768,7 +750,7 @@ def run_simulation(
 
     # ── Evaluation ────────────────────────────────────────────────────────
     if evaluate:
-        from companies_house_abm.abm.evaluation import evaluate_simulation
+        from companies_house_abm.reporting.evaluation import evaluate_simulation
 
         typer.echo("\nEvaluating against UK calibration targets...")
         report = evaluate_simulation(result, warm_up=warm_up)
@@ -907,7 +889,7 @@ def run_sector_model(
     typer.echo(f"  Results -> {csv_path}")
 
     if evaluate:
-        from companies_house_abm.abm.evaluation import evaluate_simulation
+        from companies_house_abm.reporting.evaluation import evaluate_simulation
 
         typer.echo("\nEvaluating against UK calibration targets...")
         report = evaluate_simulation(result, warm_up=warm_up)
@@ -1028,7 +1010,7 @@ def simulate_historical(
         companies_house_abm housing simulate-historical \\
             --format json --output results/historical
     """
-    from companies_house_abm.abm.historical import HistoricalSimulation
+    from companies_house_abm.abm.historical_simulation import HistoricalSimulation
     from companies_house_abm.abm.scenarios import build_uk_2013_2024
 
     if output_format not in ("csv", "json", "parquet"):
@@ -1130,7 +1112,7 @@ def simulate_historical(
 
     # ── Evaluation ───────────────────────────────────────────────────
     if evaluate:
-        from companies_house_abm.abm.evaluation import evaluate_historical
+        from companies_house_abm.reporting.evaluation import evaluate_historical
 
         typer.echo("\nEvaluating against actual UK housing data...")
         report = evaluate_historical(result, warm_up=4)

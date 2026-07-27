@@ -28,7 +28,7 @@ from companies_house_abm.abm.config import (
     TransfersConfig,
     load_config,
 )
-from companies_house_abm.data_sources.input_output import fetch_input_output_table
+from companies_house_abm.calibration.input_output import fetch_input_output_table
 from uk_data.adapters.hmrc import get_corporation_tax_rate, get_income_tax_bands
 from uk_data.adapters.land_registry import fetch_uk_average_price
 from uk_data.workflows.boe import fetch_lending_rates, get_aggregate_capital_ratio
@@ -68,7 +68,7 @@ def calibrate_households(
 
     Example::
 
-        >>> from companies_house_abm.data_sources import calibrate_households
+        >>> from companies_house_abm.calibration import calibrate_households
         >>> cfg = calibrate_households()
         >>> cfg.income_mean > 0
         True
@@ -143,7 +143,7 @@ def calibrate_banks(
 
     Example::
 
-        >>> from companies_house_abm.data_sources.calibration import calibrate_banks
+        >>> from companies_house_abm.calibration.from_data import calibrate_banks
         >>> cfg, beh = calibrate_banks()
         >>> 0.05 < cfg.capital_requirement < 0.30
         True
@@ -207,7 +207,7 @@ def calibrate_government(
 
     Example::
 
-        >>> from companies_house_abm.data_sources import calibrate_government
+        >>> from companies_house_abm.calibration import calibrate_government
         >>> fiscal, transfers = calibrate_government()
         >>> fiscal.tax_rate_corporate == 0.25
         True
@@ -269,7 +269,7 @@ def calibrate_io_sectors() -> dict[str, Any]:
 
     Example::
 
-        >>> from companies_house_abm.data_sources import calibrate_io_sectors
+        >>> from companies_house_abm.calibration import calibrate_io_sectors
         >>> data = calibrate_io_sectors()
         >>> "sectors" in data and "use_coefficients" in data
         True
@@ -378,7 +378,7 @@ def calibrate_model(base: ModelConfig | None = None) -> ModelConfig:
 
     Example::
 
-        >>> from companies_house_abm.data_sources.calibration import calibrate_model
+        >>> from companies_house_abm.calibration.from_data import calibrate_model
         >>> cfg = calibrate_model()
         >>> cfg.fiscal_rule.tax_rate_corporate == 0.25
         True

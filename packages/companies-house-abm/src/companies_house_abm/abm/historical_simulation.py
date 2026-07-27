@@ -10,7 +10,7 @@ between steps by manipulating agent and market state directly.
 
 Usage::
 
-    from companies_house_abm.abm.historical import HistoricalSimulation
+    from companies_house_abm.abm.historical_simulation import HistoricalSimulation
     from companies_house_abm.abm.scenarios import build_uk_2013_2024
 
     scenario = build_uk_2013_2024()

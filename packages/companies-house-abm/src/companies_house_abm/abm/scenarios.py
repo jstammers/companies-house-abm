@@ -20,7 +20,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any
 
-from uk_data.adapters.historical import (
+from uk_data.adapters.historical_quarterly import (
     QUARTERS,
     fetch_bank_rate_quarterly,
     fetch_earnings_index_quarterly,
@@ -37,7 +37,7 @@ class RegulatoryEvent:
     """A dated change to mortgage or housing config parameters.
 
     Each event is applied at the start of the given simulation period
-    by the :class:`~companies_house_abm.abm.historical.HistoricalSimulation`
+    by the :class:`~companies_house_abm.abm.historical_simulation.HistoricalSimulation`
     runner, which uses ``dataclasses.replace()`` to update the relevant
     frozen config dataclass.
 

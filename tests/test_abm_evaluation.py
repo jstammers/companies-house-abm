@@ -14,7 +14,9 @@ import json
 
 from typer.testing import CliRunner
 
-from companies_house_abm.abm.evaluation import (
+from companies_house_abm.abm.model import PeriodRecord, SimulationResult
+from companies_house_abm.cli import app
+from companies_house_abm.reporting.evaluation import (
     DEFAULT_TARGETS,
     EvaluationReport,
     HistoricalEvaluationReport,
@@ -23,8 +25,6 @@ from companies_house_abm.abm.evaluation import (
     compute_simulation_stats,
     evaluate_simulation,
 )
-from companies_house_abm.abm.model import PeriodRecord, SimulationResult
-from companies_house_abm.cli import app
 
 # ---------------------------------------------------------------------------
 # Helpers

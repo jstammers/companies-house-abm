@@ -25,7 +25,7 @@ from companies_house_abm.abm.config import (
     PropertyConfig,
     SimulationConfig,
 )
-from companies_house_abm.abm.historical import HistoricalSimulation
+from companies_house_abm.abm.historical_simulation import HistoricalSimulation
 from companies_house_abm.abm.scenarios import HistoricalScenario, build_uk_2013_2024
 
 NOTEBOOKS_DIR = Path(__file__).parent.parent / "notebooks"
@@ -75,7 +75,7 @@ class TestHistoricalSimulationNotebook:
 
         # Use a tiny offline scenario (all network calls mocked to fall back)
         with patch(
-            "uk_data.adapters.historical.get_json",
+            "uk_data.adapters.historical_quarterly.get_json",
             side_effect=Exception("offline"),
         ):
             scenario = build_uk_2013_2024()

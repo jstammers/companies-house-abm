@@ -80,38 +80,38 @@ Reference docs are in `docs/uk-data-api.md`.
       show_root_heading: true
       show_source: true
 
-## Data Sources Module
+## Calibration Module
 
-::: companies_house_abm.data_sources
+::: companies_house_abm.calibration
     options:
       show_root_heading: true
       show_source: true
       members_order: source
 
-### ONS
+Raw data fetchers (ONS, Bank of England, HMRC, etc.) live in the `uk-data`
+package — see [UK Data API Reference](uk-data-api.md). The modules below are the
+ABM-specific calibration helpers that consume them.
 
-::: companies_house_abm.data_sources.ons
+### Data → ModelConfig
+
+::: companies_house_abm.calibration.from_data
     options:
       show_root_heading: true
       show_source: true
 
-### Bank of England
+### Parameter Sweep
 
-::: companies_house_abm.data_sources.boe
+::: companies_house_abm.calibration.sweep
     options:
       show_root_heading: true
       show_source: true
 
-### HMRC
+## Reporting Module
 
-::: companies_house_abm.data_sources.hmrc
-    options:
-      show_root_heading: true
-      show_source: true
+Simulation evaluation against calibration targets and historical data.
+Company-level financial reporting lives in `companies_house.analysis`.
 
-### Calibration
-
-::: companies_house_abm.data_sources.calibration
+::: companies_house_abm.reporting.evaluation
     options:
       show_root_heading: true
       show_source: true
@@ -164,11 +164,11 @@ Reference docs are in `docs/uk-data-api.md`.
       show_root_heading: true
       show_source: true
 
-## Data Sources
+## Firm Profiles
 
 ### Firm Distributions
 
-::: companies_house_abm.data_sources.firm_distributions
+::: companies_house_abm.calibration.firm_profiles
     options:
       show_root_heading: true
       show_source: true

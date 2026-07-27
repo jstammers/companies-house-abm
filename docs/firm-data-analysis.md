@@ -174,7 +174,7 @@ parameters:
 
 ```python
 from pathlib import Path
-from companies_house_abm.data_sources.firm_distributions import (
+from companies_house_abm.calibration.firm_profiles import (
     run_profile_pipeline,
     load_accounts,
     assign_sectors,

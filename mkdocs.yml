@@ -60,6 +60,9 @@ markdown_extensions:
 
 nav:
   - Home: index.md
+  - Architecture: architecture.md
+  - Development: development.md
+  - Testing: testing.md
   - Companies House Package: companies-house-package.md
   - UK Data Package: uk-data-package.md
   - UK Data API Reference: uk-data-api.md

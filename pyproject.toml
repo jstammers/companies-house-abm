@@ -82,7 +82,6 @@ known-first-party = ["companies_house_abm", "companies_house", "uk_data"]
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["ARG001"]
 "packages/companies-house/src/companies_house/schema.py" = ["TCH003"]
-"packages/companies-house/src/companies_house/api/models.py" = ["TCH003"]
 "notebooks/**/*.py" = ["B018", "E501", "PLC0206", "PLC0415"]
 # CLI commands use lazy imports intentionally (startup time + optional deps)
 "**/cli.py" = ["PLC0415"]

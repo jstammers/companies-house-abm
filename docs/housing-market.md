@@ -24,7 +24,7 @@ between supply and demand are the norm — just like real housing markets.
 | **Household** (extended) | `abm/agents/household.py` | Tenure, buy/rent decision, housing payment |
 | **Bank** (extended) | `abm/agents/bank.py` | Mortgage evaluation, origination, foreclosure |
 | **Config** | `abm/config.py` | `PropertyConfig`, `HousingMarketConfig`, `MortgageConfig` |
-| **Data sources** | `data_sources/land_registry.py`, `data_sources/ons_housing.py` | UK house price and tenure data |
+| **Data sources** | `uk_data.adapters.land_registry`, `uk_data.workflows.ons` | UK house price and tenure data |
 
 ### Data Flow
 
@@ -200,11 +200,11 @@ Housing-specific parameters in the UI:
 ### Calibration from Live Data
 
 ```python
-from companies_house_abm.data_sources import (
-    calibrate_housing,
-    fetch_regional_prices,
-    fetch_tenure_distribution,
+from companies_house_abm.calibration import calibrate_housing
+from uk_data.adapters.land_registry import fetch_regional_prices
+from uk_data.workflows.ons import (
     fetch_affordability_ratio,
+    fetch_tenure_distribution,
 )
 
 # Fetch current UK housing data

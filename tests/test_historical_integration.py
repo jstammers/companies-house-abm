@@ -16,7 +16,7 @@ import socket
 import pytest
 
 from companies_house_abm.abm.scenarios import build_uk_2013_2024
-from uk_data.adapters.historical import (
+from uk_data.adapters.historical_quarterly import (
     fetch_all_historical,
     fetch_bank_rate_quarterly,
     fetch_earnings_index_quarterly,

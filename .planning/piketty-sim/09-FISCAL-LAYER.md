@@ -69,10 +69,11 @@ FIS-07 hold and what keeps every earlier stage's seeded results intact.
 Applied in `apply_taxes`, at the point in the period order S05 fixed — after
 returns and saving, before demography:
 
-- **Annual wealth tax** — progressive over wealth. Piketty's illustrative schedule
-  is roughly nothing below a threshold, then about 1%, then 2%, rising steeply into
-  the multiple-percent range for the largest fortunes; the exact bands are the
-  notebook's editable input, not a hard-coded constant.
+- **Annual wealth tax** — progressive over wealth. Piketty's illustrative schedule is,
+  broadly, nothing below a threshold, then a low single-digit rate, rising steeply for
+  the largest fortunes — **[CITE]**, to be replaced with the exact bands from the cited
+  source. Nothing depends on getting this right from memory, because the bands are the
+  notebook's editable input, never a hard-coded constant.
 - **Capital income tax** — flat rate on the return component.
 - **Labour income tax** — progressive over labour income.
 - **Transfers** — a per-capita payment, optionally financed from revenue.
@@ -115,8 +116,9 @@ there is a tax rate at which the `r > g` divergence force is exactly offset, and
 finding it interactively is the notebook's payoff. Includes the leakage slider and
 an explicit statement of what the model does not capture.
 
-**NB10 — the Great Redistribution.** The rise of tax-to-GDP from roughly a tenth
-to something like 40–50% of national income across the century, framed through the
+**NB10 — the Great Redistribution.** The century-long rise of tax-to-national-income
+from a low base to a large fraction — **[CITE]**, magnitudes to be taken from the
+OECD/appendix series rather than quoted here — framed through the
 three-class presentation of *A Brief History of Equality*: bottom 50, middle 40,
 top 10. The target phenomenon is the emergence of a **patrimonial middle class** —
 the middle 40%'s wealth share rising from very little to something substantial —

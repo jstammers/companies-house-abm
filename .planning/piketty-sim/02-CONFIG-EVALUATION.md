@@ -120,13 +120,20 @@ to arbitrarily many bands — which NB06 needs, since its whole point is
 user-editable band structure.
 
 **Why `wealth_retention` defaults to 0.98 rather than 1.0.** It is the fraction of
-gross wealth carried into the next period, and it is what makes the wealth process
-stationary. With retention at exactly 1 and a return above the growth rate, wealth
-grows without bound relative to income and there is no stationary distribution to
-measure — that is Piketty's divergence force in its pure form. The value 0.98,
-combined with the other defaults, yields a tail index of about 1.7, which is in
-the empirically observed range. S05 derives this in closed form and depends on the
-number, so changing it requires re-deriving that stage's acceptance bands.
+gross wealth carried into the next period — the drawdown of wealth for consumption —
+and it moderates the divergence force. With retention at exactly 1 and a return
+above the growth rate, detrended wealth grows without bound and there is no
+stationary distribution to measure, which is Piketty's divergence force in its pure
+form.
+
+Be precise about what does the stabilising work, because it is easy to state this
+wrongly. At these defaults retention of 0.98 is **not on its own sufficient** for
+stationarity: S05 §4 shows the detrended log-drift is `m = +0.0043`, i.e. still
+mildly expansive, and stationarity comes from the combination of retention **and**
+population turnover (`death_rate = 0.02`). A configuration with retention 0.98 and
+`death_rate = 0` has no stationary distribution at all. S05 derives the resulting
+tail index in closed form and its acceptance bands depend on both numbers, so
+changing either requires re-deriving them.
 
 **Why `scale_elasticity` defaults to zero.** Return heterogeneity rising in
 wealth is one of Piketty's amplifying mechanisms, and NB03 must be able to switch
@@ -186,6 +193,13 @@ The module docstring records that these classes are adapted from the ABM
 package's evaluation module, so a future reader knows the duplication is
 deliberate and where the sibling lives.
 
+**This attribution is required and must not be removed to satisfy a grep.** The
+docstring necessarily contains the text `companies_house`, which would trip a
+coupling check written against the bare substring. Both the G5 command and T01-5 are
+therefore scoped to *import statements*, precisely so that honest attribution and
+the coupling invariant can coexist. If a future check flags this docstring, fix the
+check, not the docstring.
+
 ## 4. Requirements
 
 - [ ] **CFG-01** Frozen nested dataclasses aggregated by `WealthEngineConfig`, nested defaults via `default_factory`.
@@ -241,8 +255,9 @@ Pass criteria:
    assert load_config(p) == c, 'round trip lost information'
    print('round trip ok')"
    ```
-3. `rg -l 'companies_house' packages/piketty-sim/` returns nothing — the copy is a
-   copy, not an import.
+3. `rg -e 'from companies_house' -e 'import companies_house' packages/piketty-sim/`
+   returns nothing — the copy is a copy, not an import. The attribution docstrings
+   will still mention the sibling package by name, and that is correct.
 4. Coverage of `config.py` and `evaluation.py` is at or above 95%; these are small
    pure modules with no excuse for gaps.
 

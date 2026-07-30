@@ -84,11 +84,12 @@ reporting shares rather than synthetic indices.
 2. Live Lorenz curve with the Gini printed alongside.
 3. Class shares bar chart: bottom 50, middle 40, top 10, top 1.
 4. **The dissociation demonstration** (NBA-01): two distributions with
-   near-identical Ginis and materially different top-1% shares, shown side by side.
-   The observed numbers come from S03's gate item 2, so the narrative quotes real
-   computed values rather than asserting the phenomenon abstractly. This is the
-   analytical justification for the shares-first presentation used throughout the
-   series.
+   near-identical Ginis and materially different top-1% shares, shown side by side —
+   lognormal(0, 1) against Pareto with tail index **1.46**, the value derived in S03
+   §6 to make the Ginis coincide. The observed numbers come from S03's gate item 2,
+   so the narrative quotes real computed values rather than asserting the phenomenon
+   abstractly. This is the analytical justification for the shares-first presentation
+   used throughout the series.
 5. Log-log CCDF with the fitted tail overlaid, reporting `alpha` and the
    inverted-Pareto coefficient `b`, with the interpretation that average wealth
    above a threshold is `b` times that threshold.
@@ -141,9 +142,13 @@ scale-dependence generates a Pareto tail.
    `scale_elasticity`, population size.
 2. **Stationarity indicator.** Computed from the config, not guessed: display the
    drift `m = log(retention) + mu_A - log(1 + g)` and the predicted tail index from
-   S05 §4, with a clear warning when the configuration is explosive (`m >= 0` and
-   `death_rate == 0`). Without this, a reader dragging sliders into the
-   non-stationary region sees a meaningless fitted exponent presented as a result.
+   S05 §4, implementing S05's **two-tier stationarity rule** verbatim: a hard warning
+   when `death_rate == 0` and `m >= 0` (non-stationary, fitted exponent meaningless),
+   and a separate caution when `alpha <= 1` (stationary but infinite-mean, so top
+   shares are wildly seed-dependent). Without this, a reader dragging sliders into
+   either region sees a meaningless number presented as a result. Note the first
+   condition requires **both** clauses — keying it on `m >= 0` alone fires on the
+   shipped defaults, which are stationary via turnover.
 3. Simulation via `simulate_wealth` at a notebook-scale config (20 000 agents,
    `record_every=5`, inside the S05 memory budget).
 4. Cross-section evolution: distribution snapshots over time as small multiples or
@@ -193,7 +198,7 @@ test is written generically now rather than per notebook.
 | T06-7 | `test_notebook_shows_snapshot_date` | Source references `snapshot_metadata` or `snapshot_date` (NBA-09). |
 | T06-8 | `test_nb03_core_logic_runs` | Replicates NB03's simulation at a tiny config (500 agents, 50 periods) and asserts the panel shape, a finite Gini and a finite fitted `alpha`. Mirrors the "run the notebook's core logic with a small config" pattern at `tests/test_notebook.py:73`. |
 | T06-9 | `test_nb02_core_logic_runs` | `beta_path` at the notebook's preset values converges to `s / g`. |
-| T06-10 | `test_nb01_dissociation_holds` | The two distributions NB01 uses do have near-equal Ginis (within 0.05) and top-1% shares differing by at least 1.5×. Guards the notebook's central claim against a future parameter edit quietly falsifying it. |
+| T06-10 | `test_nb01_dissociation_holds` | The two distributions NB01 uses do have near-equal Ginis (within 0.05) and top-1% shares differing by at least 1.5×. Guards the notebook's central claim against a future parameter edit quietly falsifying it. **Use Pareto tail index 1.46** — see S03 §6 item 2 for the derivation; 1.35 fails this test by construction, and the correct response to a failure here is to fix the parameter, never to widen the tolerance. |
 
 T06-10 is the one to keep: it turns a narrative assertion into something CI
 defends.

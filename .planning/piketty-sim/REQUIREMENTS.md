@@ -6,7 +6,12 @@ in" column is filled in at tick time.
 
 ## Cross-cutting invariants
 
-These are re-verified at **every** stage gate, not once.
+These are re-verified at **every** stage gate, not once. Their checkboxes are
+therefore *not* owned by any single stage: they are ticked when the programme
+finishes, and each stage's G1 check re-confirms them without claiming them. A stage
+header listing an INV id (S01 lists three, S05 lists INV-03) means that stage is
+where the invariant is first *established* and given an executable test — not that
+later stages are exempt from it.
 
 - [ ] **INV-01**: No module under `packages/piketty-sim/` imports
       `companies_house_abm` or `companies_house`.
@@ -121,9 +126,13 @@ These are re-verified at **every** stage gate, not once.
       interventions without modifying engine code.
 - [ ] **ENG-04**: `WealthPanel` exposes the final cross-section, a metric time
       series for any cross-sectional statistic, and a long-format polars frame.
-- [ ] **ENG-05**: With a contractive multiplicative shock and a positive
-      additive term, the stationary distribution's fitted tail exponent matches
-      the Kesten-theory prediction `E[A^alpha] = 1` within documented tolerance.
+- [ ] **ENG-05**: For a configuration with a stationary detrended distribution,
+      the fitted tail exponent matches the closed-form killed-Kesten prediction
+      `(1 - d) * E[A_hat ** alpha] = 1` within documented tolerance, and in the
+      documented (downward) direction. Note the condition includes the survival
+      factor: `E[A_hat ** alpha] = 1` is only the special case `d = 0`, and the
+      default configuration is *not* that case — its multiplicative factor is
+      mildly expansive and stationarity comes from turnover.
 - [ ] **ENG-06**: Widening the gap between the mean return and the growth rate
       monotonically increases stationary top shares over the tested range.
 - [ ] **ENG-07**: Enabling return scale-dependence — returns rising in wealth —
@@ -134,6 +143,13 @@ These are re-verified at **every** stage gate, not once.
 - [ ] **ENG-09**: Memory use is bounded and documented: `record_every` controls
       panel size, and the reference notebook configuration runs within the
       documented time and memory budget.
+- [ ] **ENG-10**: A national-income aggregate and the capital/income ratio `beta`
+      are defined once in the engine and exposed on the panel, with capital income
+      tracked separately from labour income. Every later use of "national income"
+      or `beta` — the first fundamental law, the inheritance identity, revenue as a
+      share of national income, and the calibration moments — refers to this one
+      definition, and the distinction between saving out of labour income and
+      saving out of national income is documented.
 
 ## Stage 06 — Arc A notebooks
 
@@ -311,7 +327,7 @@ These are re-verified at **every** stage gate, not once.
 | S02 | CFG-01 … CFG-06 |
 | S03 | MET-01 … MET-06 |
 | S04 | DAT-01 … DAT-08 |
-| S05 | ENG-01 … ENG-09 |
+| S05 | ENG-01 … ENG-10 |
 | S06 | NBA-01 … NBA-09 |
 | S07 | HST-01 … HST-05 |
 | S08 | OLG-01 … OLG-06 |

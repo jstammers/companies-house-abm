@@ -223,7 +223,7 @@ Pass criteria:
    metric's seed variation.
 4. Parity holds (T15-9, T15-10) and the measured speed-up is recorded.
 5. Every earlier stage's pinned observations still reproduce.
-6. `rg -l 'companies_house' packages/piketty-sim/ packages/rust-piketty/` returns
+6. `rg -e 'from companies_house' -e 'import companies_house' packages/piketty-sim/ packages/rust-piketty/` returns
    nothing.
 7. NB12 opened interactively and run end to end; documented runtime for the full
    configuration.

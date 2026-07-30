@@ -48,8 +48,9 @@ amount_fraction_of_mean: float = 0.0    # endowment as a fraction of mean adult 
 age_at_receipt: int = 25
 ```
 
-Piketty's illustrative figure is on the order of 60% of average adult wealth, paid
-at 25. The fraction-of-mean parameterisation matters: an endowment fixed in absolute
+Piketty's illustrative figure is on the order of 60% of average adult wealth, paid at
+25 — **[CITE]** before use; verify both the fraction and the age against the source,
+since gate item 3 turns this figure into an acceptance criterion. The fraction-of-mean parameterisation matters: an endowment fixed in absolute
 terms erodes as the economy grows, whereas one indexed to mean wealth is a standing
 claim on the capital stock, which is what the proposal intends.
 

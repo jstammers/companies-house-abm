@@ -17,14 +17,18 @@ wealth passes to the next generation under an estate-tax schedule. This turns th
 reset-based turnover of S05 into overlapping generations, and it unlocks the
 mechanism Piketty treats as central to long-run concentration — inheritance.
 
-The empirical target is the U-shaped path of the inheritance flow: roughly a tenth
-or more of national income in the nineteenth century, collapsing to a small
-fraction by mid-twentieth century, then rising again. If a model of wealth
+The empirical target is the U-shaped path of the inheritance flow: on the order of a
+tenth or more of national income in the nineteenth century, collapsing to a small
+fraction by mid-twentieth century, then rising again. **[CITE]** — these magnitudes
+are orientation only and must be replaced with the specific Piketty–Zucman
+inheritance-flow series values from the pinned appendix data before they are used as
+the stage's target. If a model of wealth
 inequality cannot produce that, it is missing the transmission channel that makes
 wealth concentration self-perpetuating rather than merely persistent.
 
-This stage is also the first to carry a strong **accounting identity** as an
-acceptance test, which makes it unusually verifiable for a behavioural extension.
+This stage is also the first to carry an **accounting identity** as an acceptance
+test. That makes its internal consistency unusually checkable — though §3.3 is
+careful about how little such an identity actually proves.
 
 ## 2. Scope
 
@@ -86,10 +90,18 @@ accounting identity, so a correct simulation must satisfy it: measure `b_y`
 directly as realised bequests over national income, measure `mu`, `m` and `beta`
 from the same run, and the two sides must agree within sampling error.
 
-That is OLG-03 and it is the strongest test available in this stage — it validates
-the mortality model, the bequest mechanics and the wealth accounting
-simultaneously, and it will fail loudly if, for example, mortality is applied
-before returns so that decedents' recorded wealth is stale.
+That is OLG-03. Be clear-eyed about what it does and does not establish. Because
+`mu` is *defined* as the decedent-to-living mean wealth ratio and measured from the
+same run, the identity is close to a tautology: realised bequests equal deaths times
+mean decedent wealth by construction. So it validates **no behavioural content**, and
+it certainly does not validate the mortality model.
+
+What it does catch is a specific and likely class of implementation bug: double
+counting, heirs selected with replacement, and stale ordering — for example mortality
+applied before returns, so a decedent's recorded estate is one period out of date.
+Those are easy to write and invisible in a chart, which makes the test worth having.
+Just do not read a passing tautology as empirical validation of the inheritance
+mechanism.
 
 `mu` above 1 is the interesting case and the reason the flow can be large: the
 dying are older and therefore wealthier than the living on average. A model that
@@ -126,7 +138,7 @@ than work?" as a computed answer per cohort.
 | T08-2 | `test_wealth_conserved_net_of_estate_tax` | Total wealth before and after a bequest event differs by exactly the estate tax collected, to floating-point tolerance. |
 | T08-3 | `test_population_stationary` | Population size is constant across all periods in the default configuration. |
 | T08-4 | `test_age_distribution_plausible` | Mean age and maximum age fall within bands implied by the supplied hazard schedule, and no agent exceeds the schedule's terminal age. |
-| T08-5 | `test_inheritance_identity_holds` | Measured `b_y` agrees with `mu * m * beta` computed from the same run, within 5% relative. The stage's central test. `slow`. |
+| T08-5 | `test_inheritance_identity_holds` | Measured `b_y` agrees with `mu * m * beta` computed from the same run, within 5% relative, using the `beta` defined in S05 §3.3a. A consistency check on the accounting, not evidence about behaviour — see §3.3. `slow`. |
 | T08-6 | `test_mu_exceeds_one` | Average decedent wealth exceeds average living wealth — the wealth-age profile is realistic rather than flat. |
 | T08-7 | `test_equal_split_dilutes_concentration` | `equal_split` with several heirs yields a lower stationary top-1% share than `single` at the same seed. The institutional variable has the expected direction. |
 | T08-8 | `test_estate_tax_reduces_inherited_share` | Raising the estate-tax rate monotonically reduces the inherited share of total wealth across at least four points. |

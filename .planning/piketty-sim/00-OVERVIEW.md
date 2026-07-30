@@ -154,13 +154,28 @@ gates below pass. Each stage document restates its stage-specific commands under
 
 | Gate | Criterion |
 |---|---|
-| **G1** | Every requirement ID owned by the stage is checked off in `REQUIREMENTS.md`, with the implementing file named. |
+| **G1** | Every requirement ID owned by the stage is checked off in `REQUIREMENTS.md`, with the implementing file named. The five `INV-*` invariants are re-confirmed but not ticked — they belong to the programme, not to a stage, and are ticked only at the end. |
 | **G2** | Every test in the stage's test table exists, is named as specified, and passes. |
 | **G3** | `make fix && make verify && make test` are clean from the repo root. Never bypass hooks with `--no-verify`. |
 | **G4** | The stage's own verification commands (in its document) pass, including any numerical acceptance bands. |
-| **G5** | Coupling invariant holds: `rg -l 'companies_house_abm\|companies_house' packages/piketty-sim/` returns nothing. |
+| **G5** | Coupling invariant holds: `rg -e 'from companies_house' -e 'import companies_house' packages/piketty-sim/` returns nothing. |
 | **G6** | Documentation named in the stage's scope table is updated (package docs page, `docs/architecture.md`, `CLAUDE.md` as applicable). |
+| **G6b** | If the stage document has a "Pinned observations" / "Pinned results" section, **every row is filled in** with values from a real run. This is not optional bookkeeping: stages S08, S09, S12, S13 and S15 each have a gate criterion reading "earlier stages' pinned observations reproduce unchanged", which is unenforceable — and silently passes — if the tables were left as em-dashes. A stage that skips its pinning breaks every downstream regression check. |
 | **G7** | Work is committed with the stage's Conventional Commit subject and the stage row is ticked in `ROADMAP.md`. |
+
+Two notes on G5, both of which have already caused a defect in this document:
+
+- **Match imports, not mentions.** The pattern targets `import` statements
+  deliberately. S02 requires copy-adapted modules to name their origin in a
+  docstring, and that attribution necessarily contains the string
+  `companies_house`. A grep for the bare string would make honest attribution fail
+  the gate; a grep for imports does not. T01-5 implements the same import-scoped
+  rule.
+- **Use `-e`, not `\|`.** ripgrep uses Rust regex syntax, in which `\|` is a
+  *literal pipe*, not alternation. An earlier draft of this table used
+  `rg -l 'companies_house_abm\|companies_house'`, which matches nothing and
+  therefore passes on any tree — a gate that could never fail. Verify any change to
+  this command against a file that should match before trusting it.
 
 Two further rules apply throughout:
 
@@ -201,7 +216,17 @@ Stages 01–06 are specified to implementation depth: signatures, acceptance ban
 and test assertions are fixed. Stages 07–15 are specified to design depth: the
 module boundaries, seams, requirements and gate structure are fixed, but exact
 numerical acceptance bands and chart specifications are to be pinned at the
-start of that stage, once the engine's real behaviour is observable. Pinning a
+start of that stage, once the engine's real behaviour is observable.
+
+**One exception inside the implementation-depth group.** S04's source URLs and
+variable codes are deliberately *not* specified: they must be looked up against each
+source's own documented download interface at implementation time, because
+structured identifiers copied from memory or from a planning document are
+untrustworthy. That means S04 cannot be completed from this document set alone —
+it needs live access to the sources — and its T04-10 gate depends on data that must
+be fetched first. Plan S04 as "confirm the interface, then implement", not as a pure
+coding task. S04 §7 also flags an unresolved licensing question that could force a
+fetch-only mode for a given source. Pinning a
 band means running the seeded reference configuration, recording the result in
 the stage document, and committing that document change with the stage's work.
 
@@ -210,6 +235,16 @@ appendix table, a WID series, an inheritance-flow estimate — the test asserts
 against **the value in the pinned data snapshot**, never against a number typed
 from memory into a test file. Literature values are cross-checked against the
 cited source during implementation and recorded in the snapshot metadata.
+
+**This applies to the prose of these documents too, and they do not yet fully comply.**
+Several stage documents quote empirical magnitudes as orientation without a page,
+table or appendix reference: the scale of the historical inheritance flow (S08 §1),
+the century-long rise in tax-to-GDP and the illustrative wealth-tax band structure
+(S09 §1 and §3.2), the size of the proposed universal endowment (S13 §3.1), and the
+plausible range for a wealth-tail index (S05 §4). Treat every such figure as
+**unverified until cited**. The first task of each of those stages is to locate the
+figure in the source and either cite it precisely or remove the claim; none of them
+may become a test target in the meantime.
 
 ## Honest-limitations discipline
 

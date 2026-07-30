@@ -5,7 +5,7 @@
 | **Status** | todo |
 | **Depends on** | S02, S03 |
 | **Blocks** | S06, S07, S08, S14, S15 |
-| **Requirements** | ENG-01 … ENG-09, INV-03 (determinism established here) |
+| **Requirements** | ENG-01 … ENG-10, INV-03 (determinism established here) |
 | **Commit** | `feat(piketty-sim): add Kesten wealth engine and aggregate laws` |
 
 ## 1. Purpose
@@ -55,20 +55,44 @@ lognormal that spreads forever, and the additive term is what pins the lower end
 and turns the stationary law into a power law.
 
 `retention` is the fraction of gross wealth carried into the next period — one
-minus the drawdown of wealth for consumption. It is the knob that makes the
-process stationary; without some drawdown or mortality, `r > g` means wealth
-grows without bound relative to income, which is Piketty's divergence force in
-its pure form and has no stationary distribution to measure.
+minus the drawdown of wealth for consumption. Together with population turnover it
+is what makes the process stationary; without either, `r > g` means wealth grows
+without bound relative to income, which is Piketty's divergence force in its pure
+form and has no stationary distribution to measure.
+
+Note carefully that at the default parameters retention alone is **not** enough.
+§4 shows the detrended log-drift is `m = +0.0043`, still mildly expansive, so
+stationarity at the defaults depends on `death_rate = 0.02` as well. Descriptions
+of the default configuration as having a "contractive" multiplicative factor are
+wrong; the correct statement is that the *killed* process is stationary via
+`(1 - d) * E[A_hat ** alpha] = 1`.
 
 Component functions, each independently testable and each an explicit seam for a
 later stage:
 
 ```python
-def apply_returns(wealth, cfg, rng) -> np.ndarray        # multiplicative
+def apply_returns(wealth, cfg, rng) -> tuple[np.ndarray, np.ndarray]
+    """Return (new_wealth, capital_income) — the latter feeds national income."""
 def apply_income_and_saving(wealth, income, cfg, t) -> np.ndarray   # additive
 def apply_taxes(wealth, cfg) -> np.ndarray               # no-op by default; S09
-def apply_demography(wealth, ages, cfg, rng) -> tuple    # reset now; S08 OLG
+def apply_demography(wealth, cfg, rng, *, ages=None) -> np.ndarray  # reset now; S08 OLG
 ```
+
+`apply_demography` takes `ages` as an optional keyword defaulting to `None`, because
+S05 has no age vector — reset mode does not need one. S08 introduces ages and passes
+them; keeping the parameter optional now means S08 extends the signature rather than
+changing it.
+
+**Reset semantics, which materially affect the fitted tail index.** When an agent
+exits in `"reset"` mode, the replacement is drawn *in detrended units* and then
+expressed in period-`t` levels — that is, the replacement's wealth is
+`draw * (1 + g) ** t`, not a fixed level draw. The distinction matters: a fixed
+level draw becomes negligible relative to a growing economy, so the additive floor
+that makes the tail Pareto would decay away and the measured `alpha` would drift with
+the horizon. The replacement draw is `Lognormal(0, initial_wealth_sigma)` scaled to
+mean labour income, and the replacement also receives a fresh permanent-income draw
+from `IncomeConfig`. Both choices are tested for by T05-13 and are prerequisites for
+§4's prediction holding at any horizon.
 
 The per-period order is part of the contract, because later stages insert at
 these points and the ordering changes the arithmetic: **returns, then income and
@@ -104,10 +128,10 @@ mu[i, t] = mu_A + scale_elasticity * (log w[i, t] - log median(w[:, t]))
 Zero by default, so the baseline is the clean textbook process and any tail
 thickening is visibly attributable to switching it on.
 
-`wealth_retention` is declared by S02 with a default of `0.98`. The reason it is
-not `1.0` is §4: with retention exactly 1 and `r > g`, the process has no
-stationary distribution. Changing that default invalidates this stage's acceptance
-bands and requires re-deriving them.
+`wealth_retention` is declared by S02 with a default of `0.98`. The reason it is not
+`1.0` is §4: with retention exactly 1, `r > g` and no turnover, the process has no
+stationary distribution. Changing that default — or `death_rate` — invalidates this
+stage's acceptance bands and requires re-deriving them.
 
 ### 3.3 `WealthPanel`
 
@@ -116,6 +140,7 @@ bands and requires re-deriving them.
 class WealthPanel:
     wealth: np.ndarray            # (n_recorded, n_agents)
     income: np.ndarray            # (n_recorded, n_agents), labour income
+    capital_income: np.ndarray    # (n_recorded, n_agents), return flow on wealth
     recorded_periods: np.ndarray  # (n_recorded,)
     config: WealthEngineConfig
 
@@ -123,6 +148,8 @@ class WealthPanel:
     def metric_series(self, fn: Callable[[np.ndarray], float]) -> np.ndarray
     def to_polars(self) -> pl.DataFrame     # long format, altair-ready
     def detrended(self) -> np.ndarray       # wealth / (1 + g) ** t
+    def national_income(self) -> np.ndarray # (n_recorded,) aggregate, see below
+    def beta(self) -> np.ndarray            # (n_recorded,) wealth / national income
 ```
 
 `metric_series` is the composition point with S03: `panel.metric_series(gini)` or
@@ -134,6 +161,38 @@ cross-sectional statistic, so the engine never needs to know which metrics exist
 average labour income it does. Every stationarity and tail claim in this document
 is about the detrended series, and `detrended()` is what the tests and notebooks
 use so that distinction is explicit rather than assumed.
+
+### 3.3a National income and `beta` — defined once, here
+
+Four separate requirements depend on a national-income aggregate — ENG-08's
+`alpha = r * beta`, S08's inheritance identity `b_y = mu * m * beta`, S09's
+revenue-relative-to-national-income (FIS-03), and S14's `beta` moment (CAL-01) — so
+it is defined here and nowhere else:
+
+```
+national_income[t] = sum_i labour_income[i, t] + sum_i capital_income[i, t]
+beta[t]            = sum_i wealth[i, t] / national_income[t]
+```
+
+Capital income is the return flow, `(r[i, t]) * w[i, t]`, which is why
+`apply_returns` returns it separately rather than folding it into the wealth update.
+This is a closed economy with no depreciation and no government production, so
+national income is simply labour plus capital income — an approximation, and one the
+notebooks must state, since Piketty's national income is net of capital depreciation.
+
+**Two distinct quantities are both called `s`, and conflating them is a real hazard
+because NB02 and NB03 put both on sliders.** They are not the same number and must
+not be wired to the same control:
+
+| Symbol | Where | Meaning |
+|---|---|---|
+| `SavingsConfig.rate` | the engine | micro: saved share of an agent's **labour** income |
+| the `s` argument of `steady_state_beta` / `beta_path` | `aggregates.py` | macro: saving out of **national** income, as in Piketty's second law |
+
+`aggregates.py` deliberately takes its `s` as a bare function argument rather than
+reading it from the config, precisely so the two cannot be silently unified. A
+notebook wishing to relate them must compute the macro rate from a run — aggregate
+saving over national income — rather than assuming they are equal.
 
 ### 3.4 Entry point
 
@@ -155,11 +214,23 @@ period, which is how S07 injects dated war and policy shocks without the engine
 knowing anything about history.
 
 **Memory budget** (ENG-09): the panel holds
-`2 * n_agents * ceil(periods / record_every) * 8` bytes. At 10 000 agents and 500
-periods with `record_every=1` that is 80 MB, which is too much to keep casually in
-a notebook kernel. The docstring states the formula, and the reference notebook
-configuration uses `record_every=5` (about 16 MB at 20 000 agents). Long runs and
-sweeps should record sparsely.
+`n_arrays * n_agents * ceil(periods / record_every) * 8` bytes, where `n_arrays` is
+3 (wealth, labour income, capital income). Worked values:
+
+| Config | Arithmetic | Size |
+|---|---|---|
+| **Default** (10 000 agents, 500 periods, `record_every=1`) | `3 × 10_000 × 500 × 8` | **120 MB** |
+| Reference notebook (20 000 agents, 500 periods, `record_every=5`) | `3 × 20_000 × 100 × 8` | **48 MB** |
+
+The default is far too large to hold casually in a notebook kernel, so
+`simulate_wealth`'s docstring states the formula and the default `record_every`
+warrants review during implementation: consider defaulting it to 5, or emitting a
+warning above a size threshold. Long runs and sweeps must record sparsely. T05-14
+asserts the reference configuration stays under 64 MB.
+
+(An earlier draft of this section stated 16 MB for the reference configuration and
+counted only two arrays. Both were wrong — recompute rather than trusting a quoted
+figure.)
 
 ### 3.5 `aggregates.py` — the two fundamental laws
 
@@ -219,6 +290,20 @@ average in logs, the standard stationarity requirement. As `m` rises toward zero
 (a wider `r − g` gap) `alpha` falls and the tail fattens. As return volatility `v`
 rises with `m` fixed, `alpha` falls. Both are Piketty's claims, in closed form.
 
+**The stationarity rule NB03 must implement.** Read straight off the formula, in two
+tiers — and note the first tier is *not* simply `m >= 0`:
+
+1. **Non-stationary (hard warning, fitted `alpha` is meaningless).** Only when
+   `death_rate == 0` **and** `m >= 0`. When `death_rate > 0` the term
+   `-2 * v ** 2 * log(1 - d)` is strictly positive, so the discriminant exceeds
+   `m ** 2`, the square root exceeds `abs(m)`, and the numerator is positive for any
+   sign of `m`. Turnover alone guarantees a stationary tail. This is why the default
+   configuration is stationary despite `m = +0.0043`, and why a rule keyed on
+   `m >= 0` alone would fire spuriously on the shipped defaults.
+2. **Stationary but pathological (caution).** When `alpha <= 1` the stationary
+   distribution has infinite mean; sample top shares will be wildly seed-dependent
+   and any reported average is not meaningful. Warn separately.
+
 **Pinned reference configuration.** Defaults from S02 plus
 `wealth_retention = 0.98`: `r_mean = 0.05`, `r_std = 0.10`, `g = 0.02`,
 `death_rate = 0.02`.
@@ -231,19 +316,29 @@ rises with `m` fixed, `alpha` falls. Both are Piketty's claims, in closed form.
 | `alpha` (predicted) | **1.695** |
 | `b = alpha / (alpha - 1)` | 2.44 |
 
-A wealth tail index near 1.7 and an inverted-Pareto coefficient near 2.4 are
-squarely in the empirically observed range for advanced economies, which is a
-useful independent indication that the default parameters are not absurd.
+A tail index near 1.7 is in the vicinity of published estimates for wealth
+distributions in advanced economies, but treat that as a loose plausibility note and
+**nothing more**. It is not independent evidence: the defaults were chosen, `alpha`
+was derived from them, and the derived value was then judged plausible — which is
+circular. Published wealth-tail estimates also vary substantially by country, period
+and whether the underlying source is estate, survey or rich-list data. Before this
+sentence is used to justify any parameter choice, replace it with a specific cited
+estimate for a specific country and method, or delete it. S14 is where the defaults
+get confronted with data properly.
 
 **Second reference case, exact formula.** With `death_rate = 0` and
 `wealth_retention = 0.97`, `m = -0.0059864` and `alpha = -2 * m / v ** 2 = 1.326`.
 This case tests the classical `d = 0` branch with no killing-model approximation,
 so it carries a tighter tolerance.
 
-**Tolerances, calibrated against a trial run.** The `d > 0` prediction is asymptotic
-in two ways: the killing correction is exact only in the continuous-time limit, and
-the Hill estimator carries finite-sample bias. Both push the *fitted* value below
-the prediction, and a prototype run confirms they do:
+**Tolerances, calibrated against a trial run.** The gap between prediction and fit
+comes from finite-sample effects, not from the tail condition being approximate:
+`(1 - d) * E[A_hat ** alpha] = 1` is the standard discrete-time condition for a
+killed random-difference equation, and applies exactly here. What biases the *fitted*
+value downward is (a) the Hill estimator's well-known finite-sample bias and (b)
+contamination of the fitted region by recently regenerated agents, whose wealth is
+not yet drawn from the stationary tail. Both push the same way, and a prototype run
+confirms they do:
 
 | Case | Predicted | Fitted (prototype) | Gap | Band |
 |---|---|---|---|---|
@@ -276,6 +371,7 @@ and the new prototype evidence in §10.
 - [ ] **ENG-07** Return scale-dependence thickens the tail versus baseline.
 - [ ] **ENG-08** The two fundamental laws implemented; `beta_path` converges at the analytic rate.
 - [ ] **ENG-09** Memory formula documented; reference config inside budget.
+- [ ] **ENG-10** National income and `beta` defined once (§3.3a) and exposed on the panel; capital income tracked separately; the two senses of `s` documented.
 
 ## 6. Tests
 
@@ -296,13 +392,13 @@ and the new prototype evidence in §10.
 | T05-11 | `test_metric_series_composes` | `panel.metric_series(gini)` has length equal to the recorded axis and values in `[0, 1]`. |
 | T05-12 | `test_to_polars_round_trip` | Long frame has `n_recorded * n_agents` rows, expected columns, and no nulls. |
 | T05-13 | `test_detrended_removes_growth` | With `r_std = 0` and no mortality, detrended mean wealth is constant to floating-point tolerance while level mean wealth grows. |
-| T05-14 | `test_memory_budget_documented` | The reference notebook config's panel is under 40 MB via `panel.wealth.nbytes + panel.income.nbytes`. |
+| T05-14 | `test_memory_budget_documented` | The reference notebook config's panel is under 64 MB via `panel.wealth.nbytes + panel.income.nbytes + panel.capital_income.nbytes`. |
 
 `tests/test_engine_aggregates.py`
 
 | ID | Test | Assertion |
 |---|---|---|
-| T05-15 | `test_alpha_identity` | `alpha_from_r_beta(0.05, 6.0) == 0.30`. |
+| T05-15 | `test_alpha_identity` | `alpha_from_r_beta(0.05, 6.0) == pytest.approx(0.30)`. Use `approx`, not `==`: in IEEE 754 `0.05 * 6.0` is `0.30000000000000004`, so the exact comparison fails. |
 | T05-16 | `test_steady_state_beta` | `steady_state_beta(0.10, 0.02) == 5.0`. |
 | T05-17 | `test_beta_path_converges_to_steady_state` | From several starting points, `beta_path` approaches `s / g` and the final value is within 1e-6 over a long horizon. |
 | T05-18 | `test_beta_path_contraction_rate` | Successive deviations from `s / g` shrink by exactly `1 / (1 + g)`. |
@@ -350,7 +446,7 @@ Pass criteria:
 3. Stationarity is real, not assumed: the top-1% share over the last quarter of a
    reference run has a coefficient of variation under 0.05. If it does not, the run
    is too short and the horizon must be extended before pinning anything.
-4. `rg -l 'companies_house' packages/piketty-sim/` returns nothing.
+4. `rg -e 'from companies_house' -e 'import companies_house' packages/piketty-sim/` returns nothing.
 5. Coverage of `engine/` at or above 90%.
 
 ## 8. Risks
@@ -367,10 +463,18 @@ Pass criteria:
   §4 explicitly warns against widening a band to accommodate this.
 - **Non-stationary configurations.** Users will drag sliders into the explosive
   region, and a fitted exponent there is meaningless. T05-8 pins the behaviour, and
-  NB03 must display a stationarity warning when `m >= 0`, computed from the config
-  rather than guessed.
-- **Slow tests eroding the suite.** Three `slow` tests at a minute each is
-  acceptable; ten would not be. Keep the theory tests to the two reference cases
+  NB03 must display a stationarity warning computed from the config rather than
+  guessed, using the **two-tier rule** below.
+- **Slow tests eroding the suite.** This stage adds three `slow` tests, but the
+  programme schedules about twelve across all stages (T05-4/5/6, T08-5, T09-8,
+  T10-2/3/4, T12-8/12, T13-6, T14-9), all of which run in the default suite since
+  `make test` excludes only `integration`. Three at a minute each is fine; twelve is
+  a five-minute default suite and a real tax on the G3 gate. **Programme-level
+  policy:** keep each `slow` test under 60 seconds, and if the default suite exceeds
+  roughly three minutes, introduce a `slow`-excluded fast target
+  (`pytest -m "not integration and not slow"`) for local iteration while keeping the
+  full suite as the gate. Do not silently drop the theory tests — they are the
+  strongest verification the programme has. Keep the theory tests to the two reference cases
   plus the monotonicity sweep, and put anything more exploratory in the S14
   calibration harness where it belongs.
 

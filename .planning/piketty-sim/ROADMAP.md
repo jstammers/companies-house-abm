@@ -5,7 +5,7 @@
 - Programme: a twelve-notebook marimo series simulating Piketty's wealth
   dynamics, hosted in a new, loosely-coupled workspace package.
 - Stages: 15, strictly gated. See `00-OVERVIEW.md` for the seven universal gates.
-- Requirements mapped: 90 across 15 stages, plus 5 cross-cutting invariants
+- Requirements mapped: 91 across 15 stages, plus 5 cross-cutting invariants
   re-verified at every gate.
 
 ## Stage sequence
@@ -18,7 +18,7 @@ Status values: `todo`, `in progress`, `done`, `blocked`.
 | S02 | Config & evaluation | todo | Immutable parameter objects and model-agnostic moment scoring | CFG-01…06 | `feat(piketty-sim): add engine config and evaluation framework` |
 | S03 | Inequality metrics | todo | The measurement toolkit the whole series reports through | MET-01…06 | `feat(piketty-sim): add Lorenz, Gini, share and Pareto-tail metrics` |
 | S04 | Data layer | todo | Pinned, cached, offline-capable loaders for the empirical backbone | DAT-01…08 | `feat(piketty-sim): add WID, JST, Maddison and WIID loaders` |
-| S05 | Wealth engine | todo | The reusable generative core: Kesten process and the two laws | ENG-01…09 | `feat(piketty-sim): add Kesten wealth engine and aggregate laws` |
+| S05 | Wealth engine | todo | The reusable generative core: Kesten process and the two laws | ENG-01…10 | `feat(piketty-sim): add Kesten wealth engine and aggregate laws` |
 | S06 | Arc A notebooks | todo | NB01–NB03: measurement, the laws, and `r > g` | NBA-01…09 | `feat(piketty-sim): add Arc A notebooks NB01-NB03` |
 | S07 | Historical shocks | todo | NB04: the U-curve and war/policy counterfactuals | HST-01…05 | `feat(piketty-sim): add dated shocks and the U-curve notebook` |
 | S08 | Demography & inheritance | todo | NB05: overlapping generations, mortality, bequests | OLG-01…06 | `feat(piketty-sim): add OLG demography and inheritance flows` |
@@ -32,20 +32,30 @@ Status values: `todo`, `in progress`, `done`, `blocked`.
 
 ## Dependency graph
 
+The stage headers are authoritative. Where this diagram and a stage's
+`Depends on` / `Blocks` rows disagree, the headers win.
+
 ```
 S01 ──┬── S02 ──┐
-      ├── S03 ──┼── S05 ── S06 ──┬── S07
-      └── S04 ──┘                ├── S08 ── S09 ──┬── S10 ── S15
-                                 │                └── S13
-                                 ├── S11                ↑
-                                 └── S12 ────────────────┘
-                     S04+S05 ── S14 ─────────────────── S15
+      ├── S03 ──┼── S05 ──┬── S06 ──┬── S07 ─────────────────┐
+      └── S04 ──┘         │         ├── S11 ─────────────────┤
+                          │         └── S08 ──┬── S09 ──┬── S10 ──┤
+                          │                   │         └── S13 ──┤
+                          │                   └── S12 ────────────┤
+                          └── S14 ─────────────────────────────── S15
 ```
 
-Read as: S01 unblocks the three foundation stages; S05 needs config and metrics;
-S06 needs data as well; S08 and S09 form the fiscal/demographic spine that S10
-and S13 build on; S11 and S12 are independent branches off S06 and S08; S14 can
-proceed in parallel once the engine and data exist; S15 needs everything.
+`S13` additionally requires `S12` (edge omitted for legibility: S13 depends on both
+S09 and S12). Every one of S07, S09, S10, S11, S12, S13 and S14 blocks S15 — the
+capstone's header says `Depends on | all stages`, and the rightmost column collects
+those edges.
+
+Read as: S01 unblocks the three foundation stages; S05 needs config and metrics; S06
+needs data as well; **S12 hangs off S08, not off S06** — it needs the demographic
+layer to have generations to transmit between; S08 and S09 form the
+fiscal/demographic spine that S10 and S13 build on; S11 is an independent branch off
+S06; S14 needs only S04 and S05 and so can run in parallel with S07–S13; S15 needs
+everything.
 
 ## Phase grouping
 
@@ -64,7 +74,8 @@ analytical work on the 1914 and 1980 breaks.
 
 **Phase 3 — Political economy (S10–S12).** New model types — voting,
 transmission — reusing the population objects built earlier. Kept deliberately
-small and legible.
+small and legible. Note S11 is unblocked as early as S06 and need not wait for
+phase 2 to finish.
 
 **Phase 4 — Synthesis (S13–S15).** Proposals, calibration, then the capstone.
 Rust is written only after the Python engine's API is frozen, as a drop-in

@@ -29,7 +29,7 @@ a test that proves it imports, and green tooling.
 | `packages/piketty-sim/src/piketty_sim/py.typed` | create | empty marker |
 | `packages/piketty-sim/src/piketty_sim/data/bundled/.gitkeep` | create | keeps the tracked-data path alive before S04 |
 | `packages/piketty-sim/tests/test_package.py` | create | import and metadata smoke tests |
-| `pyproject.toml` | modify | six hardcoded per-package lists (§3.2) |
+| `pyproject.toml` | modify | seven hardcoded per-package keys (§3.2) |
 | `Makefile` | modify | `.PHONY`, `test`, `test-integration`, two new targets |
 | `.gitignore` | modify | negate the bundled-data path |
 | `docs/piketty-sim-package.md` | create | package documentation page |
@@ -99,19 +99,28 @@ not become a hard dependency of a package whose core is pure numpy.
 
 ### 3.2 Root `pyproject.toml` edits
 
-Six lists are hardcoded per package. A new member is invisible to tooling unless
-all six are updated, and only the workspace `members` glob picks it up
-automatically.
+**Seven** keys are hardcoded per package. A new member is invisible to tooling
+unless all seven are updated; only the workspace `members` glob picks it up
+automatically. Locate them by key name, not by line number — the line numbers below
+were accurate when this document was written and will drift.
 
-| Line | Key | Edit |
-|---|---|---|
-| 54 | `[tool.ruff] src` | add `"packages/piketty-sim/src"` |
-| 80 | `[tool.ruff.lint.isort] known-first-party` | add `"piketty_sim"` |
-| 85 area | `[tool.ruff.lint.per-file-ignores]` | add `"packages/piketty-sim/notebooks/**/*.py" = ["B018", "E501", "PLC0206", "PLC0415"]` |
-| 115 | `[tool.ty.src] exclude` | add `"packages/piketty-sim/tests"` |
-| 128 | `[tool.pytest.ini_options] testpaths` | add `"packages/piketty-sim/tests"` |
-| 129 | `[tool.pytest.ini_options] pythonpath` | add `"packages/piketty-sim/src"` |
-| 151 | `[tool.coverage.run] source` | add `"piketty_sim"` |
+| Key | Edit |
+|---|---|
+| `[tool.ruff] src` | add `"packages/piketty-sim/src"` |
+| `[tool.ruff.lint.isort] known-first-party` | add `"piketty_sim"` |
+| `[tool.ruff.lint.per-file-ignores]` | add `"packages/piketty-sim/notebooks/**/*.py" = ["B018", "E501", "PLC0206", "PLC0415"]` |
+| `[tool.ty.src] exclude` | add `"packages/piketty-sim/tests"` |
+| `[tool.pytest.ini_options] testpaths` | add `"packages/piketty-sim/tests"` |
+| `[tool.pytest.ini_options] pythonpath` | add `"packages/piketty-sim/src"` |
+| `[tool.coverage.run] source` | add `"piketty_sim"` |
+
+Count them off against this table when done. An off-by-one here is exactly the
+failure mode §7 warns about, and an earlier draft of this document said "six" while
+listing seven.
+
+The `slow`, `network` and `integration` pytest markers are **already registered**
+in the root `markers` list, so no marker registration is needed — but `--strict-markers`
+is on, so any *new* marker a later stage invents must be added there.
 
 Two traps to respect:
 
@@ -174,6 +183,13 @@ storage and HTTP infrastructure.
 description, and states the rule: *`piketty-sim` depends on `uk-data` only;
 never on `companies_house_abm`.*
 
+The two counts in this document are both correct and easy to confuse: `CLAUDE.md`
+counts **four packages under `packages/`** because it includes the out-of-workspace
+`rust-abm` crate, so it becomes five. §3.1 refers to **three existing Python
+workspace members** — `companies-house`, `uk-data`, `companies_house_abm` — because
+`rust-abm` is excluded from the uv workspace and is not a Python member. Four
+directories, three Python members; both go up by one.
+
 ### 3.6 Notebook execution model — no PEP 723
 
 The source proposal suggested PEP 723 inline dependency metadata so
@@ -205,10 +221,18 @@ cell.
 | T01-2 | `test_package_is_typed` | `py.typed` exists inside the installed package directory. |
 | T01-3 | `test_bundled_data_dir_exists` | The `data/bundled` directory resolves via `importlib.resources`. |
 | T01-4 | `test_no_abm_dependency` | The package's declared dependencies contain neither `companies-house-abm` nor `companies-house`. |
-| T01-5 | `test_no_abm_imports` | Recursively scanning every `.py` file under the package finds no `companies_house` import. Implements INV-01 as an executable test, so it is enforced automatically at every later gate rather than by manual grep. |
+| T01-5 | `test_no_abm_imports` | Recursively scanning every `.py` file under the package finds no *import* of `companies_house` — matching `^\s*(from\|import)\s+companies_house` per line, or better, walking the `ast` for `Import`/`ImportFrom` nodes. Implements INV-01 as an executable test, enforced automatically at every later gate rather than by manual grep. |
 
 T01-5 is the load-bearing test of this stage: it converts the programme's central
 architectural constraint into something CI fails on.
+
+**It must match imports, not the bare string.** S02 requires copy-adapted modules
+to name their origin in a docstring for the benefit of future readers, and that
+attribution necessarily contains the text `companies_house`. A test scanning for
+the bare substring would make honest attribution fail, pressuring the implementer
+to drop the attribution — the opposite of what we want. Parsing the AST is the
+robust form and is worth the extra few lines here, since this single test guards the
+whole programme's central constraint.
 
 ## 6. Verification gate
 
@@ -228,13 +252,13 @@ Pass criteria:
 1. All commands above exit zero.
 2. `uv run python -c "import piketty_sim; print(piketty_sim.__version__)"` prints a version.
 3. `git check-ignore packages/piketty-sim/src/piketty_sim/data/bundled/.gitkeep` exits **non-zero** — the file is not ignored.
-4. `rg -l 'companies_house' packages/piketty-sim/` returns nothing.
+4. `rg -e 'from companies_house' -e 'import companies_house' packages/piketty-sim/` returns nothing.
 5. The coverage report lists `piketty_sim`.
 6. Unzipping the built wheel shows `piketty_sim/data/bundled/` present.
 
 ## 7. Risks
 
-- **Silent tooling invisibility.** Forgetting any one of the six root lists
+- **Silent tooling invisibility.** Forgetting any one of the seven root keys
   produces a package that appears fine but is unlinted or untested. Gate item 5
   and the `make test-cov` run are the specific checks for this.
 - **Marimo lint failure surfacing only at S06.** The per-file-ignores glob is

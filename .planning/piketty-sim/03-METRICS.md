@@ -45,10 +45,14 @@ Gini is subtly wrong, every downstream band is wrong too.
 ### 3.1 `metrics/distribution.py`
 
 ```python
-def lorenz_curve(values: ArrayLike) -> tuple[np.ndarray, np.ndarray]:
+Negatives = Literal["keep", "clip", "raise"]
+
+def lorenz_curve(
+    values: ArrayLike, *, negatives: Negatives = "keep"
+) -> tuple[np.ndarray, np.ndarray]:
     """Return cumulative population share and cumulative value share."""
 
-def gini(values: ArrayLike) -> float:
+def gini(values: ArrayLike, *, negatives: Negatives = "keep") -> float:
     """Gini coefficient via the sorted-index formula."""
 
 def top_share(values: ArrayLike, fraction: float) -> float:
@@ -204,6 +208,7 @@ of `0.05` on `alpha`.
 | ID | Test | Assertion |
 |---|---|---|
 | T03-11 | `test_inverted_beta_matches_mean_above_threshold` | `b` from the fitted alpha agrees with empirical mean-above-threshold over threshold, rtol 0.02. The key cross-validation of estimator and interpretation. |
+| T03-11b | `test_inverted_beta_consistent_with_top_share` | On synthetic Pareto data, the fitted alpha reproduces `top_share(x, p) ≈ p ** ((a - 1) / a)` for p in {0.01, 0.10}, tying `pareto.py` and `distribution.py` together. Required by MET-05, which asks for consistency with `top_share` specifically — T03-11 alone only checks mean-above-threshold. |
 | T03-12 | `test_hill_recovers_known_alpha` | Fitted alpha within 0.05 of true a in {1.5, 2.0, 2.5}. |
 | T03-13 | `test_fit_reports_tail_metadata` | `xmin` equals the requested quantile, `n_tail ≈ tail_fraction * n`, `se_alpha ≈ alpha / sqrt(n_tail)`. |
 | T03-14 | `test_lognormal_is_not_read_as_thin_pareto` | On lognormal data the fit still returns finite, positive values and does not raise — documenting that Hill fits *any* tail and that discriminating power-law from lognormal is a separate question, flagged for NB01's narrative. |
@@ -230,12 +235,22 @@ Pass criteria:
    from piketty_sim.metrics import gini, top_share
    rng = np.random.default_rng(42)
    a = rng.lognormal(0.0, 1.0, 200_000)
-   b = (1 - rng.random(200_000)) ** (-1 / 1.35)
+   b = (1 - rng.random(200_000)) ** (-1 / 1.46)
    for name, x in (('lognormal', a), ('pareto', b)):
        print(f'{name:10s} gini={gini(x):.3f} top1={top_share(x, 0.01):.3f}')"
    ```
-   Expect Ginis within roughly 0.05 of each other while the top 1% shares differ
-   by a factor of two or more. Record the observed numbers in the NB01 narrative.
+   **The Pareto tail index must be 1.46, not 1.35.** The closed forms in §4 fix this
+   exactly: lognormal(0, 1) has Gini `2 * Phi(1 / sqrt(2)) - 1 = 0.5205`, and
+   Pareto(a) has Gini `1 / (2a - 1)`, so matching Ginis requires
+   `a = (1 / 0.5205 + 1) / 2 = 1.4606`. At `a = 1.35` the Gini is 0.5882 — a gap of
+   0.068, which **fails** the 0.05 tolerance that NB01's T06-10 asserts. At
+   `a = 1.46` the gap is 0.0003 and the top-1% shares still differ by roughly 2.5×
+   (about 0.234 versus 0.092), comfortably clearing the 1.5× requirement.
+
+   This is worth dwelling on because it is exactly the trap §8 warns about: the
+   tempting fix on seeing T06-10 fail is to widen the tolerance, which destroys the
+   claim the test exists to defend. The tolerance is right; the parameter was wrong.
+   Record the observed numbers in the NB01 narrative.
 3. Coverage of both metrics modules at or above 95%.
 4. Runtime of the metrics test files under 30 seconds combined; if the 200 000-draw
    cases push past that, lower to 100 000 and widen tolerances to 0.008 rather

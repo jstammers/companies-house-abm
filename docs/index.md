@@ -126,6 +126,10 @@ for rec in result.records:
 See the [Housing Market](housing-market.md) documentation for full details on
 running housing simulations, policy experiments, and calibration from live data.
 
+See the [Financial Market Crash Model](financial-market-crash.md) for the
+literature review, data-source review and design plan for the leveraged-investor
+asset market module.
+
 ## Development
 
 ### Prerequisites

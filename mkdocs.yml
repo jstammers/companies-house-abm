@@ -70,6 +70,7 @@ nav:
   - ABM Design: abm-design.md
   - Modelling Approach: modelling-approach.md
   - Housing Market: housing-market.md
+  - Financial Market Crash Model: financial-market-crash.md
   - Firm Data Analysis: firm-data-analysis.md
   - Stochastic Behaviour & Bounded Rationality: stochastic-bounded-rationality.md
   - API Reference: api.md

@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "companies-house"
 version = "0.2.1"
 description = "Companies House data ingestion, analysis, and API client"
-readme = "../../README.md"
+readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
 authors = [

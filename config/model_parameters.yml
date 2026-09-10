@@ -279,3 +279,44 @@ technical:
   numerical_tolerance: 1e-6  # Tolerance for stock-flow consistency checks
   max_iterations: 100  # Max iterations for market clearing algorithms
   logging_level: "INFO"  # "DEBUG", "INFO", "WARNING", "ERROR"
+
+# Financial-crash module (docs/financial-market-crash.md, Phase 1).
+# Standalone daily leveraged-asset market — independent of `simulation:`
+# above, which drives the quarterly real-economy model.
+financial:
+  days: 1000  # trading days per run
+  seed: 42
+  assets:
+    count: 8
+    classes: ["equity", "gilt", "corporate_bond"]
+    fundamental_drift: 0.0002  # per day
+    fundamental_vol: 0.01  # per day
+    common_factor_share: 0.5
+    initial_price: 100.0
+    initial_daily_volume: 20000.0
+    volatility_ewma_lambda: 0.94
+    volatility_floor: 0.001
+  investors:
+    count: 200
+    target_leverage_mean: 3.0
+    target_leverage_std: 1.0
+    portfolio_overlap: 0.6
+    basket_size: 4
+    rebalancing_speed: 0.25
+    mispricing_sensitivity: 5.0
+  margin:
+    haircut_min: 0.05
+    haircut_max: 0.50
+    var_multiplier: 3.0
+    max_liquidation_rate: 0.25
+    margin_call_multiple: 1.15
+    procyclical_haircuts: true
+  liquidity:
+    impact_coefficient: 0.75  # Y in the square-root law (Toth et al. 2011)
+    permanent_impact_share: 0.7
+    resiliency: 0.20
+    dealer_count: 5
+    dealer_capital_per_dealer: 5000000.0
+    dealer_inventory_limit_ratio: 0.02
+    slow_capital_replenishment: 0.05
+    cascade_iterations: 5

@@ -243,6 +243,80 @@ class MortgageConfig:
 
 
 @dataclass(frozen=True)
+class RiskyAssetConfig:
+    """Configuration for the financial-crash module's asset universe."""
+
+    count: int = 8
+    classes: tuple[str, ...] = ("equity", "gilt", "corporate_bond")
+    fundamental_drift: float = 0.0002  # per day
+    fundamental_vol: float = 0.01  # per day
+    common_factor_share: float = 0.5
+    initial_price: float = 100.0
+    initial_daily_volume: float = 20_000.0
+    volatility_ewma_lambda: float = 0.94
+    # Floor under which realised volatility cannot decay. Since price impact
+    # (M4) scales with realised volatility, an unfloored EWMA can spiral to
+    # zero and permanently freeze the market (see financial_model docs).
+    volatility_floor: float = 0.001
+
+
+@dataclass(frozen=True)
+class InvestorConfig:
+    """Configuration for leveraged-investor agents (financial-crash module)."""
+
+    count: int = 200
+    target_leverage_mean: float = 3.0
+    target_leverage_std: float = 1.0
+    portfolio_overlap: float = 0.6
+    basket_size: int = 4
+    rebalancing_speed: float = 0.25
+    mispricing_sensitivity: float = 5.0
+
+
+@dataclass(frozen=True)
+class MarginConfig:
+    """Margin/haircut configuration for the financial-crash module."""
+
+    haircut_min: float = 0.05
+    haircut_max: float = 0.50
+    var_multiplier: float = 3.0
+    max_liquidation_rate: float = 0.25  # of position per day
+    margin_call_multiple: float = 1.15  # slack above target before a call
+    procyclical_haircuts: bool = True
+
+
+@dataclass(frozen=True)
+class MarketLiquidityConfig:
+    """Market-depth/liquidity-supply configuration for the financial-crash module."""
+
+    impact_coefficient: float = 0.75  # Y in the square-root law
+    permanent_impact_share: float = 0.7
+    resiliency: float = 0.20  # transient impact decay per day
+    dealer_count: int = 5
+    dealer_capital_per_dealer: float = 5_000_000.0
+    dealer_inventory_limit_ratio: float = 0.02  # of ADV
+    slow_capital_replenishment: float = 0.05
+    cascade_iterations: int = 5
+
+
+@dataclass(frozen=True)
+class FinancialMarketConfig:
+    """Top-level configuration for the standalone financial-crash module.
+
+    See ``docs/financial-market-crash.md`` for the design.  This module runs
+    on a daily clock, independent of the quarterly real-economy ``Simulation``
+    (Phase 1 of the roadmap: standalone before coupling).
+    """
+
+    days: int = 1000
+    seed: int = 42
+    assets: RiskyAssetConfig = field(default_factory=RiskyAssetConfig)
+    investors: InvestorConfig = field(default_factory=InvestorConfig)
+    margin: MarginConfig = field(default_factory=MarginConfig)
+    liquidity: MarketLiquidityConfig = field(default_factory=MarketLiquidityConfig)
+
+
+@dataclass(frozen=True)
 class ModelConfig:
     """Complete model configuration."""
 
@@ -264,6 +338,9 @@ class ModelConfig:
     properties: PropertyConfig = field(default_factory=PropertyConfig)
     housing_market: HousingMarketConfig = field(default_factory=HousingMarketConfig)
     mortgage: MortgageConfig = field(default_factory=MortgageConfig)
+    financial_market: FinancialMarketConfig = field(
+        default_factory=FinancialMarketConfig
+    )
 
 
 def _extract(raw: dict[str, Any], section: str, *keys: str) -> dict[str, Any]:
@@ -324,6 +401,20 @@ def load_config(path: Path | None = None) -> ModelConfig:
 
     mortgage_raw = _extract(behavior, "banks", "mortgage")
 
+    # Financial-crash module: standalone `financial:` top-level block
+    financial_raw = raw.get("financial", {})
+    assets_raw: dict[str, Any] = dict(financial_raw.get("assets", {}))
+    if "classes" in assets_raw and isinstance(assets_raw["classes"], list):
+        assets_raw["classes"] = tuple(assets_raw["classes"])
+    financial_market = FinancialMarketConfig(
+        days=financial_raw.get("days", FinancialMarketConfig().days),
+        seed=financial_raw.get("seed", FinancialMarketConfig().seed),
+        assets=RiskyAssetConfig(**assets_raw),
+        investors=InvestorConfig(**financial_raw.get("investors", {})),
+        margin=MarginConfig(**financial_raw.get("margin", {})),
+        liquidity=MarketLiquidityConfig(**financial_raw.get("liquidity", {})),
+    )
+
     return ModelConfig(
         simulation=SimulationConfig(**sim_raw),
         firms=FirmConfig(**firms_raw_d),
@@ -343,6 +434,7 @@ def load_config(path: Path | None = None) -> ModelConfig:
         properties=PropertyConfig(**properties_raw_d),
         housing_market=HousingMarketConfig(**markets.get("housing", {})),
         mortgage=MortgageConfig(**mortgage_raw),
+        financial_market=financial_market,
     )
 
 

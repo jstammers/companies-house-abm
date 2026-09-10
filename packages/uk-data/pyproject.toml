@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "uk-data"
 version = "0.1.0"
 description = "Standalone UK economic and business data integration package"
-readme = "../../README.md"
+readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
 authors = [

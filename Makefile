@@ -54,9 +54,13 @@ test-matrix-cov:
 	uv run hatch test --cover
 
 
-# Dependency vulnerability scanning
+# Dependency vulnerability scanning.
+# PYSEC-2026-89 (markdown, HIGH) has no available fix: the vulnerable range
+# extends past the latest published release, per pysentry's own "unfixable"
+# classification. --ignore-while-no-fix drops it only until a fixed version
+# ships, at which point this scan starts failing again until it's upgraded.
 pysentry:
-	uv run pysentry-rs
+	uv run pysentry-rs --ignore-while-no-fix PYSEC-2026-89
 
 
 # Build the Rust ABM extension (requires cargo + maturin)
